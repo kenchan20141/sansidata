@@ -1338,26 +1338,41 @@ function deleteClassReport(reportKey) {
 
 // === [新增] 數據統計與圖表邏輯 ===
 
-// 1. 初始化介面
+// === [修正版] 初始化介面 (解決時區問題) ===
 function initStatUI() {
-    const today = new Date();
-    document.getElementById('statDate').valueAsDate = today;
+    // 1. 獲取本地時間 (香港時間)
+    const now = new Date();
     
-    // 填充月份選單
-    const monthSel = document.getElementById('statMonth');
-    monthSel.innerHTML = '';
-    for(let i=1; i<=12; i++) {
-        const opt = document.createElement('option');
-        opt.value = String(i).padStart(2, '0');
-        opt.text = i + '月';
-        if(i === today.getMonth()+1) opt.selected = true;
-        monthSel.add(opt);
+    // 2. 手動格式化為 YYYY-MM-DD (避免 UTC 誤差)
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    const dateStr = `${y}-${m}-${d}`;
+
+    // 3. 設定日期選擇器
+    const dateInput = document.getElementById('statDate');
+    if (dateInput) {
+        dateInput.value = dateStr; // 設定為今天 (例如 2026-01-11)
     }
     
-    // 預設年份
+    // 4. 設定年份選單
     const yearSel = document.getElementById('statYear');
-    yearSel.value = today.getFullYear();
+    if (yearSel) yearSel.value = y;
 
+    // 5. 設定月份選單
+    const monthSel = document.getElementById('statMonth');
+    if (monthSel) {
+        monthSel.innerHTML = '';
+        for(let i=1; i<=12; i++) {
+            const opt = document.createElement('option');
+            opt.value = String(i).padStart(2, '0'); // 確保是 "01", "02"
+            opt.text = i + '月';
+            if(String(i).padStart(2, '0') === m) opt.selected = true; // 選中本月
+            monthSel.add(opt);
+        }
+    }
+
+    // 6. 初始化顯示狀態
     updateStatInputs();
     updateTimeInputs();
 }

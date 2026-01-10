@@ -192,11 +192,28 @@
         .badge-expand { background-color: #d69a92; }
         
         /* 2. 整體概況標題容器 (增強版) */
-        .badge-general {
-            width: 100%; max-width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 20px 10px; margin-bottom: 10px; background: linear-gradient(135deg, #94a7b5 0%, #738591 100%);
-            color: white; border-radius: 12px; box-shadow: 0 8px 20px rgba(94, 112, 103, 0.3); position: relative; overflow: hidden;
-        }
+        /* 2. 整體概況標題容器 (修改為無印米色風格) */
+.badge-general {
+    width: 100%; 
+    max-width: 100%; 
+    box-sizing: border-box; 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center;
+    padding: 20px 10px; 
+    margin-bottom: 10px; 
+    
+    /* === 修改重點：無印風．暖麻米色 === */
+    background: linear-gradient(135deg, #C5B4A1 0%, #A99885 100%);
+    box-shadow: 0 8px 20px rgba(169, 152, 133, 0.35);
+    /* ============================== */
+
+    color: white; 
+    border-radius: 12px; 
+    position: relative; 
+    overflow: hidden;
+}
         .badge-general-title { font-size: 1.6rem; font-weight: bold; letter-spacing: 2px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
         
         /* 3. 綜合評級 */

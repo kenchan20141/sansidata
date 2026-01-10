@@ -680,7 +680,7 @@
                     if (reports.length > 0) {
                         studentCount++;
                         const latestReport = reports[0].aiContent.replace(/<[^>]*>?/gm, ' ').substring(0, 300);
-                        classSummary += `學生[${name}]: ${latestReport}...\n`;
+                        classSummary += `學生 ${studentCount}: ${latestReport}...\n`;
                     }
 
                     // 收集分數 (遍歷所有寫作紀錄)
@@ -738,6 +738,10 @@
 
                 ### 你的任務：
                 請根據以上資料，生成一份「全班綜合學習評估報告」。
+
+                 ### 核心指令 (Privacy Protocols)：
+                1. **宏觀視角**：報告必須完全聚焦於「班級整體表現」或「大部分學生」。
+                2. **嚴禁個別提及**：絕對**不可以**在報告中提及任何特定學生編號或具體個案（例如：**不要寫**「學生 1 表現...」或「有部分學生如...」）。
                 
                 ### 輸出格式要求 (嚴格遵守 HTML，樣式需與學生報告一致)：
                 請直接輸出 HTML 代碼，不要使用 Markdown。

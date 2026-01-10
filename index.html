@@ -674,162 +674,226 @@
         }
 
         // === 新增：生成全班綜合報告邏輯 ===
-        async function generateClassReport() {
-            const btn = document.getElementById('btnClassReport');
-            const g = document.getElementById('reportGrade').value;
-            const c = document.getElementById('reportClass').value;
+// === 最終全功能版 V3：生成全班綜合報告 (含大綱 + 閱讀 + 寫作 + 整合拓展) ===
+async function generateClassReport() {
+    const btn = document.getElementById('btnClassReport');
+    const g = document.getElementById('reportGrade').value;
+    const c = document.getElementById('reportClass').value;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 分析全班數據中...';
+
+    try {
+        // 1. 抓取全班資料
+        const snapshot = await db.ref(`students/${g}/${c}`).once('value');
+        const data = snapshot.val();
+        
+        if (!data) { alert("此班級無學生資料！"); btn.disabled=false; btn.innerHTML = '<i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)'; return; }
+
+        // 2. 聚合數據
+        let classSummary = "";      // 成品文章摘要 (過往報告)
+        let outlineSummary = "";    // 大綱點評摘要
+        let readingSummary = "";    // 閱讀點評摘要
+        let expandSummary = "";     // ★ 新增：整合拓展摘要
+        let studentCount = 0;
+        
+        // 分數統計 (寫作)
+        let narrativeTotal = { content:0, expr:0, struct:0, count:0 };
+        let argumentTotal = { content:0, expr:0, struct:0, count:0 };
+
+        // 遍歷每位學生
+        Object.entries(data).forEach(([name, d]) => {
+            const h = d.history ? (Array.isArray(d.history) ? d.history : Object.values(d.history)) : [];
             
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 分析全班數據中...';
+            // A. 收集過往「學習報告」摘要 (寫作成品表現)
+            const reports = h.filter(r => r.category === "學習報告").sort((a,b) => b.timestamp - a.timestamp);
+            if (reports.length > 0) {
+                studentCount++;
+                const latestReport = reports[0].aiContent.replace(/<[^>]*>?/gm, ' ').substring(0, 300);
+                classSummary += `學生 ${studentCount}: ${latestReport}...\n`;
+            }
 
-            try {
-                // 1. 抓取全班資料
-                const snapshot = await db.ref(`students/${g}/${c}`).once('value');
-                const data = snapshot.val();
-                
-                if (!data) { alert("此班級無學生資料！"); btn.disabled=false; btn.innerHTML = '<i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)'; return; }
-
-                // 2. 聚合數據 (計算平均分 & 收集摘要)
-                let classSummary = "";
-                let studentCount = 0;
-                let narrativeTotal = { content:0, expr:0, struct:0, count:0 };
-                let argumentTotal = { content:0, expr:0, struct:0, count:0 };
-
-                // 遍歷每位學生
-                Object.entries(data).forEach(([name, d]) => {
-                    const h = d.history ? (Array.isArray(d.history) ? d.history : Object.values(d.history)) : [];
-                    const reports = h.filter(r => r.category === "學習報告").sort((a,b) => b.timestamp - a.timestamp);
-                    
-                    // 收集摘要 (只取最新一份報告的摘要)
-                    if (reports.length > 0) {
-                        studentCount++;
-                        const latestReport = reports[0].aiContent.replace(/<[^>]*>?/gm, ' ').substring(0, 300);
-                        classSummary += `學生 ${studentCount}: ${latestReport}...\n`;
+            // B. 遍歷所有紀錄 (分數 + 各範疇點評)
+            h.forEach(r => {
+                // --- 1. 處理寫作分數 ---
+                const scoreMatch = r.aiContent.match(/總分:\s*(\d+)/);
+                if (scoreMatch) {
+                    const score = parseInt(scoreMatch[1]);
+                    if (r.category === "敘事抒情") {
+                        narrativeTotal.content += score * 0.4;
+                        narrativeTotal.expr += score * 0.3;
+                        narrativeTotal.struct += score * 0.2;
+                        narrativeTotal.count++;
+                    } else if (r.category === "議論") {
+                        argumentTotal.content += score * 0.4;
+                        argumentTotal.expr += score * 0.3;
+                        argumentTotal.struct += score * 0.2;
+                        argumentTotal.count++;
                     }
-
-                    // 收集分數 (遍歷所有寫作紀錄)
-                    h.forEach(r => {
-                        // 嘗試解析分數 (這裡簡化處理，直接從 aiContent 抓取隱藏欄位太複雜，改用正則抓取顯示分數)
-                        const scoreMatch = r.aiContent.match(/總分:\s*(\d+)/);
-                        if (scoreMatch) {
-                            const score = parseInt(scoreMatch[1]);
-                            // 這裡反推單項分數有點難，我們假設分數分佈平均
-                            // 為了生成雷達圖，我們需要 Content/Expr/Struct 分數
-                            // 如果無法精確抓取，我們用總分估算：Content=總分*0.4, Expr=總分*0.3, Struct=總分*0.2
-                            if (r.category === "敘事抒情") {
-                                narrativeTotal.content += score * 0.4;
-                                narrativeTotal.expr += score * 0.3;
-                                narrativeTotal.struct += score * 0.2;
-                                narrativeTotal.count++;
-                            } else if (r.category === "議論") {
-                                argumentTotal.content += score * 0.4;
-                                argumentTotal.expr += score * 0.3;
-                                argumentTotal.struct += score * 0.2;
-                                argumentTotal.count++;
-                            }
-                        }
-                    });
-                });
-
-                if (studentCount === 0 && narrativeTotal.count === 0 && argumentTotal.count === 0) {
-                    alert("此班級數據不足，無法生成報告。");
-                    btn.disabled=false; 
-                    btn.innerHTML = '<i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)';
-                    return;
                 }
 
-                // 計算平均分
-                const narrAvg = {
-                    content: narrativeTotal.count ? Math.round((narrativeTotal.content / narrativeTotal.count) / 4) : 0, 
-                    expr: narrativeTotal.count ? Math.round((narrativeTotal.expr / narrativeTotal.count) / 3) : 0,    
-                    struct: narrativeTotal.count ? Math.round((narrativeTotal.struct / narrativeTotal.count) / 2) : 0 
-                };
-                const argAvg = {
-                    content: argumentTotal.count ? Math.round((argumentTotal.content / argumentTotal.count) / 4) : 0,
-                    expr: argumentTotal.count ? Math.round((argumentTotal.expr / argumentTotal.count) / 3) : 0,
-                    struct: argumentTotal.count ? Math.round((argumentTotal.struct / argumentTotal.count) / 2) : 0
-                };
+                // --- 2. 處理大綱點評 ---
+                if (r.subFunction && r.subFunction.includes("大綱")) {
+                    let rawText = r.aiContent.replace(/<[^>]*>?/gm, ' ');
+                    let extract = "";
+                    const commentIdx = rawText.indexOf("點評");
+                    if (commentIdx !== -1) {
+                        extract = rawText.substring(commentIdx, commentIdx + 120);
+                        outlineSummary += `[${r.category}大綱表現]: ${extract}...\n`;
+                    }
+                }
 
-                // 3. 呼叫 AI 生成
-                const prompt = `你是一位資深的中文科科主任。以下是 ${g}年級${c}班 的學習數據摘要。
-                
-                ### 班級數據概覽：
-                - 敘事抒情文 (平均分 0-10)：內容${narrAvg.content}, 表達${narrAvg.expr}, 結構${narrAvg.struct}
-                - 議論文 (平均分 0-10)：內容${argAvg.content}, 表達${argAvg.expr}, 結構${argAvg.struct}
+                // --- 3. 處理閱讀理解 ---
+                if (r.category === "閱讀" && r.subFunction === "點評") {
+                    let rawText = r.aiContent.replace(/<[^>]*>?/gm, ' ');
+                    let extract = "";
+                    const commentIdx = rawText.indexOf("點評");
+                    if (commentIdx !== -1) {
+                        extract = rawText.substring(commentIdx, commentIdx + 150); 
+                        readingSummary += `[閱讀答題表現]: ${extract}...\n`;
+                    }
+                }
 
-                ### 學生個別報告摘要：
-                ${classSummary}
+                // --- 4. ★ 新增：處理整合拓展 ---
+                if (r.category === "整合拓展" && r.subFunction === "點評") {
+                    let rawText = r.aiContent.replace(/<[^>]*>?/gm, ' ');
+                    let extract = "";
+                    // 整合拓展通常包含「點評」和「建議」
+                    const commentIdx = rawText.indexOf("點評");
+                    if (commentIdx !== -1) {
+                        extract = rawText.substring(commentIdx, commentIdx + 150);
+                        expandSummary += `[整合拓展表現]: ${extract}...\n`;
+                    }
+                }
+            });
+        });
 
-                ### 你的任務：
-                請根據以上資料，生成一份「全班綜合學習評估報告」。
-
-                 ### 核心指令 (Privacy Protocols)：
-                1. **宏觀視角**：報告必須完全聚焦於「班級整體表現」或「大部分學生」。
-                2. **嚴禁個別提及**：絕對**不可以**在報告中提及任何特定學生編號或具體個案（例如：**不要寫**「學生 1 表現...」或「有部分學生如...」）。
-                
-                ### 輸出格式要求 (嚴格遵守 HTML，樣式需與學生報告一致)：
-                請直接輸出 HTML 代碼，不要使用 Markdown。
-
-                1. **班級整體概況**：
-                   <div class="report-section">
-                       <div class="report-category-badge badge-general">
-                           <div class="badge-general-title"><i class="fas fa-users"></i> ${g}${c}班 綜合評估</div>
-                       </div>
-                       <div class="report-text-card">
-                           <p>(約150字，分析班級整體強弱項，例如整體敘事能力較強但議論邏輯薄弱等。)</p>
-                       </div>
-                   </div>
-                   <div class="report-separator"></div>
-
-                2. **範疇深入分析**：(針對敘事、議論)
-                   請為每個範疇生成一段分析，**不要**包含圖表代碼，圖表會由系統自動插入。
-                   格式：
-                   <div class="report-section">
-                       <div class="report-category-badge badge-[narrative/argument]"><i class="fas fa-book"></i> [範疇名稱]</div>
-                       <div class="report-text-card">
-                           <p>(分析該範疇的班級普遍問題與亮點。)</p>
-                       </div>
-                   </div>
-
-                3. **教學建議**：
-                   <div class="report-quote-card">
-                       <div class="report-quote-content">「(給任教老師的具體教學建議)」</div>
-                       <div class="report-quote-author">—— AI 科主任</div>
-                   </div>`;
-
-                const response = await callAPI(prompt);
-
-                // --- 4. 儲存與顯示 ---
-                const reportData = {
-                    timestamp: firebase.database.ServerValue.TIMESTAMP,
-                    dateStr: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
-                    stats: {
-                        narrAvg: narrAvg,
-                        argAvg: argAvg,
-                        narrativeTotal: Math.round((narrativeTotal.content+narrativeTotal.expr+narrativeTotal.struct)/narrativeTotal.count) || 0,
-                        argumentTotal: Math.round((argumentTotal.content+argumentTotal.expr+argumentTotal.struct)/argumentTotal.count) || 0
-                    },
-                    aiHtml: response // 只儲存 AI 生成的原始 HTML
-                };
-
-                // 4-1. 存入 Firebase
-                await db.ref(`class_reports/${g}/${c}`).push(reportData);
-                
-                // 4-2. 刷新歷史列表
-                loadClassReportHistory();
-
-                // 4-3. 開啟顯示
-                openClassReportModal(reportData);
-
-            } catch (e) {
-                console.error(e);
-                alert("生成失敗，請稍後再試。");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)';
-            }
+        // 檢查是否有足夠數據
+        if (studentCount === 0 && narrativeTotal.count === 0 && argumentTotal.count === 0 && 
+            outlineSummary === "" && readingSummary === "" && expandSummary === "") {
+            alert("此班級數據不足，無法生成報告。");
+            btn.disabled=false; 
+            btn.innerHTML = '<i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)';
+            return;
         }
 
+        // 計算平均分 (寫作)
+        const narrAvg = {
+            content: narrativeTotal.count ? Math.round((narrativeTotal.content / narrativeTotal.count) / 4) : 0, 
+            expr: narrativeTotal.count ? Math.round((narrativeTotal.expr / narrativeTotal.count) / 3) : 0,    
+            struct: narrativeTotal.count ? Math.round((narrativeTotal.struct / narrativeTotal.count) / 2) : 0 
+        };
+        const argAvg = {
+            content: argumentTotal.count ? Math.round((argumentTotal.content / argumentTotal.count) / 4) : 0,
+            expr: argumentTotal.count ? Math.round((argumentTotal.expr / argumentTotal.count) / 3) : 0,
+            struct: argumentTotal.count ? Math.round((argumentTotal.struct / argumentTotal.count) / 2) : 0
+        };
+
+        // 3. 呼叫 AI 生成 (保留完整的指令與格式要求)
+        const prompt = `你是一位資深的中文科科主任。以下是 ${g}年級${c}班 的學習數據摘要。
+        
+        ### 班級數據概覽 (寫作評分)：
+        - 敘事抒情文 (平均分 0-10)：內容${narrAvg.content}, 表達${narrAvg.expr}, 結構${narrAvg.struct}
+        - 議論文 (平均分 0-10)：內容${argAvg.content}, 表達${argAvg.expr}, 結構${argAvg.struct}
+
+        ### 學生寫作表現 (大綱構思 + 成品)：
+        ${outlineSummary || "（暫無大綱紀錄）"}
+        ${classSummary}
+
+        ### 學生閱讀理解表現 (來自閱讀練習紀錄)：
+        ${readingSummary || "（暫無閱讀練習紀錄）"}
+
+        ### 學生整合拓展表現 (來自練習紀錄)：
+        ${expandSummary || "（暫無整合拓展紀錄）"}
+
+        ### 你的任務：
+        請生成一份「全班綜合學習評估報告」。
+        **關鍵要求：**
+        1. 整合「讀」、「寫」、「聽/說(整合拓展)」的全方位表現。
+        2. 將「大綱構思」融合到寫作分析中，分析學生在構思與實作間的落差。
+        3. 必須為每個範疇（閱讀、敘事、議論、整合拓展）提供獨立的分析區塊。
+
+        ### 核心指令 (Privacy Protocols)：
+        1. **宏觀視角**：報告必須完全聚焦於「班級整體表現」或「大部分學生」。
+        2. **嚴禁個別提及**：絕對**不可以**在報告中提及任何特定學生編號或具體個案。
+        3. **趨勢分析**：請將個別樣本中的具體問題（如離題、論據不足、拓展方向錯誤）轉化為全班性的強弱項分析。
+
+        ### 輸出格式要求 (嚴格遵守 HTML，樣式需與學生報告一致)：
+        請直接輸出 HTML 代碼，不要使用 Markdown。
+
+        1. **班級整體概況**：
+           <div class="report-section">
+               <div class="report-category-badge badge-general">
+                   <div class="badge-general-title"><i class="fas fa-users"></i> ${g}${c}班 綜合評估</div>
+               </div>
+               <div class="report-text-card">
+                   <p>(約150字，總結班級在「讀」、「寫」、「整合」三方面的整體強弱項，並給予一個總體的學習氛圍評價。)</p>
+               </div>
+           </div>
+           <div class="report-separator"></div>
+
+        2. **範疇深入分析**：
+           <div class="report-section">
+               <div class="report-category-badge badge-reading"><i class="fas fa-book-open"></i> 閱讀</div>
+               <div class="report-text-card">
+                   <p>(分析班級在閱讀理解上的普遍問題，例如理解題意、推論能力或文本依據運用等。)</p>
+               </div>
+           </div>
+           
+           <div class="report-section">
+               <div class="report-category-badge badge-narrative"><i class="fas fa-pen-nib"></i> 敘事抒情</div>
+               <div class="report-text-card">
+                   <p>(分析敘事文的通病與亮點，請融合對大綱構思的觀察，例如立意是否深刻、詳略是否得當。)</p>
+               </div>
+           </div>
+           
+           <div class="report-section">
+               <div class="report-category-badge badge-argument"><i class="fas fa-gavel"></i> 議論</div>
+               <div class="report-text-card">
+                   <p>(分析議論文的通病與亮點，請融合對大綱構思的觀察，例如論點是否清晰、論證是否嚴謹。)</p>
+               </div>
+           </div>
+
+           <div class="report-section">
+               <div class="report-category-badge badge-expand"><i class="fas fa-layer-group"></i> 整合拓展</div>
+               <div class="report-text-card">
+                   <p>(分析班級在整合拓展練習上的表現，例如是否能準確回應主題句、拓展方向是否合理、資料運用是否恰當。)</p>
+               </div>
+           </div>
+
+        3. **教學建議**：
+           <div class="report-quote-card">
+               <div class="report-quote-content">「(給任教老師的整體教學策略建議，涵蓋讀寫結合及思維訓練的方向)」</div>
+               <div class="report-quote-author">—— AI 科主任</div>
+           </div>`;
+
+        const response = await callAPI(prompt);
+
+        // --- 4. 儲存與顯示 ---
+        const reportData = {
+            timestamp: firebase.database.ServerValue.TIMESTAMP,
+            dateStr: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
+            stats: {
+                narrAvg: narrAvg,
+                argAvg: argAvg,
+                narrativeTotal: Math.round((narrativeTotal.content+narrativeTotal.expr+narrativeTotal.struct)/narrativeTotal.count) || 0,
+                argumentTotal: Math.round((argumentTotal.content+argumentTotal.expr+argumentTotal.struct)/argumentTotal.count) || 0
+            },
+            aiHtml: response
+        };
+
+        await db.ref(`class_reports/${g}/${c}`).push(reportData);
+        loadClassReportHistory();
+        openClassReportModal(reportData);
+
+    } catch (e) {
+        console.error(e);
+        alert("生成失敗，請稍後再試。");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)';
+    }
+}
         // === 新增：載入與顯示歷史全班報告 ===
        function loadClassReportHistory() {
     const g = document.getElementById('reportGrade').value;

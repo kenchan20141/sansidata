@@ -821,19 +821,55 @@ async function deleteAssignment(aid, g, c) {
             });
         }
         function moveIndividualStudent() {
-            const n=document.querySelector('input[name="ts"]:checked')?.value;
-            if(!n) return alert("請選擇學生");
-            const fg=document.getElementById('indivFromGrade').value, fc=document.getElementById('indivFromClass').value;
-            const tg=document.getElementById('indivToGrade').value, tc=document.getElementById('indivToClass').value, nn=document.getElementById('indivNewNumber').value;
-            if(!nn) return alert("請輸入新班號");
-            db.ref(`students/${fg}/${fc}/${n}`).once('value', s=>{
-                const d=s.val(); if(!d) return;
-                d.profile = d.profile || {}; d.profile.grade=tg; d.profile.class=tc; d.profile.number=nn;
-                db.ref(`students/${tg}/${tc}/${n}`).set(d, e=>{
-                    if(!e) { db.ref(`students/${fg}/${fc}/${n}`).remove(); alert("成功"); populateTransferStudentList(); }
-                });
+    const n = document.querySelector('input[name="ts"]:checked')?.value;
+    if (!n) return alert("請選擇學生");
+
+    const fg = document.getElementById('indivFromGrade').value;
+    const fc = document.getElementById('indivFromClass').value;
+    const tg = document.getElementById('indivToGrade').value;
+    const tc = document.getElementById('indivToClass').value;
+    const nn = document.getElementById('indivNewNumber').value;
+
+    if (!nn) return alert("請輸入新班號");
+
+    const oldPath = `students/${fg}/${fc}/${n}`;
+    const newPath = `students/${tg}/${tc}/${n}`;
+
+    db.ref(oldPath).once('value', s => {
+        const d = s.val();
+        if (!d) return;
+
+        // 更新資料物件中的 profile
+        d.profile = d.profile || {};
+        d.profile.grade = tg;
+        d.profile.class = tc;
+        d.profile.number = nn;
+
+        // 判斷是否為同班移動（例如只改班號）
+        if (oldPath === newPath) {
+            // 同路徑：直接更新，不要執行 remove
+            db.ref(newPath).update(d, e => {
+                if (!e) {
+                    alert("班號已更新");
+                    populateTransferStudentList();
+                } else {
+                    alert("更新失敗：" + e.message);
+                }
+            });
+        } else {
+            // 跨班移動：先在新位置建立，再刪除舊位置
+            db.ref(newPath).set(d, e => {
+                if (!e) {
+                    db.ref(oldPath).remove();
+                    alert("學生已成功轉班");
+                    populateTransferStudentList();
+                } else {
+                    alert("移轉失敗：" + e.message);
+                }
             });
         }
+    });
+}
         function deleteStudent() {
             const n=document.querySelector('input[name="ts"]:checked')?.value;
             if(n && confirm(`刪除 ${n}?`)) db.ref(`students/${document.getElementById('indivFromGrade').value}/${document.getElementById('indivFromClass').value}/${n}`).remove(e=>{ if(!e) populateTransferStudentList(); });

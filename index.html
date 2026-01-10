@@ -312,8 +312,11 @@
         <!-- 導航列 -->
         <div class="nav-bar">
             <button class="nav-btn active" onclick="switchTab('students')"><i class="fas fa-user-graduate"></i> 學生管理</button>
-            <button class="nav-btn" onclick="switchTab('assignments')"><i class="fas fa-edit"></i> 課業管理</button>
+            
             <button class="nav-btn" onclick="switchTab('reports')"><i class="fas fa-chart-pie"></i> 學生報告</button>
+            <button class="nav-btn" onclick="switchTab('assignments')"><i class="fas fa-edit"></i> 課業管理</button>
+            <!-- 在 nav-bar 內加入這行 -->
+<button class="nav-btn" onclick="switchTab('analytics')"><i class="fas fa-chart-bar"></i> 數據統計</button>
             <button class="nav-btn" onclick="switchTab('management')"><i class="fas fa-calendar-alt"></i> 學年管理</button>
         </div>
 
@@ -465,6 +468,82 @@
             </div>
         </div>
     </div>
+
+
+<!-- 5. 數據統計頁面 (全新) -->
+<div id="tab-analytics" class="box" style="display:none;">
+    <h2>神思大數據統計</h2>
+    
+    <div class="filter-group">
+        <!-- 統計對象選擇 -->
+        <label><i class="fas fa-cubes" style="color:var(--m-blue);"></i> 對象：</label>
+        <select id="statScope" onchange="updateStatInputs()">
+            <option value="global">所有用家 (含訪客)</option>
+            <option value="school">全校 (僅已登入)</option>
+            <option value="class">個別班級</option>
+            <option value="student">個別學生</option>
+        </select>
+
+        <!-- 動態顯示的輸入框 (班級/學生) -->
+        <span id="statClassInput" style="display:none;">
+            <select id="statGrade">
+                <option value="1">中一</option><option value="2">中二</option><option value="3">中三</option>
+                <option value="4">中四</option><option value="5">中五</option><option value="6">中六</option>
+            </select>
+            <select id="statClass">
+                <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+            </select>
+        </span>
+        <span id="statStudentInput" style="display:none;">
+            <input type="text" id="statStudentName" placeholder="學生姓名" style="width:120px;">
+        </span>
+
+        <!-- 時間維度選擇 -->
+        <label style="margin-left:15px;"><i class="far fa-clock" style="color:var(--m-brown);"></i> 時間：</label>
+        <select id="statTimeMode" onchange="updateTimeInputs()">
+            <option value="day">本日 (實時)</option>
+            <option value="month">本月 (趨勢)</option>
+            <option value="year">本年 (總覽)</option>
+        </select>
+        
+        <!-- 日期/月份/年份 選擇器 -->
+        <input type="date" id="statDate" style="display:inline-block;">
+        <select id="statMonth" style="display:none;">
+            <!-- JS 自動填充 1-12 月 -->
+        </select>
+        <select id="statYear" style="display:none;">
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+            <option value="2027">2027</option>
+        </select>
+
+        <button class="btn-action btn-view" onclick="fetchAndRenderStats()">
+            <i class="fas fa-search"></i> 查詢
+        </button>
+    </div>
+
+    <!-- 數據概覽卡片 -->
+    <div style="display:flex; gap:20px; justify-content:center; margin-bottom:30px; flex-wrap:wrap;">
+        <div style="background:#f0f7ff; padding:20px; border-radius:12px; text-align:center; flex:1; min-width:150px; border:1px solid #cce5ff;">
+            <div style="color:#007bff; font-size:2em; font-weight:bold;" id="dispVisits">0</div>
+            <div style="color:#666;">總進入次數</div>
+        </div>
+        <div style="background:#fff0f0; padding:20px; border-radius:12px; text-align:center; flex:1; min-width:150px; border:1px solid #ffcccc;">
+            <div style="color:#dc3545; font-size:2em; font-weight:bold;" id="dispDuration">0</div>
+            <div style="color:#666;">總使用時長 (分鐘)</div>
+        </div>
+        <div style="background:#f0fff4; padding:20px; border-radius:12px; text-align:center; flex:1; min-width:150px; border:1px solid #c3e6cb;">
+            <div style="color:#28a745; font-size:2em; font-weight:bold;" id="dispAvg">0</div>
+            <div style="color:#666;">平均每次時長 (分鐘)</div>
+        </div>
+    </div>
+
+    <!-- 圖表容器 -->
+    <div class="chart-container" style="position: relative; height:400px; width:100%;">
+        <canvas id="analyticsChart"></canvas>
+    </div>
+</div>
+    
 
     <!-- Modal: 學生歷史檢閱 (通用) -->
     <div id="historyViewerModal" class="modal-overlay">
@@ -1255,6 +1334,276 @@ function deleteClassReport(reportKey) {
             if(all[6]) await db.ref(`graduates/${y}`).set(all[6]);
             db.ref('students').set(n, e=>alert(e?'失敗':'成功'));
         }
+
+
+// === [新增] 數據統計與圖表邏輯 ===
+
+// 1. 初始化介面
+function initStatUI() {
+    const today = new Date();
+    document.getElementById('statDate').valueAsDate = today;
+    
+    // 填充月份選單
+    const monthSel = document.getElementById('statMonth');
+    monthSel.innerHTML = '';
+    for(let i=1; i<=12; i++) {
+        const opt = document.createElement('option');
+        opt.value = String(i).padStart(2, '0');
+        opt.text = i + '月';
+        if(i === today.getMonth()+1) opt.selected = true;
+        monthSel.add(opt);
+    }
+    
+    // 預設年份
+    const yearSel = document.getElementById('statYear');
+    yearSel.value = today.getFullYear();
+
+    updateStatInputs();
+    updateTimeInputs();
+}
+
+// 2. 更新輸入框顯示狀態
+function updateStatInputs() {
+    const scope = document.getElementById('statScope').value;
+    document.getElementById('statClassInput').style.display = (scope === 'class' || scope === 'student') ? 'inline-block' : 'none';
+    document.getElementById('statStudentInput').style.display = (scope === 'student') ? 'inline-block' : 'none';
+}
+
+function updateTimeInputs() {
+    const mode = document.getElementById('statTimeMode').value;
+    document.getElementById('statDate').style.display = (mode === 'day') ? 'inline-block' : 'none';
+    document.getElementById('statMonth').style.display = (mode === 'month') ? 'inline-block' : 'none';
+    document.getElementById('statYear').style.display = (mode === 'month' || mode === 'year') ? 'inline-block' : 'none';
+}
+
+// 3. 抓取數據並繪圖 (核心邏輯)
+let analyticsChartInstance = null;
+
+async function fetchAndRenderStats() {
+    const scope = document.getElementById('statScope').value;
+    const mode = document.getElementById('statTimeMode').value;
+    const btn = event.target;
+    
+    // 鎖定按鈕
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+
+    // A. 構建路徑參數
+    let year, month, day;
+    if (mode === 'day') {
+        const d = new Date(document.getElementById('statDate').value);
+        year = d.getFullYear();
+        month = String(d.getMonth()+1).padStart(2,'0');
+        day = String(d.getDate()).padStart(2,'0');
+    } else {
+        year = document.getElementById('statYear').value;
+        if (mode === 'month') month = document.getElementById('statMonth').value;
+    }
+
+    // B. 決定要讀取的資料庫路徑
+    let fetchPath = `analytics/${year}`;
+    if (mode === 'day') fetchPath += `/${month}/${day}`;
+    else if (mode === 'month') fetchPath += `/${month}`;
+
+    try {
+        const snapshot = await db.ref(fetchPath).once('value');
+        const data = snapshot.val();
+        
+        if (!data) {
+            alert("該時段無數據紀錄。");
+            resetCharts();
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            return;
+        }
+
+        // C. 數據聚合 (Aggregation)
+        let aggregatedData = {}; // { '01日': {visits:10, duration:500}, ... }
+        let totalStats = { visits: 0, duration: 0 };
+
+        // 遞迴函式：找出目標數據節點並累加
+        function processNode(nodeData, dateLabel) {
+            let targetNode = null;
+
+            // 根據選擇的對象 (Scope) 深入挖掘
+            if (scope === 'global') {
+                targetNode = nodeData.global;
+            } 
+            else if (scope === 'school') {
+                targetNode = nodeData.school;
+            } 
+            else if (scope === 'class') {
+                const g = document.getElementById('statGrade').value;
+                const c = document.getElementById('statClass').value;
+                if (nodeData.classes && nodeData.classes[g+c]) {
+                    targetNode = nodeData.classes[g+c];
+                }
+            }
+            else if (scope === 'student') {
+                const g = document.getElementById('statGrade').value;
+                const c = document.getElementById('statClass').value;
+                const n = document.getElementById('statStudentName').value.trim();
+                // 檢查路徑是否存在
+                if (nodeData.students && nodeData.students[g] && nodeData.students[g][c] && nodeData.students[g][c][n]) {
+                    targetNode = nodeData.students[g][c][n];
+                }
+            }
+
+            // 如果找到了數據，進行累加
+            if (targetNode) {
+                if (!aggregatedData[dateLabel]) aggregatedData[dateLabel] = { visits: 0, duration: 0 };
+                
+                aggregatedData[dateLabel].visits += (targetNode.visits || 0);
+                aggregatedData[dateLabel].duration += (targetNode.duration || 0);
+                
+                totalStats.visits += (targetNode.visits || 0);
+                totalStats.duration += (targetNode.duration || 0);
+            }
+        }
+
+        // 根據時間模式遍歷數據
+        if (mode === 'day') {
+            // 本日：只有一筆資料
+            processNode(data, '本日');
+        } 
+        else if (mode === 'month') {
+            // 本月：data 裡面是 {'01':{...}, '02':{...}}
+            Object.keys(data).sort().forEach(dKey => {
+                processNode(data[dKey], `${parseInt(dKey)}日`);
+            });
+        } 
+        else if (mode === 'year') {
+            // 本年：data 裡面是 {'01':{...}, '02':{...}} (月份)
+            Object.keys(data).sort().forEach(mKey => {
+                const monthData = data[mKey];
+                // 該月內還有很多天，需要再遍歷每一天
+                Object.keys(monthData).forEach(dKey => {
+                    processNode(monthData[dKey], `${parseInt(mKey)}月`);
+                });
+            });
+        }
+
+        // D. 更新上方大字報
+        document.getElementById('dispVisits').innerText = totalStats.visits;
+        document.getElementById('dispDuration').innerText = Math.round(totalStats.duration / 60); // 秒轉分
+        const avg = totalStats.visits > 0 ? Math.round((totalStats.duration / 60) / totalStats.visits) : 0;
+        document.getElementById('dispAvg').innerText = avg;
+
+        // E. 繪製圖表
+        renderAnalyticsChart(aggregatedData);
+
+    } catch (e) {
+        console.error(e);
+        alert("讀取數據失敗");
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+// 4. 重置圖表
+function resetCharts() {
+    document.getElementById('dispVisits').innerText = 0;
+    document.getElementById('dispDuration').innerText = 0;
+    document.getElementById('dispAvg').innerText = 0;
+    if (analyticsChartInstance) {
+        analyticsChartInstance.destroy();
+        analyticsChartInstance = null;
+    }
+}
+
+// 5. 渲染混合圖表 (Chart.js)
+function renderAnalyticsChart(aggData) {
+    const ctx = document.getElementById('analyticsChart').getContext('2d');
+    if (analyticsChartInstance) analyticsChartInstance.destroy();
+
+    const labels = Object.keys(aggData); // X軸 (日期/月份)
+    const visitData = labels.map(l => aggData[l].visits); // 長條圖數據
+    const durationData = labels.map(l => Math.round(aggData[l].duration / 60)); // 折線圖數據 (分鐘)
+
+    analyticsChartInstance = new Chart(ctx, {
+        type: 'bar', // 預設類型
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '進入次數 (次)',
+                    data: visitData,
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1,
+                    order: 2, // 層級 (在折線圖下面)
+                    yAxisID: 'y'
+                },
+                {
+                    label: '使用時長 (分鐘)',
+                    data: durationData,
+                    type: 'line', // 混合折線圖
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    tension: 0.3, // 曲線平滑度
+                    order: 1, // 層級 (最上層)
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) label += ': ';
+                            if (context.parsed.y !== null) label += context.parsed.y;
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: { display: true, text: '次數' },
+                    beginAtZero: true
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    grid: { drawOnChartArea: false }, // 不顯示右軸網格，保持乾淨
+                    title: { display: true, text: '分鐘' },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+// 6. 修改 tab 切換函式 (確保初始化)
+const originalSwitchTab = window.switchTab;
+window.switchTab = function(tabId) {
+    originalSwitchTab(tabId); // 執行原本的切換邏輯
+    if(tabId === 'analytics') {
+        // 第一次進入時初始化 UI
+        if(document.getElementById('statMonth').options.length === 0) {
+            initStatUI();
+        }
+    }
+};
+
+
+        
     </script>
 
 <footer class="copyright-footer">

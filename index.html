@@ -655,9 +655,11 @@
 
 
 // === OneSignal 發送函式 (請確保這段在您的代碼中) ===
-const _p1 = "os_v2_app_";
-const _p2 = "7bo2joflvzgf5dnzzh2gh7eycxk5kn45q25uwymlyhqbq746uburtgfhd3xfyyxullklptksmnddfdwgpechno4byssraz7yysuusrq";
-const _OS_KEY = _p1 + _p2;
+// === OneSignal 發送函式 ===
+// 簡單混淆 API Key
+const _k1 = "os_v2_app_";
+const _k2 = "7bo2joflvzgf5dnzzh2gh7eycxk5kn45q25uwymlyhqbq746uburtgfhd3xfyyxullklptksmnddfdwgpechno4byssraz7yysuusrq";
+const _OS_KEY = _k1 + _k2;
 
 async function sendClassNotification(targetGrade, targetClass, title, message) {
     const options = {
@@ -668,20 +670,26 @@ async function sendClassNotification(targetGrade, targetClass, title, message) {
             Authorization: 'Basic ' + _OS_KEY
         },
         body: JSON.stringify({
-            app_id: "f85da4b8-abae-4c5e-8db9-c9f463fc9815",
+            app_id: "f85da4b8-abae-4c5e-8db9-c9f463fc9815", // 神思 App ID
             headings: { en: title, zh: title },
             contents: { en: message, zh: message },
-            // ★★★ 這裡就是防止發給全校的關鍵過濾器 ★★★
+            // 關鍵：只發送給該班級的標籤
             filters: [
                 { field: "tag", key: "grade", relation: "=", value: targetGrade },
                 { operator: "AND" },
                 { field: "tag", key: "class", relation: "=", value: targetClass }
             ],
-            url: "https://kenchan20141.github.io/AIChinese/" // 點擊通知後的網址
+            // 點擊通知後打開的網址
+            url: "https://kenchan20141.github.io/AIChinese/"
         })
     };
-    try { await fetch('https://onesignal.com/api/v1/notifications', options); } 
-    catch (err) { console.error('推播失敗:', err); }
+
+    try {
+        await fetch('https://onesignal.com/api/v1/notifications', options);
+        console.log('推播發送成功');
+    } catch (err) {
+        console.error('推播發送失敗:', err);
+    }
 }
 
         

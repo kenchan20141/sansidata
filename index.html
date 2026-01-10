@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>神思 - 教師後台</title>
+    <title>神思 - 教研平台</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -259,6 +259,30 @@
             .filter-group select, .filter-group input { width: 100%; } .transfer-grid { flex-direction: column; }
             .modal-content-container { flex-direction: column; } .submission-sidebar { width: 100%; height: 40%; }
         }
+
+
+.copyright-footer {
+    position: fixed;
+    bottom: 0;
+    right: 0;
+    padding: 5px 10px;
+    background-color: #f1f1f1;
+}
+
+.copyright-footer p {
+    margin: 0;
+    font-size: 14px;
+}
+
+@media (max-width: 600px) {
+    .copyright-footer p {
+        font-size: 12px;
+    }
+}
+
+
+
+        
     </style>
 </head>
 <body>
@@ -266,7 +290,7 @@
     <!-- === 安全登入閘門 === -->
     <div id="loginOverlay">
         <div class="login-box">
-            <h2 style="color: var(--m-blue); margin-bottom: 10px;">神思・教師後台</h2>
+            <h2 style="color: var(--m-blue); margin-bottom: 10px;">神思・教研平台</h2>
             <p style="color: #888; margin-bottom: 30px;">請使用學校教師帳號登入以存取資料</p>
             <button id="loginBtn" class="login-btn" onclick="teacherLogin()">
                 <i class="fab fa-google"></i> Google 帳號登入
@@ -807,35 +831,104 @@
         }
 
         // === 新增：載入與顯示歷史全班報告 ===
-        function loadClassReportHistory() {
-            const g = document.getElementById('reportGrade').value;
-            const c = document.getElementById('reportClass').value;
-            const container = document.getElementById('classReportHistoryContainer');
-            const list = document.getElementById('classReportList');
+       function loadClassReportHistory() {
+    const g = document.getElementById('reportGrade').value;
+    const c = document.getElementById('reportClass').value;
+    const container = document.getElementById('classReportHistoryContainer');
+    const list = document.getElementById('classReportList');
 
-            db.ref(`class_reports/${g}/${c}`).once('value', snapshot => {
-                const data = snapshot.val();
-                if (!data) {
-                    container.style.display = 'none';
-                    return;
-                }
-
-                container.style.display = 'block';
-                list.innerHTML = '';
-
-                // 將資料轉為陣列並按時間倒序排列
-                Object.entries(data)
-                    .sort(([,a], [,b]) => b.timestamp - a.timestamp)
-                    .forEach(([key, report]) => {
-                        const btn = document.createElement('button');
-                        btn.className = 'btn-action';
-                        btn.style.cssText = 'background:white; color:#555; border:1px solid #ccc; flex-shrink:0;';
-                        btn.innerHTML = `<i class="far fa-file-alt"></i> ${report.dateStr || '未知日期'}`;
-                        btn.onclick = () => openClassReportModal(report);
-                        list.appendChild(btn);
-                    });
-            });
+    db.ref(`class_reports/${g}/${c}`).once('value', snapshot => {
+        const data = snapshot.val();
+        if (!data) {
+            container.style.display = 'none';
+            return;
         }
+
+        container.style.display = 'block';
+        list.innerHTML = '';
+
+        // 將資料轉為陣列並按時間倒序排列
+        Object.entries(data)
+            .sort(([,a], [,b]) => b.timestamp - a.timestamp)
+            .forEach(([key, report]) => {
+                
+                // 建立一個外層容器 (膠囊狀)
+                const wrapper = document.createElement('div');
+                wrapper.style.cssText = `
+                    display: inline-flex; 
+                    align-items: center; 
+                    background: #fff; 
+                    border: 1px solid #ccc; 
+                    border-radius: 50px; 
+                    padding: 5px 5px 5px 15px; 
+                    flex-shrink: 0; 
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+                    transition: transform 0.2s;
+                `;
+
+                // 1. 檢閱按鈕 (文字部分)
+                const viewSpan = document.createElement('span');
+                viewSpan.style.cssText = "cursor: pointer; color: #555; font-size: 0.95em; font-weight: bold; margin-right: 10px;";
+                viewSpan.innerHTML = `<i class="far fa-file-alt"></i> ${report.dateStr || '未知日期'}`;
+                viewSpan.onclick = () => openClassReportModal(report);
+
+                // 2. 刪除按鈕 (紅色圓形圖示，無文字)
+                const delBtn = document.createElement('button');
+                delBtn.className = 'btn-action';
+                delBtn.title = "刪除此報告"; // 滑鼠懸停提示
+                delBtn.style.cssText = `
+                    background: #fbecec; 
+                    color: #d69a92; 
+                    border: none; 
+                    border-radius: 50%; 
+                    width: 32px; 
+                    height: 32px; 
+                    padding: 0;
+                    display: flex; 
+                    align-items: center; 
+                    justify-content: center;
+                    font-size: 14px;
+                    box-shadow: none;
+                `;
+                
+                delBtn.innerHTML = `<i class="fas fa-trash-alt"></i>`;
+                
+                // 按鈕互動效果
+                delBtn.onmouseover = function() { this.style.background = '#d69a92'; this.style.color = 'white'; };
+                delBtn.onmouseout = function() { this.style.background = '#fbecec'; this.style.color = '#d69a92'; };
+                
+                delBtn.onclick = (e) => {
+                    e.stopPropagation(); // 防止觸發檢閱
+                    deleteClassReport(key);
+                };
+
+                // 組合元素
+                wrapper.appendChild(viewSpan);
+                wrapper.appendChild(delBtn);
+                list.appendChild(wrapper);
+            });
+    });
+}
+
+        // === 新增：刪除全班報告邏輯 ===
+function deleteClassReport(reportKey) {
+    // 二次確認 (雖然不顯示文字按鈕，但 Alert 還是要有文字提示比較安全)
+    if (!confirm("確定要刪除這份全班報告嗎？\n(此動作無法復原)")) return;
+
+    const g = document.getElementById('reportGrade').value;
+    const c = document.getElementById('reportClass').value;
+
+    // 執行 Firebase 刪除
+    db.ref(`class_reports/${g}/${c}/${reportKey}`).remove()
+        .then(() => {
+            // 刪除成功後，重新載入列表
+            loadClassReportHistory();
+        })
+        .catch(err => {
+            console.error(err);
+            alert("刪除失敗：" + err.message);
+        });
+}
 
         function openClassReportModal(reportData) {
             const modal = document.getElementById('classReportModal');
@@ -1099,5 +1192,11 @@
             db.ref('students').set(n, e=>alert(e?'失敗':'成功'));
         }
     </script>
+
+<footer class="copyright-footer">
+<p>Copyright © 2025 陳冠健. All rights reserved.</p>
+</footer>
+
+    
 </body>
 </html>

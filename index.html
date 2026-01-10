@@ -1379,6 +1379,7 @@ function updateTimeInputs() {
 // 3. 抓取數據並繪圖 (核心邏輯)
 let analyticsChartInstance = null;
 
+// === [修復版] 抓取數據並繪圖 (核心邏輯) ===
 async function fetchAndRenderStats() {
     const scope = document.getElementById('statScope').value;
     const mode = document.getElementById('statTimeMode').value;
@@ -1389,16 +1390,26 @@ async function fetchAndRenderStats() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     btn.disabled = true;
 
-    // A. 構建路徑參數
+    // A. 構建路徑參數 (關鍵修復：直接處理字串，避免時區誤差)
     let year, month, day;
+    
     if (mode === 'day') {
-        const d = new Date(document.getElementById('statDate').value);
-        year = d.getFullYear();
-        month = String(d.getMonth()+1).padStart(2,'0');
-        day = String(d.getDate()).padStart(2,'0');
+        const rawDate = document.getElementById('statDate').value; // 格式: "2026-01-11"
+        if (!rawDate) {
+            alert("請選擇日期");
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            return;
+        }
+        const parts = rawDate.split('-'); // ["2026", "01", "11"]
+        year = parts[0];
+        month = parts[1];
+        day = parts[2];
     } else {
         year = document.getElementById('statYear').value;
-        if (mode === 'month') month = document.getElementById('statMonth').value;
+        if (mode === 'month') {
+            month = document.getElementById('statMonth').value; // 確保這裡的值是 "01", "02" (有補零)
+        }
     }
 
     // B. 決定要讀取的資料庫路徑
@@ -1406,12 +1417,20 @@ async function fetchAndRenderStats() {
     if (mode === 'day') fetchPath += `/${month}/${day}`;
     else if (mode === 'month') fetchPath += `/${month}`;
 
+    // ★★★ 除錯訊息 (按 F12 看 Console) ★★★
+    console.log(`正在讀取路徑: ${fetchPath}`);
+    console.log(`篩選對象: ${scope}`);
+
     try {
         const snapshot = await db.ref(fetchPath).once('value');
         const data = snapshot.val();
         
+        // ★★★ 除錯訊息 ★★★
+        console.log("Firebase 回傳資料:", data);
+
         if (!data) {
-            alert("該時段無數據紀錄。");
+            console.warn("⚠️ 此路徑無資料回傳");
+            alert(`找不到數據！\n正在讀取路徑：${fetchPath}\n\n請確認 Firebase Console 中該日期是否真的有數據。`);
             resetCharts();
             btn.innerHTML = originalText;
             btn.disabled = false;
@@ -1424,6 +1443,8 @@ async function fetchAndRenderStats() {
 
         // 遞迴函式：找出目標數據節點並累加
         function processNode(nodeData, dateLabel) {
+            if (!nodeData) return; // 防呆
+
             let targetNode = null;
 
             // 根據選擇的對象 (Scope) 深入挖掘
@@ -1436,6 +1457,7 @@ async function fetchAndRenderStats() {
             else if (scope === 'class') {
                 const g = document.getElementById('statGrade').value;
                 const c = document.getElementById('statClass').value;
+                // 檢查路徑: classes -> 6A
                 if (nodeData.classes && nodeData.classes[g+c]) {
                     targetNode = nodeData.classes[g+c];
                 }
@@ -1444,7 +1466,7 @@ async function fetchAndRenderStats() {
                 const g = document.getElementById('statGrade').value;
                 const c = document.getElementById('statClass').value;
                 const n = document.getElementById('statStudentName').value.trim();
-                // 檢查路徑是否存在
+                // 檢查路徑
                 if (nodeData.students && nodeData.students[g] && nodeData.students[g][c] && nodeData.students[g][c][n]) {
                     targetNode = nodeData.students[g][c][n];
                 }
@@ -1452,19 +1474,23 @@ async function fetchAndRenderStats() {
 
             // 如果找到了數據，進行累加
             if (targetNode) {
+                // 數據清洗：確保是數字
+                const v = parseInt(targetNode.visits || 0);
+                const d = parseInt(targetNode.duration || 0);
+
                 if (!aggregatedData[dateLabel]) aggregatedData[dateLabel] = { visits: 0, duration: 0 };
                 
-                aggregatedData[dateLabel].visits += (targetNode.visits || 0);
-                aggregatedData[dateLabel].duration += (targetNode.duration || 0);
+                aggregatedData[dateLabel].visits += v;
+                aggregatedData[dateLabel].duration += d;
                 
-                totalStats.visits += (targetNode.visits || 0);
-                totalStats.duration += (targetNode.duration || 0);
+                totalStats.visits += v;
+                totalStats.duration += d;
             }
         }
 
         // 根據時間模式遍歷數據
         if (mode === 'day') {
-            // 本日：只有一筆資料
+            // 本日：直接處理當前節點
             processNode(data, '本日');
         } 
         else if (mode === 'month') {
@@ -1494,8 +1520,8 @@ async function fetchAndRenderStats() {
         renderAnalyticsChart(aggregatedData);
 
     } catch (e) {
-        console.error(e);
-        alert("讀取數據失敗");
+        console.error("讀取過程發生錯誤:", e);
+        alert("讀取數據失敗：" + e.message);
     } finally {
         btn.innerHTML = originalText;
         btn.disabled = false;

@@ -661,6 +661,207 @@
         }
         auth.onAuthStateChanged(user => { if (user && user.email.endsWith('@ccckyc.edu.hk')) showApp(user); });
 
+
+
+// ==============================================
+        // === 補全：課業管理邏輯 (修復 ReferenceError) ===
+        // ==============================================
+
+        // 1. 載入已派發課業列表
+        function loadAssignmentHistory() {
+            const g = document.getElementById('assignGrade').value;
+            const c = document.getElementById('assignClass').value;
+            const list = document.getElementById('assignmentHistoryList');
+            
+            list.innerHTML = '<p style="text-align:center; padding:20px; color:#999;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
+
+            db.ref(`assignments/${g}/${c}`).once('value', snapshot => {
+                const data = snapshot.val();
+                list.innerHTML = '';
+                
+                if (!data) {
+                    list.innerHTML = '<p style="text-align:center; width:100%; color:#aaa; padding:20px;">此班級暫無已派發的課業。</p>';
+                    return;
+                }
+
+                // 按時間倒序排列
+                Object.entries(data)
+                    .sort(([,a], [,b]) => b.timestamp - a.timestamp)
+                    .forEach(([id, item]) => {
+                        const div = document.createElement('div');
+                        div.className = 'assignment-item';
+                        div.innerHTML = `
+                            <div style="flex:1;">
+                                <div style="font-weight:bold; font-size:1.2em; color:#444;">${item.topic}</div>
+                                <div style="font-size:0.9em; color:#888; margin-top:5px;">
+                                    <span class="tag">${item.type}</span> 
+                                    <i class="far fa-clock"></i> ${item.dateStr || '未知日期'}
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <button class="btn-action btn-view" onclick="viewSubmissions('${id}', '${item.topic}')">
+                                    <i class="fas fa-eye"></i> 檢閱繳交
+                                </button>
+                                <button class="btn-action btn-delete" onclick="deleteAssignment('${id}')">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        `;
+                        list.appendChild(div);
+                    });
+            });
+        }
+
+        // 2. 發布新課業
+        function publishAssignment() {
+            const g = document.getElementById('assignGrade').value;
+            const c = document.getElementById('assignClass').value;
+            const topic = document.getElementById('assignTopic').value.trim();
+            const type = document.getElementById('assignType').value;
+            const btn = document.getElementById('btnPublish');
+
+            if (!topic) {
+                alert("請輸入課業題目！");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 發布中...';
+
+            const newAssignment = {
+                topic: topic,
+                type: type,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                dateStr: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            };
+
+            db.ref(`assignments/${g}/${c}`).push(newAssignment)
+                .then(() => {
+                    alert("發布成功！");
+                    document.getElementById('assignTopic').value = ''; // 清空輸入框
+                    loadAssignmentHistory(); // 重新載入列表
+                })
+                .catch(err => alert("發布失敗：" + err.message))
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-paper-plane"></i> 立即派發';
+                });
+        }
+
+        // 3. 刪除課業
+        function deleteAssignment(id) {
+            if(!confirm("確定要刪除此課業嗎？\n(注意：這不會刪除學生已提交的內容，但會從列表中移除)")) return;
+            
+            const g = document.getElementById('assignGrade').value;
+            const c = document.getElementById('assignClass').value;
+
+            db.ref(`assignments/${g}/${c}/${id}`).remove()
+                .then(() => loadAssignmentHistory())
+                .catch(err => alert("刪除失敗：" + err.message));
+        }
+
+        // 4. 檢閱繳交狀況 (開啟 Modal)
+        async function viewSubmissions(assignmentId, topic) {
+            const g = document.getElementById('assignGrade').value;
+            const c = document.getElementById('assignClass').value;
+            
+            // 開啟 Modal 並設定標題
+            document.getElementById('submissionViewerModal').style.display = 'flex';
+            document.getElementById('submissionTitle').innerText = topic;
+            document.getElementById('submissionList').innerHTML = '<li style="padding:20px; text-align:center; color:#999;">載入名單中...</li>';
+            document.getElementById('submissionDetailArea').innerHTML = '<div style="text-align:center; color:#ccc; margin-top:100px;"><i class="far fa-file-alt" style="font-size:48px;"></i><p>請選擇學生以檢視內容</p></div>';
+
+            try {
+                // 4.1 獲取該班所有學生名單
+                const studentsSnap = await db.ref(`students/${g}/${c}`).once('value');
+                const students = studentsSnap.val() || {};
+
+                // 4.2 獲取該作業的所有繳交紀錄 (假設繳交紀錄存在 submissions 節點下，或者你需要根據你的數據結構調整)
+                // 這裡假設結構是: submissions/{assignmentId}/{studentName} 
+                // 或者如果你的繳交是直接寫入學生歷史紀錄，這裡需要遍歷學生的 history。
+                // *基於你的系統看起來是寫入學生個人 history，這裡我們採用遍歷學生 History 的方式*
+
+                const submissionListEl = document.getElementById('submissionList');
+                submissionListEl.innerHTML = '';
+
+                let submittedCount = 0;
+                let pendingCount = 0;
+
+                // 排序學生 (按學號)
+                const sortedStudentNames = Object.keys(students).sort((a,b) => 
+                    (parseInt(students[a].profile?.number)||99) - (parseInt(students[b].profile?.number)||99)
+                );
+
+                sortedStudentNames.forEach(name => {
+                    const studentData = students[name];
+                    const history = studentData.history ? Object.values(studentData.history) : [];
+                    
+                    // 尋找是否有匹配此 assignmentId 或 題目的紀錄
+                    // 注意：如果你的學生提交時沒有存 assignmentId，這裡可能需要用題目(title)來匹配
+                    const submission = history.find(h => h.assignmentId === assignmentId || h.title === topic);
+
+                    const li = document.createElement('li');
+                    li.className = `submission-item ${submission ? '' : ''}`;
+                    
+                    const statusHtml = submission 
+                        ? `<span class="status-badge status-done"><i class="fas fa-check"></i> 已交</span>`
+                        : `<span class="status-badge status-pending"><i class="fas fa-times"></i> 未交</span>`;
+                    
+                    if(submission) submittedCount++; else pendingCount++;
+
+                    li.innerHTML = `
+                        <div>
+                            <div style="font-weight:bold;">${name} <small style="color:#888;">(${studentData.profile?.number || '?'})</small></div>
+                            <div style="font-size:0.8em; color:#aaa;">${submission ? submission.dateStr.split(' ')[0] : '-'}</div>
+                        </div>
+                        ${statusHtml}
+                    `;
+
+                    // 點擊事件
+                    if (submission) {
+                        li.onclick = () => {
+                            // 移除其他 active
+                            document.querySelectorAll('.submission-item').forEach(i => i.classList.remove('active'));
+                            li.classList.add('active');
+                            showSubmissionDetail(submission, name);
+                        };
+                    } else {
+                        li.style.cursor = 'default';
+                        li.style.opacity = '0.6';
+                    }
+
+                    submissionListEl.appendChild(li);
+                });
+
+                // 更新計數
+                document.getElementById('submitCount').innerText = submittedCount;
+                document.getElementById('pendingCount').innerText = pendingCount;
+
+            } catch (e) {
+                console.error(e);
+                alert("載入名單失敗");
+            }
+        }
+
+        // 5. 顯示單一繳交內容 (在右側顯示)
+        function showSubmissionDetail(data, studentName) {
+            const container = document.getElementById('submissionDetailArea');
+            container.innerHTML = `
+                <h2 style="border-bottom:1px solid #eee; padding-bottom:10px;">${studentName} 的作業</h2>
+                <div style="margin-top:20px;">
+                    <h4 style="color:var(--m-blue);"><i class="fas fa-align-left"></i> 學生作答：</h4>
+                    <div style="background:#f9f9f9; padding:20px; border-radius:8px; line-height:1.6; white-space:pre-wrap; border:1px solid #eee;">${data.userContent || '(無文字內容)'}</div>
+                </div>
+                <div style="margin-top:30px;">
+                    <h4 style="color:var(--m-green);"><i class="fas fa-robot"></i> AI 評語：</h4>
+                    <div class="detail-ai-box">${data.aiContent || '評語生成中...'}</div>
+                </div>
+            `;
+        }
+
+
+
+        
         // === Tab 切換邏輯 ===
         function switchTab(tabId) {
             document.querySelectorAll('.box').forEach(b => b.style.display = 'none');

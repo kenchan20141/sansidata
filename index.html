@@ -653,55 +653,66 @@
             document.getElementById('breadSep2').style.display = s ? 'inline' : 'none';
         }
 
-        // === 2. 課業管理 ===
-        function publishAssignment() {
-            const g = document.getElementById('assignGrade').value, c = document.getElementById('assignClass').value;
-            const topic = document.getElementById('assignTopic').value.trim(), type = document.getElementById('assignType').value;
-            if (!topic) return alert("請輸入題目");
-            document.getElementById('btnPublish').disabled = true;
-            
-            db.ref(`assignments/${g}/${c}`).push().set({ topic, type, timestamp: Date.now() }, e => {
-                document.getElementById('btnPublish').disabled = false;
-                if(e) alert("失敗"); else { alert("成功"); document.getElementById('assignTopic').value=''; loadAssignmentHistory(); }
-            });
-        }
+
+// === OneSignal 發送函式 (請確保這段在您的代碼中) ===
+const _p1 = "os_v2_app_";
+const _p2 = "7bo2joflvzgf5dnzzh2gh7eycxk5kn45q25uwymlyhqbq746uburtgfhd3xfyyxullklptksmnddfdwgpechno4byssraz7yysuusrq";
+const _OS_KEY = _p1 + _p2;
+
+async function sendClassNotification(targetGrade, targetClass, title, message) {
+    const options = {
+        method: 'POST',
+        headers: {
+            accept: 'application/json',
+            'Content-Type': 'application/json',
+            Authorization: 'Basic ' + _OS_KEY
+        },
+        body: JSON.stringify({
+            app_id: "f85da4b8-abae-4c5e-8db9-c9f463fc9815",
+            headings: { en: title, zh: title },
+            contents: { en: message, zh: message },
+            // ★★★ 這裡就是防止發給全校的關鍵過濾器 ★★★
+            filters: [
+                { field: "tag", key: "grade", relation: "=", value: targetGrade },
+                { operator: "AND" },
+                { field: "tag", key: "class", relation: "=", value: targetClass }
+            ],
+            url: "https://kenchan20141.github.io/AIChinese/" // 點擊通知後的網址
+        })
+    };
+    try { await fetch('https://onesignal.com/api/v1/notifications', options); } 
+    catch (err) { console.error('推播失敗:', err); }
+}
+
         
-        function loadAssignmentHistory() {
+        // === 2. 課業管理 ===
+      function publishAssignment() {
     const g = document.getElementById('assignGrade').value;
     const c = document.getElementById('assignClass').value;
-    const list = document.getElementById('assignmentHistoryList');
+    const topic = document.getElementById('assignTopic').value.trim();
+    const type = document.getElementById('assignType').value;
     
-    // 清除舊的監聽器（防止重複切換班級導致多次觸發）
-    db.ref(`assignments/${g}/${c}`).off();
-
-    list.innerHTML = '<p style="text-align:center;">載入中...</p>';
+    if (!topic) return alert("請輸入題目");
+    document.getElementById('btnPublish').disabled = true;
     
-    // 使用 .on('value') 進行即時監聽，學生端若同樣使用 .on() 亦會同步消失
-    db.ref(`assignments/${g}/${c}`).on('value', s => {
-        const d = s.val(); 
-        list.innerHTML = '';
-        if(!d) { 
-            list.innerHTML = '<p style="text-align:center;color:#999; padding:20px;">無課業</p>'; 
-            return; 
+    // 1. 寫入 Firebase (資料庫層面隔離，安全)
+    db.ref(`assignments/${g}/${c}`).push().set({ 
+        topic, 
+        type, 
+        timestamp: Date.now() 
+    }, e => {
+        document.getElementById('btnPublish').disabled = false;
+        if(e) {
+            alert("發佈失敗"); 
+        } else {
+            // 2. 發送 OneSignal 推播 (利用 Tag 隔離，安全)
+            // 只有身上貼有 "4" 和 "A" 標籤的學生會收到
+            sendClassNotification(g, c, "新課業發佈", `老師發佈了新功課：《${topic}》`);
+            
+            alert("成功發佈並已發送推播通知！"); 
+            document.getElementById('assignTopic').value=''; 
+            loadAssignmentHistory(); 
         }
-        
-        Object.entries(d).sort((a,b)=>b[1].timestamp-a[1].timestamp).forEach(([k, t]) => {
-            const date = new Date(t.timestamp).toLocaleDateString('zh-HK');
-            const div = document.createElement('div'); 
-            div.className = 'assignment-item';
-            div.innerHTML = `
-                <div style="flex:1;">
-                    <div style="font-size:1.1em; font-weight:bold; color:#333; margin-bottom:5px;">
-                        <span class="tag">${t.type}</span> ${t.topic}
-                    </div>
-                    <div style="font-size:0.85em; color:#999;"><i class="far fa-clock"></i> ${date}</div>
-                </div>
-                <div style="display:flex; gap:10px;">
-                    <button class="btn-action btn-view" onclick="viewSubmissions('${k}','${t.topic}','${g}','${c}')">檢閱</button> 
-                    <button class="btn-action btn-delete" onclick="deleteAssignment('${k}', '${g}', '${c}')">刪除</button>
-                </div>`;
-            list.appendChild(div);
-        });
     });
 }
 

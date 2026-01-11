@@ -380,99 +380,6 @@ canvas {
 
     .copyright-footer { position: fixed; bottom: 0; right: 0; padding: 5px 10px; background-color: #f1f1f1; z-index: 999; }
     .copyright-footer p { margin: 0; font-size: 14px; }
-
-
-    /* === 解決雷達圖與文字重疊的修復樣式 === */
-/* 1. 確保報告部分有明確的結構化佈局 */
-.report-section {
-    display: block;
-    width: 100%;
-    margin-bottom: 60px;
-    position: relative;
-    overflow: visible;
-    clear: both;
-}
-
-/* 2. 圖表區域容器 - 確保有足夠底部邊距 */
-.report-chart-area {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 30px;
-    align-items: flex-start;
-    width: 100%;
-    margin-bottom: 50px !important;
-    padding-bottom: 30px;
-    border-bottom: 1px solid #eee;
-}
-
-/* 3. 雷達圖容器確保固定高度 */
-.report-radar-container {
-    flex: 1;
-    min-width: 300px;
-    background: #fff;
-    border: 1px solid #eee;
-    border-radius: 12px;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    height: 420px; /* 固定高度 */
-    justify-content: center;
-}
-
-/* 4. 評分條容器 */
-.report-scores-container {
-    flex: 1;
-    min-width: 300px;
-    background: #fdfcf8;
-    border: 1px solid #eee;
-    border-radius: 12px;
-    padding: 25px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-}
-
-/* 5. 強制文字區域換行並有足夠上邊距 */
-.report-text-content {
-    display: block;
-    width: 100%;
-    clear: both;
-    margin-top: 40px !important;
-    position: relative;
-    z-index: 1;
-}
-
-/* 6. 分隔線樣式 */
-.report-separator-line {
-    height: 1px;
-    width: 100%;
-    border: none;
-    border-top: 2px dashed #e0ddd7;
-    margin: 30px 0;
-    opacity: 0.6;
-}
-
-/* 手機版調整 */
-@media (max-width: 768px) {
-    .report-chart-area {
-        flex-direction: column;
-        margin-bottom: 40px !important;
-    }
-    
-    .report-radar-container,
-    .report-scores-container {
-        width: 100%;
-        min-width: auto;
-    }
-    
-    .report-text-content {
-        margin-top: 30px !important;
-    }
-}
-
-
-
-
     
     @media (max-width: 600px) { 
         .copyright-footer p { font-size: 12px; } 
@@ -1225,64 +1132,122 @@ function loadStudentList() {
    // === 關鍵修訂：生成左右並置的 HTML ===
 function generateClassChartHTML(type, avg, count) {
     const id = type === 'narrative' ? 'narrativeClassChart' : 'argumentClassChart';
-    const title = type === 'narrative' ? '敘事抒情' : '議論'; 
+    const title = type === 'narrative' ? '敘事抒情' : '議論';
     const cls = type === 'narrative' ? 'badge-narrative' : 'badge-argument';
-    
-    // 計算分數邏輯
+
+    // 計算各項分數 (維持原邏輯)
     const scoreContent = avg.content * 4;
     const scoreExpr = avg.expr * 3;
     const scoreStruct = avg.struct * 2;
-    const scorePunc = 5; 
-    const scoreTypo = 1; 
+    const scorePunc = 5;
+    const scoreTypo = 1;
     const totalScore = Math.min(100, scoreContent + scoreExpr + scoreStruct + scorePunc + scoreTypo);
-    
+
     return `
-    <div class="report-section">
-        
-        <!-- 標題 -->
-        <div class="report-category-badge ${cls}" style="margin-bottom: 25px;">
+    <div class="report-section" style="
+        display: block !important;
+        width: 100%;
+        margin-bottom: 80px !important;           /* 強制推開下方文字區塊 */
+        padding-bottom: 40px;
+        border-bottom: 1px dashed #e0ddd7;
+    ">
+        <!-- 標題徽章 -->
+        <div class="report-category-badge ${cls}" style="
+            margin-bottom: 30px;
+            display: inline-flex;
+        ">
             <i class="fas fa-book"></i> ${title}
         </div>
-        
-        <!-- 圖表區域 -->
-        <div class="report-chart-area">
-            <!-- 左側評分條 -->
-            <div class="report-scores-container">
-                <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555; margin-bottom: 20px;">
+
+        <!-- 左右並置主容器 -->
+        <div style="
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            align-items: flex-start;
+            width: 100%;
+        ">
+            <!-- 左側：評分條 -->
+            <div style="
+                flex: 1;
+                min-width: 320px;
+                background: #fdfcf8;
+                border: 1px solid #eee;
+                border-radius: 12px;
+                padding: 25px;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            ">
+                <h3 style="
+                    margin-top:0;
+                    border-left:none;
+                    padding-left:0;
+                    text-align:center;
+                    color:#555;
+                    margin-bottom: 25px;
+                ">
                     班級平均表現 <small style="font-weight:normal; color:#999;">(${count}份)</small>
                 </h3>
-                
+
                 <div class="score-item"><label>內容 (40)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div><span class="score-display">${scoreContent}</span></div></div>
                 <div class="score-item"><label>表達 (30)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div><span class="score-display">${scoreExpr}</span></div></div>
                 <div class="score-item"><label>結構 (20)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.struct*10}%" class="progress-bar-fill"></div></div><span class="score-display">${scoreStruct}</span></div></div>
                 <div class="score-item"><label>標點 (10)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:50%" class="progress-bar-fill"></div></div><span class="score-display">${scorePunc}</span></div></div>
                 <div class="score-item"><label>錯別字 (+3)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:33%" class="progress-bar-fill"></div></div><span class="score-display">+${scoreTypo}</span></div></div>
 
-                <div class="total-score-container" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                <div class="total-score-container" style="
+                    margin-top: 25px;
+                    padding-top: 15px;
+                    border-top: 1px solid #eee;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                ">
                     <span style="font-size:1.1em; color:#555;">平均總分: ${totalScore} / 100</span>
-                    <span style="font-size:2em; font-weight:bold; color:#d9534f;">${determineGrade(totalScore)}</span>
+                    <span style="font-size:2.4em; font-weight:bold; color:#d9534f;">${determineGrade(totalScore)}</span>
                 </div>
             </div>
-            
-            <!-- 右側雷達圖 -->
-            <div class="report-radar-container">
-                <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555; margin-bottom: 15px;">能力分佈</h3>
-                
-                <!-- 雷達圖 Canvas 容器 -->
-                <div style="position: relative; width: 100%; max-width: 350px; height: 320px; overflow: hidden; margin: auto;">
+
+            <!-- 右側：雷達圖區塊（加強防塌陷與重疊） -->
+            <div style="
+                flex: 1;
+                min-width: 320px;
+                background:#fff;
+                border:1px solid #eee;
+                border-radius:12px;
+                padding:25px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            ">
+                <h3 style="
+                    margin:0 0 20px 0;
+                    text-align:center;
+                    color:#555;
+                ">能力分佈</h3>
+
+                <!-- 關鍵防重疊容器：強制固定高度 + 底部間距 -->
+                <div style="
+                    position: relative;
+                    width: 100%;
+                    max-width: 380px;
+                    height: 380px !important;
+                    min-height: 380px !important;
+                    margin-bottom: 35px !important;
+                    overflow: hidden;
+                ">
                     <canvas id="${id}"></canvas>
                 </div>
+
+                <!-- 可選小提示，增加視覺區隔 -->
+                <small style="color:#999; text-align:center; font-size:0.9em;">
+                    （數值越高，該面向表現越強）
+                </small>
             </div>
         </div>
-        
-        <!-- 分隔線 -->
-        <div class="report-separator-line"></div>
-        
-        <!-- 文字描述區域 -->
-        <div class="report-text-content">
-            <!-- AI 生成的文字內容會出現在這裡 -->
-        </div>
-        
+
+        <!-- 最後一道保險墊片 -->
+        <div style="height: 40px; width: 100%; clear: both;"></div>
     </div>`;
 }
 

@@ -219,15 +219,26 @@
         .total-score-container { margin-top: 20px; padding-top: 15px; border-top: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
         
         /* === 關鍵修復：雷達圖容器 === */
-        .radar-chart-container { 
-            position: relative; 
-            width: 100%; 
-            height: auto; 
-            aspect-ratio: 1 / 1; /* 強制保持正方形比例 */
-            max-height: 400px;   /* 限制最大高度，避免在大螢幕過大 */
-            margin: 0 auto;
-        }
+        /* === 關鍵修復：雷達圖容器 === */
+.radar-chart-container { 
+    position: relative; 
+    width: 100%;            /* 寬度佔滿父容器 */
+    max-width: 350px;       /* 限制最大寬度，避免過大 */
+    margin: 0 auto;         /* 居中 */
+    aspect-ratio: 1 / 1;    /* 強制保持正方形比例 */
+    overflow: hidden;       /* 確保超出的部分被隱藏 (雖然縮放後不應超出) */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 
+/* 新增：強制 Canvas 元素適應容器大小 */
+.radar-chart-container canvas {
+    width: 100% !important;
+    height: auto !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+}
         /* === 關鍵修復：手機版/窄螢幕強制垂直堆疊 === */
         @media (max-width: 768px) {
             .box { padding: 15px; } .nav-btn { width: 100%; } .filter-group { flex-direction: column; }
@@ -728,14 +739,45 @@
         const cls = type==='narrative'?'badge-narrative':'badge-argument';
         return `<div class="report-section"><div class="report-category-badge ${cls}"><i class="fas fa-book"></i> ${title}</div><div class="report-radar-wrapper"><div class="grading-grid"><div class="grading-scores"><h3>班級平均表現</h3><div class="score-item"><label>內容</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.content*4}</span></div></div><div class="score-item"><label>表達</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.expr*3}</span></div></div><div class="score-item"><label>結構</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.struct*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.struct*2}</span></div></div><div class="total-score-container"><span style="font-size:1.1em;">平均總分: ${total}</span><span style="font-size:2em;font-weight:bold;color:#d9534f;">${determineGrade(total)}</span></div></div><div class="grading-radar"><div class="radar-chart-container"><canvas id="${id}"></canvas></div></div></div></div></div>`;
     }
-    function renderClassChart(id, avg) {
-        const ctx = document.getElementById(id); if(!ctx) return;
-        new Chart(ctx.getContext('2d'), {
-            type: 'radar',
-            data: { labels: ['立意','取材','扣題','詳略','詞彙','文學性'], datasets: [{ label: '班級平均', data: [(avg.content*0.6+avg.struct*0.4).toFixed(1), (avg.content*0.8+avg.expr*0.2).toFixed(1), (avg.content*0.7+avg.struct*0.3).toFixed(1), (avg.struct*0.7+avg.content*0.3).toFixed(1), avg.expr, avg.expr], backgroundColor: 'rgba(94, 112, 103, 0.4)', borderColor: '#5e7067', borderWidth: 2, pointBackgroundColor: '#5e7067' }] },
-            options: { responsive: true, maintainAspectRatio: false, scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } }, plugins: { legend: { display: false } } }
-        });
-    }
+   function renderClassChart(id, avg) {
+    const ctx = document.getElementById(id); if(!ctx) return;
+    
+    // 銷毀舊圖表以防重複渲染導致的錯誤 (建議加入)
+    const existingChart = Chart.getChart(ctx);
+    if (existingChart) existingChart.destroy();
+
+    new Chart(ctx.getContext('2d'), {
+        type: 'radar',
+        data: { 
+            labels: ['立意','取材','扣題','詳略','詞彙','文學性'], 
+            datasets: [{ 
+                label: '班級平均', 
+                data: [(avg.content*0.6+avg.struct*0.4).toFixed(1), (avg.content*0.8+avg.expr*0.2).toFixed(1), (avg.content*0.7+avg.struct*0.3).toFixed(1), (avg.struct*0.7+avg.content*0.3).toFixed(1), avg.expr, avg.expr], 
+                backgroundColor: 'rgba(94, 112, 103, 0.4)', 
+                borderColor: '#5e7067', 
+                borderWidth: 2, 
+                pointBackgroundColor: '#5e7067' 
+            }] 
+        },
+        options: { 
+            responsive: true,           // 啟用響應式
+            maintainAspectRatio: true,  // 修改：設為 true，強制保持比例縮放
+            scales: { 
+                r: { 
+                    suggestedMin: 0, 
+                    suggestedMax: 10, 
+                    ticks: { display: false },
+                    pointLabels: {
+                        font: { size: 11 } // 微調字體大小以防標籤撐開容器
+                    }
+                } 
+            }, 
+            plugins: { 
+                legend: { display: false } 
+            } 
+        }
+    });
+}
     async function callAPI(prompt) {
         let k = READING_API_KEYS[Math.floor(Math.random() * READING_API_KEYS.length)];
         const r = await fetch(READING_API_URL, { method: "POST", headers: { "Authorization": `Bearer ${k}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: READING_MODEL, messages: [{ role: "user", content: prompt }], max_tokens: 4000 }) });

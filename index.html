@@ -1037,7 +1037,6 @@ let analyticsChartInstance = null;
             const snap = await db.ref(path).once('value');
             const data = snap.val();
             
-            // 無數據處理
             if (!data) { 
                 alert("此時段無數據紀錄"); 
                 ['dispUnique','dispVisits','dispDuration','dispAvg'].forEach(id=>document.getElementById(id).innerText=0);
@@ -1045,11 +1044,8 @@ let analyticsChartInstance = null;
                 return; 
             }
 
-            // 初始化統計容器
-            // agg[時間標籤] = { uniqueSet: Set(), totalVisits: 0, totalDuration: 0 }
+            // 初始化
             let agg = {};
-            
-            // 全域統計 (用於上方卡片顯示)
             let globalUniqueSet = new Set();
             let grandTotalVisits = 0;
             let grandTotalDuration = 0;
@@ -1057,10 +1053,9 @@ let analyticsChartInstance = null;
             function proc(node, label) {
                 if(!node) return;
                 
-                // 初始化該時間點的數據結構
                 if(!agg[label]) agg[label] = { uniqueSet: new Set(), visits: 0, duration: 0 };
 
-                // 1. 處理學生數據
+                // 1. 處理學生
                 if (node.students) {
                     if(scope === 'global' || scope === 'school') {
                         Object.keys(node.students).forEach(gKey => {
@@ -1069,16 +1064,13 @@ let analyticsChartInstance = null;
                                     const sData = node.students[gKey][cKey][sName];
                                     const uid = `${gKey}${cKey}_${sName}`;
                                     
-                                    // 統計邏輯
                                     const v = parseInt(sData.visits || 0);
                                     const t = parseInt(sData.duration || 0);
                                     
-                                    // 加入該時間點的統計
                                     agg[label].uniqueSet.add(uid);
                                     agg[label].visits += v;
                                     agg[label].duration += t;
 
-                                    // 加入全域統計
                                     globalUniqueSet.add(uid);
                                     grandTotalVisits += v;
                                     grandTotalDuration += t;
@@ -1107,7 +1099,7 @@ let analyticsChartInstance = null;
                     }
                 }
 
-                // 2. 處理訪客數據 (僅 Global 模式)
+                // 2. 處理訪客
                 if (scope === 'global' && node.guests) {
                     Object.keys(node.guests).forEach(guestID => {
                         const gData = node.guests[guestID];
@@ -1125,12 +1117,12 @@ let analyticsChartInstance = null;
                 }
             }
 
-            // 執行遍歷
+            // 遍歷數據
             if(mode==='day') proc(data, '本日');
             else if(mode==='month') Object.keys(data).sort().forEach(k=>proc(data[k], parseInt(k)+'日'));
             else if(mode==='year') Object.keys(data).sort().forEach(mk=>{ Object.keys(data[mk]).forEach(dk=>proc(data[mk][dk], parseInt(mk)+'月')); });
 
-            // 更新上方卡片數據
+            // 卡片顯示
             const totalPeople = globalUniqueSet.size;
             const safeDivisor = totalPeople === 0 ? 1 : totalPeople;
 
@@ -1139,24 +1131,17 @@ let analyticsChartInstance = null;
             document.getElementById('dispDuration').innerText = Math.round(grandTotalDuration/60);
             document.getElementById('dispAvg').innerText = Math.round((grandTotalDuration/60) / safeDivisor);
 
-            // === 準備圖表數據 ===
+            // 圖表數據準備
             const labels = Object.keys(agg);
             
-            // 數據集 1 (底層): 使用人數 (不重複)
+            // 數據集 1: 使用人數 (放在前景)
             const uniqueData = Object.values(agg).map(a => a.uniqueSet.size);
             
-            // 數據集 2 (上層): 重複進入次數 = (總次數 - 不重複人數)
-            // 這樣堆疊起來的總高度就會等於「總次數」
-            const repeatData = Object.values(agg).map(a => {
-                const unique = a.uniqueSet.size;
-                const total = a.visits;
-                // 防止數據異常導致負數 (理論上 total >= unique)
-                return Math.max(0, total - unique);
-            });
+            // 數據集 2: 總進入次數 (放在背景，作為總高度)
+            const totalVisitsData = Object.values(agg).map(a => a.visits);
 
             const durationData = Object.values(agg).map(a => Math.round(a.duration/60));
 
-            // 繪圖
             const ctx = document.getElementById('analyticsChart').getContext('2d');
             if(analyticsChartInstance) analyticsChartInstance.destroy();
             
@@ -1166,42 +1151,59 @@ let analyticsChartInstance = null;
                     labels: labels, 
                     datasets: [
                         { 
-                            label: '使用人數 (不重複)', 
-                            data: uniqueData, 
-                            backgroundColor: '#b6a6ca', // 紫色 (底層)
-                            stack: 'Stack 0',
+                            label: '總進入次數 (Total)', 
+                            data: totalVisitsData, 
+                            // 藍色，半透明背景，讓它看起來像是一個容器或背景
+                            backgroundColor: 'rgba(148, 167, 181, 0.2)', 
+                            borderColor: 'rgba(148, 167, 181, 1)',
+                            borderWidth: 1,
                             maxBarThickness: 50,
-                            minBarLength: 2 
+                            // ★ 關鍵：order 數字大代表在後層 (背景)
+                            order: 2,
+                            // ★ 關鍵：不與其他 bar 併排，而是重疊
+                            grouped: false 
                         },
                         { 
-                            label: '重複進入次數', 
-                            data: repeatData, 
-                            backgroundColor: '#94a7b5', // 藍色 (上層)
-                            stack: 'Stack 0',
-                            maxBarThickness: 50,
-                            minBarLength: 2
+                            label: '使用人數 (Unique)', 
+                            data: uniqueData, 
+                            // 紫色，較不透明，顯示在前方
+                            backgroundColor: 'rgba(182, 166, 202, 0.85)', 
+                            hoverBackgroundColor: 'rgba(182, 166, 202, 1)',
+                            maxBarThickness: 30, // 稍微窄一點點，製造「內含」的視覺效果
+                            // ★ 關鍵：order 數字小代表在前層 (前景)
+                            order: 1,
+                            grouped: false
                         },
                         { 
                             label: '總時長(分)', 
                             data: durationData, 
                             type: 'line', 
                             borderColor: '#d69a92', 
+                            backgroundColor: '#d69a92',
                             borderWidth: 2, 
                             yAxisID: 'y1',
-                            tension: 0.1
+                            tension: 0.1,
+                            order: 0 // 線條在最上層
                         }
                     ] 
                 },
                 options: { 
                     maintainAspectRatio: false, 
+                    interaction: {
+                        mode: 'index', // 滑鼠懸停時同時顯示所有數據
+                        intersect: false,
+                    },
                     scales: { 
+                        x: {
+                            stacked: true, // X 軸堆疊，確保位置對齊
+                        },
                         y: { 
                             beginAtZero: true, 
                             position: 'left', 
-                            title: {display:true, text:'人次 (總高度=總次數)'}, 
-                            stacked: true, // 啟用堆疊
+                            title: {display:true, text:'數量'}, 
+                            stacked: false, // ★ 關鍵：Y 軸不堆疊！這樣 4 就是 4，2 就是 2
                             ticks: {
-                                stepSize: 1, // 強制整數
+                                stepSize: 1, 
                                 callback: function(value) { if (value % 1 === 0) return value; }
                             }
                         }, 
@@ -1211,30 +1213,10 @@ let analyticsChartInstance = null;
                             grid: { drawOnChartArea: false }, 
                             title: {display:true, text:'分鐘'},
                             ticks: {
-                                stepSize: 1, // 強制整數
+                                stepSize: 1, 
                                 callback: function(value) { if (value % 1 === 0) return value; }
                             }
                         } 
-                    },
-                    plugins: {
-                        tooltip: {
-                            callbacks: {
-                                // 優化 Tooltip 顯示，讓使用者知道總數
-                                footer: function(tooltipItems) {
-                                    let total = 0;
-                                    tooltipItems.forEach(function(tooltipItem) {
-                                        if(tooltipItem.dataset.type !== 'line') {
-                                            total += tooltipItem.raw;
-                                        }
-                                    });
-                                    // 只有當有堆疊數據時才顯示總和
-                                    if(total > 0 && tooltipItems[0].dataset.type !== 'line') {
-                                        return '總進入次數: ' + total;
-                                    }
-                                    return '';
-                                }
-                            }
-                        }
                     }
                 }
             });

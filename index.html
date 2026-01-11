@@ -950,15 +950,43 @@ function loadStudentList() {
     }
     function deleteClassReport(key) { if(confirm("確定刪除此報告？")) { const g=document.getElementById('reportGrade').value, c=document.getElementById('reportClass').value; db.ref(`class_reports/${g}/${c}/${key}`).remove().then(()=>loadClassReportHistory()); }}
     function openClassReportModal(data) {
-        const m = document.getElementById('classReportModal'), c = document.getElementById('classReportContent');
-        const d = document.createElement('div'); d.innerHTML = data.aiHtml;
-        if(data.stats.narrativeTotal>0) { const b=d.querySelector('.badge-narrative'); if(b) b.outerHTML=generateClassChartHTML('narrative', data.stats.narrAvg, data.stats.narrativeTotal); }
-        if(data.stats.argumentTotal>0) { const b=d.querySelector('.badge-argument'); if(b) b.outerHTML=generateClassChartHTML('argument', data.stats.argAvg, data.stats.argumentTotal); }
-        c.innerHTML = `<div style="text-align:right;color:#999;padding:20px 20px 0 0;">報告日期：${data.dateStr}</div><div style="padding:20px;">${d.innerHTML}</div>`;
-        m.style.display = 'flex';
-        // Render charts slightly delayed to ensure DOM is ready
-        setTimeout(() => { if(data.stats.narrativeTotal>0) renderClassChart('narrativeClassChart', data.stats.narrAvg); if(data.stats.argumentTotal>0) renderClassChart('argumentClassChart', data.stats.argAvg); }, 200);
+    const m = document.getElementById('classReportModal');
+    const c = document.getElementById('classReportContent');
+
+    if (!m || !c) return alert("系統錯誤：找不到報告視窗元件");
+
+    // ★★★ 關鍵修復 1：將視窗搬運到 body 最外層，防止被 tab 頁面困住 ★★★
+    document.body.appendChild(m);
+
+    // ★★★ 關鍵修復 2：強制設定超高層級，確保在最上層 ★★★
+    m.style.zIndex = "99999";
+
+    // 準備內容
+    const d = document.createElement('div'); 
+    d.innerHTML = data.aiHtml;
+
+    // 重新生成圖表容器 HTML (如果有數據)
+    if(data.stats.narrativeTotal > 0) { 
+        const b = d.querySelector('.badge-narrative'); 
+        if(b) b.outerHTML = generateClassChartHTML('narrative', data.stats.narrAvg, data.stats.narrativeTotal); 
     }
+    if(data.stats.argumentTotal > 0) { 
+        const b = d.querySelector('.badge-argument'); 
+        if(b) b.outerHTML = generateClassChartHTML('argument', data.stats.argAvg, data.stats.argumentTotal); 
+    }
+
+    // 填入內容
+    c.innerHTML = `<div style="text-align:right;color:#999;padding:20px 20px 0 0;">報告日期：${data.dateStr}</div><div style="padding:20px;">${d.innerHTML}</div>`;
+    
+    // 顯示視窗
+    m.style.display = 'flex';
+
+    // 延遲渲染圖表 (配合我們剛才修復的 Chart.js 邏輯)
+    setTimeout(() => { 
+        if(data.stats.narrativeTotal > 0) renderClassChart('narrativeClassChart', data.stats.narrAvg); 
+        if(data.stats.argumentTotal > 0) renderClassChart('argumentClassChart', data.stats.argAvg); 
+    }, 200);
+}
     
    // === 關鍵修訂：生成左右並置的 HTML ===
    function generateClassChartHTML(type, avg, total) {

@@ -223,21 +223,23 @@
 /* === 關鍵修復：雷達圖容器 === */
 .radar-chart-container { 
     position: relative; 
-    width: 100%; 
-    max-width: 150px;     /* 稍微調小最大寬度，讓它在手機上更精緻 */
-    margin: 0 auto;       /* 居中 */
-    aspect-ratio: 1 / 1;  /* 保持正方形 */
+    width: 100%;           /* 寬度跟隨父層 */
+    max-width: 280px;      /* 建議不要設太小(如150px)，否則文字會重疊。250-280px 是手機最佳閱讀大小 */
+    margin: 0 auto;        /* 居中 */
+    aspect-ratio: 1 / 1;   /* 由容器控制正方形比例 */
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: 0;           /* 容器本身不需要 padding，交給 JS 的 layout padding 控制 */
+    overflow: hidden;      /* 確保萬一超出也不會破壞版面 */
 }
 
+/* 強制 Canvas 絕對服從容器大小 */
 .radar-chart-container canvas {
+    width: 100% !important;
+    height: 100% !important;
     max-width: 100% !important;
     max-height: 100% !important;
-    width: auto !important;   /* 改為 auto，讓 aspect ratio 生效 */
-    height: auto !important;  /* 改為 auto */
+    display: block;
 }
         /* === 關鍵修復：手機版/窄螢幕強制垂直堆疊 === */
         @media (max-width: 768px) {
@@ -265,7 +267,7 @@
                 width: 100% !important; 
                 height: auto !important; 
                 aspect-ratio: 1/1 !important; 
-                max-height: 150px !important; 
+                max-height: 300px !important; 
                 margin: 0 auto !important; 
             }
             .score-item { flex-wrap: wrap; } .score-item label { width: 100%; margin-bottom: 5px; } .score-item .slider-container { max-width: 100%; }
@@ -740,52 +742,61 @@
         return `<div class="report-section"><div class="report-category-badge ${cls}"><i class="fas fa-book"></i> ${title}</div><div class="report-radar-wrapper"><div class="grading-grid"><div class="grading-scores"><h3>班級平均表現</h3><div class="score-item"><label>內容</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.content*4}</span></div></div><div class="score-item"><label>表達</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.expr*3}</span></div></div><div class="score-item"><label>結構</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.struct*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.struct*2}</span></div></div><div class="total-score-container"><span style="font-size:1.1em;">平均總分: ${total}</span><span style="font-size:2em;font-weight:bold;color:#d9534f;">${determineGrade(total)}</span></div></div><div class="grading-radar"><div class="radar-chart-container"><canvas id="${id}"></canvas></div></div></div></div></div>`;
     }
   function renderClassChart(id, avg) {
-    const ctx = document.getElementById(id); if(!ctx) return;
+    const ctx = document.getElementById(id); 
+    if(!ctx) return;
     
-    // 銷毀舊圖表防止重疊
+    // 1. 銷毀舊圖表 (非常重要！否則舊圖表會在背景撐大容器)
     const existingChart = Chart.getChart(ctx);
     if (existingChart) existingChart.destroy();
 
+    // 2. 建立新圖表
     new Chart(ctx.getContext('2d'), {
         type: 'radar',
         data: { 
             labels: ['立意','取材','扣題','詳略','詞彙','文學性'], 
             datasets: [{ 
                 label: '班級平均', 
-                data: [(avg.content*0.6+avg.struct*0.4).toFixed(1), (avg.content*0.8+avg.expr*0.2).toFixed(1), (avg.content*0.7+avg.struct*0.3).toFixed(1), (avg.struct*0.7+avg.content*0.3).toFixed(1), avg.expr, avg.expr], 
+                data: [
+                    (avg.content*0.6+avg.struct*0.4).toFixed(1), 
+                    (avg.content*0.8+avg.expr*0.2).toFixed(1), 
+                    (avg.content*0.7+avg.struct*0.3).toFixed(1), 
+                    (avg.struct*0.7+avg.content*0.3).toFixed(1), 
+                    avg.expr, 
+                    avg.expr
+                ], 
                 backgroundColor: 'rgba(94, 112, 103, 0.4)', 
                 borderColor: '#5e7067', 
                 borderWidth: 2, 
                 pointBackgroundColor: '#5e7067',
-                pointRadius: 2  // 縮小數據點的圓點大小，讓畫面更清爽
+                pointRadius: 3 // 手機上點可以稍微小一點
             }] 
         },
         options: { 
             responsive: true,
-            maintainAspectRatio: true, // 保持正方形比例
+            // 3. 關鍵：設為 false，讓圖表填滿我們在 CSS 設定的 aspect-ratio: 1/1 容器
+            maintainAspectRatio: false, 
             layout: {
-                padding: 20 // 【關鍵修正】增加內邊距，強迫圖表「縮小」到中間，保留空間給標籤
+                // 4. 關鍵：設定內距，防止標籤文字被切掉或超出容器
+                padding: {
+                    top: 10, bottom: 10, left: 10, right: 10
+                }
             },
             scales: { 
                 r: { 
                     suggestedMin: 0, 
                     suggestedMax: 10, 
                     ticks: { 
-                        display: false, // 不顯示 1-10 的刻度數字，減少雜亂
-                        stepSize: 2 
+                        display: false, // 隱藏 1-10 的刻度數字以節省空間
+                        backdropColor: 'transparent' 
                     },
                     pointLabels: {
                         font: { 
-                            size: 11 // 【關鍵修正】縮小標籤字體，避免文字超出邊界
+                            size: 11 // 5. 關鍵：限制字體大小，避免手機上文字太大撐開
                         },
-                        color: '#666'
+                        color: '#666' 
                     },
-                    grid: {
-                        color: '#e0e0e0'
-                    },
-                    angleLines: {
-                        color: '#e0e0e0'
-                    }
+                    grid: { color: '#e0e0e0' },
+                    angleLines: { color: '#e0e0e0' }
                 } 
             }, 
             plugins: { 

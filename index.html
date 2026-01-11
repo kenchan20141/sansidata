@@ -208,14 +208,14 @@
         margin-bottom: 50px;
     }
 
-    /* 2. 左側評分條區塊 */
+  /* 2. 左側評分條區塊 */
     .grading-scores {
-        flex: 1; /* 佔據剩餘空間 */
-        min-width: 300px; /* 最小寬度，避免過窄 */
+        flex: 1;           /* 保持彈性，讓它在手機版能縮放 */
+        max-width: 450px;  /* ★ 新增這一行：限制最大寬度，防止撐滿視窗 */
+        min-width: 300px;  /* 保持原本設定 */
         padding: 20px;
         background: #fdfcf8;
         border-radius: 12px;
-        /* 移除底線，因為現在是左右排列 */
         border: 1px solid #eee;
     }
     

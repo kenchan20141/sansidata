@@ -894,43 +894,137 @@ function loadStudentList() {
         });
     }
 
-    async function generateClassReport() {
-        const btn = document.getElementById('btnClassReport');
-        const g = document.getElementById('reportGrade').value, c = document.getElementById('reportClass').value;
-        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 分析全班數據中...';
-        try {
-            const snapshot = await db.ref(`students/${g}/${c}`).once('value');
-            const data = snapshot.val();
-            if (!data) { alert("此班級無學生資料！"); return; }
-            let classSummary="", outlineSummary="", readingSummary="", expandSummary="";
-            let narrativeTotal={content:0,expr:0,struct:0,count:0}, argumentTotal={content:0,expr:0,struct:0,count:0};
-            let studentCount = 0;
-            Object.entries(data).forEach(([name, d]) => {
-                const h = d.history ? (Array.isArray(d.history) ? d.history : Object.values(d.history)) : [];
-                const reports = h.filter(r => r.category === "學習報告").sort((a,b) => b.timestamp - a.timestamp);
-                if (reports.length > 0) { studentCount++; classSummary += `學生 ${studentCount}: ${reports[0].aiContent.replace(/<[^>]*>?/gm, ' ').substring(0, 300)}...\n`; }
-                h.forEach(r => {
-                    const scoreMatch = r.aiContent.match(/總分:\s*(\d+)/);
-                    if (scoreMatch) {
-                        const score = parseInt(scoreMatch[1]);
-                        if (r.category === "敘事抒情") { narrativeTotal.content+=score*0.4; narrativeTotal.expr+=score*0.3; narrativeTotal.struct+=score*0.2; narrativeTotal.count++; }
-                        else if (r.category === "議論") { argumentTotal.content+=score*0.4; argumentTotal.expr+=score*0.3; argumentTotal.struct+=score*0.2; argumentTotal.count++; }
+   async function generateClassReport() {
+    const btn = document.getElementById('btnClassReport');
+    const g = document.getElementById('reportGrade').value;
+    const c = document.getElementById('reportClass').value;
+    btn.disabled = true; 
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 分析全班數據中...';
+
+    try {
+        const snapshot = await db.ref(`students/${g}/${c}`).once('value');
+        const data = snapshot.val();
+        if (!data) { alert("此班級無學生資料！"); return; }
+
+        let classSummary = "", outlineSummary = "", readingSummary = "", expandSummary = "";
+        
+        // 用於累加原始分數 (0-10)
+        let narrativeStats = { content: 0, expression: 0, structure: 0, count: 0 };
+        let argumentStats = { content: 0, expression: 0, structure: 0, count: 0 };
+        
+        let studentCount = 0;
+        const parser = new DOMParser(); // 用於解析 HTML 字串中的分數
+
+        Object.entries(data).forEach(([name, d]) => {
+            const h = d.history ? (Array.isArray(d.history) ? d.history : Object.values(d.history)) : [];
+            
+            // 1. 收集最新一篇報告的摘要
+            const reports = h.filter(r => r.category === "學習報告").sort((a,b) => b.timestamp - a.timestamp);
+            if (reports.length > 0) { 
+                studentCount++; 
+                classSummary += `學生 ${studentCount}: ${reports[0].aiContent.replace(/<[^>]*>?/gm, ' ').substring(0, 300)}...\n`; 
+            }
+
+            // 2. 遍歷歷史紀錄，精準提取分數
+            h.forEach(r => {
+                // 提取摘要文本
+                if (r.subFunction && r.subFunction.includes("大綱")) { let t=r.aiContent.replace(/<[^>]*>?/gm, ' '); let i=t.indexOf("點評"); if(i!==-1) outlineSummary+=`[${r.category}大綱]: ${t.substring(i, i+120)}...\n`; }
+                if (r.category==="閱讀" && r.subFunction==="點評") { let t=r.aiContent.replace(/<[^>]*>?/gm, ' '); let i=t.indexOf("點評"); if(i!==-1) readingSummary+=`[閱讀]: ${t.substring(i, i+150)}...\n`; }
+                if (r.category==="整合拓展" && r.subFunction==="點評") { let t=r.aiContent.replace(/<[^>]*>?/gm, ' '); let i=t.indexOf("點評"); if(i!==-1) expandSummary+=`[整合]: ${t.substring(i, i+150)}...\n`; }
+
+                // 精準提取分數 (從隱藏的 input 中解析)
+                if ((r.category === "敘事抒情" || r.category === "議論") && r.aiContent) {
+                    try {
+                        const doc = parser.parseFromString(r.aiContent, 'text/html');
+                        // 嘗試找隱藏的分數欄位 (這些欄位存的是 0-10 或 0-3 的原始分)
+                        const cVal = doc.querySelector('input[id*="ContentScore"]')?.value;
+                        const eVal = doc.querySelector('input[id*="ExpressionScore"]')?.value;
+                        const sVal = doc.querySelector('input[id*="StructureScore"]')?.value;
+
+                        if (cVal && eVal && sVal) {
+                            const targetStats = r.category === "敘事抒情" ? narrativeStats : argumentStats;
+                            targetStats.content += parseInt(cVal);
+                            targetStats.expression += parseInt(eVal);
+                            targetStats.structure += parseInt(sVal);
+                            targetStats.count++;
+                        }
+                    } catch (err) {
+                        // 解析失敗則跳過
                     }
-                    if (r.subFunction && r.subFunction.includes("大綱")) { let t=r.aiContent.replace(/<[^>]*>?/gm, ' '); let i=t.indexOf("點評"); if(i!==-1) outlineSummary+=`[${r.category}大綱]: ${t.substring(i, i+120)}...\n`; }
-                    if (r.category==="閱讀" && r.subFunction==="點評") { let t=r.aiContent.replace(/<[^>]*>?/gm, ' '); let i=t.indexOf("點評"); if(i!==-1) readingSummary+=`[閱讀]: ${t.substring(i, i+150)}...\n`; }
-                    if (r.category==="整合拓展" && r.subFunction==="點評") { let t=r.aiContent.replace(/<[^>]*>?/gm, ' '); let i=t.indexOf("點評"); if(i!==-1) expandSummary+=`[整合]: ${t.substring(i, i+150)}...\n`; }
-                });
+                }
             });
-            if (studentCount === 0 && narrativeTotal.count === 0 && argumentTotal.count === 0 && !outlineSummary) { alert("此班級數據不足。"); return; }
-            const narrAvg = { content: narrativeTotal.count ? Math.round((narrativeTotal.content/narrativeTotal.count)/4) : 0, expr: narrativeTotal.count ? Math.round((narrativeTotal.expr/narrativeTotal.count)/3) : 0, struct: narrativeTotal.count ? Math.round((narrativeTotal.struct/narrativeTotal.count)/2) : 0 };
-            const argAvg = { content: argumentTotal.count ? Math.round((argumentTotal.content/argumentTotal.count)/4) : 0, expr: argumentTotal.count ? Math.round((argumentTotal.expr/argumentTotal.count)/3) : 0, struct: argumentTotal.count ? Math.round((argumentTotal.struct/argumentTotal.count)/2) : 0 };
-            const prompt = `你是一位中文科科主任。分析 ${g}年${c}班 數據：敘事平均(內容${narrAvg.content},表達${narrAvg.expr},結構${narrAvg.struct})，議論平均(內容${argAvg.content},表達${argAvg.expr},結構${argAvg.struct})。\n大綱表現：${outlineSummary}\n閱讀表現：${readingSummary}\n整合表現：${expandSummary}\n成品摘要：${classSummary}\n\n任務：生成「全班綜合學習評估報告」。\n格式要求(HTML)：\n1. <div class="report-section"><div class="report-category-badge badge-general"><div class="badge-general-title">${g}${c}班 綜合評估</div></div><div class="report-text-card"><p>總結</p></div></div><div class="report-separator"></div>\n2. 分別為閱讀(.badge-reading)、敘事(.badge-narrative)、議論(.badge-argument)、整合拓展(.badge-expand)提供 .report-text-card 分析。\n3. <div class="report-quote-card"><div class="report-quote-content">教學建議</div></div>`;
-            const response = await callAPI(prompt);
-            const reportData = { timestamp: firebase.database.ServerValue.TIMESTAMP, dateStr: new Date().toLocaleString(), stats: { narrAvg, argAvg, narrativeTotal: Math.round((narrativeTotal.content+narrativeTotal.expr+narrativeTotal.struct)/narrativeTotal.count)||0, argumentTotal: Math.round((argumentTotal.content+argumentTotal.expr+argumentTotal.struct)/argumentTotal.count)||0 }, aiHtml: response };
-            await db.ref(`class_reports/${g}/${c}`).push(reportData);
-            loadClassReportHistory(); openClassReportModal(reportData);
-        } catch (e) { console.error(e); alert("生成失敗"); } finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)'; }
+        });
+
+        if (studentCount === 0 && narrativeStats.count === 0 && argumentStats.count === 0 && !outlineSummary) { 
+            alert("此班級數據不足。"); return; 
+        }
+
+        // 計算平均原始分 (0-10)
+        const calcAvg = (stats) => {
+            if (stats.count === 0) return { content: 0, expr: 0, struct: 0 };
+            return {
+                content: Math.round(stats.content / stats.count),
+                expr: Math.round(stats.expression / stats.count),
+                struct: Math.round(stats.structure / stats.count)
+            };
+        };
+
+        const narrAvg = calcAvg(narrativeStats);
+        const argAvg = calcAvg(argumentStats);
+
+        // 構建 Prompt (加入嚴格的排版指令)
+        const prompt = `你是一位中文科科主任。分析 ${g}年${c}班 數據：
+        敘事平均表現(10分制)：內容${narrAvg.content}, 表達${narrAvg.expr}, 結構${narrAvg.struct}。
+        議論平均表現(10分制)：內容${argAvg.content}, 表達${argAvg.expr}, 結構${argAvg.struct}。
+        大綱表現：${outlineSummary}
+        閱讀表現：${readingSummary}
+        整合表現：${expandSummary}
+        成品摘要：${classSummary}
+
+        任務：生成「全班綜合學習評估報告」。
+        
+        【格式要求 (必須嚴格遵守 HTML)】：
+        1. <div class="report-section"><div class="report-category-badge badge-general"><div class="badge-general-title">${g}${c}班 綜合評估</div></div><div class="report-text-card"><p>總結</p></div></div><div class="report-separator"></div>
+        
+        2. 分別為閱讀(.badge-reading)、敘事(.badge-narrative)、議論(.badge-argument)、整合拓展(.badge-expand)提供 .report-text-card 分析。
+        
+        3. 【教學建議部分 - 必須使用此格式，否則會亂掉】：
+           <div class="rewrite-explanation-container">
+             <div class="rewrite-explanation-card">
+               <h3><i class="fas fa-chalkboard-teacher"></i> 重點教學建議</h3>
+               <div class="explanation-point"><div class="explanation-number">1</div><div class="explanation-text">(建議一內容)</div></div>
+               <div class="explanation-point"><div class="explanation-number">2</div><div class="explanation-text">(建議二內容)</div></div>
+               <div class="explanation-point"><div class="explanation-number">3</div><div class="explanation-text">(建議三內容)</div></div>
+             </div>
+           </div>
+        `;
+
+        const response = await callAPI(prompt);
+        
+        const reportData = { 
+            timestamp: firebase.database.ServerValue.TIMESTAMP, 
+            dateStr: new Date().toLocaleString(), 
+            stats: { 
+                narrAvg, 
+                argAvg, 
+                narrativeCount: narrativeStats.count, 
+                argumentCount: argumentStats.count 
+            }, 
+            aiHtml: response 
+        };
+        
+        await db.ref(`class_reports/${g}/${c}`).push(reportData);
+        loadClassReportHistory(); 
+        openClassReportModal(reportData);
+
+    } catch (e) { 
+        console.error(e); 
+        alert("生成失敗：" + e.message); 
+    } finally { 
+        btn.disabled = false; 
+        btn.innerHTML = '<i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)'; 
     }
+}
 
     function loadClassReportHistory() {
         const g = document.getElementById('reportGrade').value, c = document.getElementById('reportClass').value;
@@ -955,76 +1049,126 @@ function loadStudentList() {
 
     if (!m || !c) return alert("系統錯誤：找不到報告視窗元件");
 
-    // ★★★ 關鍵修復 1：將視窗搬運到 body 最外層，防止被 tab 頁面困住 ★★★
     document.body.appendChild(m);
-
-    // ★★★ 關鍵修復 2：強制設定超高層級，確保在最上層 ★★★
     m.style.zIndex = "99999";
 
-    // 準備內容
     const d = document.createElement('div'); 
     d.innerHTML = data.aiHtml;
 
-    // 重新生成圖表容器 HTML (如果有數據)
-    if(data.stats.narrativeTotal > 0) { 
+    // 這裡使用 data.stats.narrativeCount (我們在第一步修改了變數名)
+    if(data.stats.narrativeCount > 0) { 
         const b = d.querySelector('.badge-narrative'); 
-        if(b) b.outerHTML = generateClassChartHTML('narrative', data.stats.narrAvg, data.stats.narrativeTotal); 
+        if(b) b.outerHTML = generateClassChartHTML('narrative', data.stats.narrAvg, data.stats.narrativeCount); 
     }
-    if(data.stats.argumentTotal > 0) { 
+    if(data.stats.argumentCount > 0) { 
         const b = d.querySelector('.badge-argument'); 
-        if(b) b.outerHTML = generateClassChartHTML('argument', data.stats.argAvg, data.stats.argumentTotal); 
+        if(b) b.outerHTML = generateClassChartHTML('argument', data.stats.argAvg, data.stats.argumentCount); 
     }
 
-    // 填入內容
     c.innerHTML = `<div style="text-align:right;color:#999;padding:20px 20px 0 0;">報告日期：${data.dateStr}</div><div style="padding:20px;">${d.innerHTML}</div>`;
     
-    // 顯示視窗
     m.style.display = 'flex';
 
-    // 延遲渲染圖表 (配合我們剛才修復的 Chart.js 邏輯)
     setTimeout(() => { 
-        if(data.stats.narrativeTotal > 0) renderClassChart('narrativeClassChart', data.stats.narrAvg); 
-        if(data.stats.argumentTotal > 0) renderClassChart('argumentClassChart', data.stats.argAvg); 
+        if(data.stats.narrativeCount > 0) renderClassChart('narrativeClassChart', data.stats.narrAvg); 
+        if(data.stats.argumentCount > 0) renderClassChart('argumentClassChart', data.stats.argAvg); 
     }, 200);
 }
     
    // === 關鍵修訂：生成左右並置的 HTML ===
-   function generateClassChartHTML(type, avg, total) {
-        const id = type==='narrative'?'narrativeClassChart':'argumentClassChart';
-        const title = type==='narrative'?'敘事抒情':'議論';
-        const cls = type==='narrative'?'badge-narrative':'badge-argument';
+  function generateClassChartHTML(type, avg, count) {
+    const id = type==='narrative'?'narrativeClassChart':'argumentClassChart';
+    const title = type==='narrative'?'敘事抒情':'議論';
+    const cls = type==='narrative'?'badge-narrative':'badge-argument';
+    
+    // 計算加權分數
+    const scoreContent = avg.content * 4;
+    const scoreExpr = avg.expr * 3;
+    const scoreStruct = avg.struct * 2;
+    // 預設分數
+    const scorePunc = 5; // 標點預設 5
+    const scoreTypo = 1; // 錯別字預設 1
+    
+    // 計算總分 (滿分100)
+    const totalScore = Math.min(100, scoreContent + scoreExpr + scoreStruct + scorePunc + scoreTypo);
+    
+    // 將 avg 物件轉換為 JSON 字串
+    const avgStr = JSON.stringify(avg).replace(/"/g, '&quot;');
+    
+    return `
+    <div class="report-section">
+        <div class="report-category-badge ${cls}"><i class="fas fa-book"></i> ${title}</div>
         
-        // 將 avg 物件轉換為 JSON 字串，以便 onclick 傳遞
-        const avgStr = JSON.stringify(avg).replace(/"/g, '&quot;');
-        
-        return `
-        <div class="report-section">
-            <div class="report-category-badge ${cls}"><i class="fas fa-book"></i> ${title}</div>
-            
-            <div class="report-radar-wrapper">
-                <!-- 左右並置容器 -->
-                <div class="grading-side-by-side">
+        <div class="report-radar-wrapper">
+            <!-- 左右並置容器 -->
+            <div class="grading-side-by-side">
+                
+                <!-- 1. 左側：評分條 -->
+                <div class="grading-scores">
+                    <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center;">班級平均表現 (${count}份)</h3>
                     
-                    <!-- 1. 左側：評分條 -->
-                    <div class="grading-scores">
-                        <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center;">班級平均表現</h3>
-                        <div class="score-item"><label>內容 (40)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.content*4}</span></div></div>
-                        <div class="score-item"><label>表達 (30)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.expr*3}</span></div></div>
-                        <div class="score-item"><label>結構 (20)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.struct*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.struct*2}</span></div></div>
-                        <div class="total-score-container"><span style="font-size:1.1em; color:#555;">平均總分: ${total} / 100</span><span style="font-size:2em; font-weight:bold; color:#d9534f;">${determineGrade(total)}</span></div>
+                    <!-- 內容 -->
+                    <div class="score-item">
+                        <label>內容 (40)</label>
+                        <div class="slider-container">
+                            <div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div>
+                            <span class="score-display">${scoreContent}</span>
+                        </div>
                     </div>
                     
-                    <!-- 2. 右側：雷達圖 (縮圖，點擊放大) -->
-                    <div class="grading-radar-thumbnail" onclick='openEnlargedChart("${title}", ${avgStr})'>
-                        <h3>能力分佈圖</h3>
-                        <div class="radar-chart-mini-container">
-                            <canvas id="${id}"></canvas>
+                    <!-- 表達 -->
+                    <div class="score-item">
+                        <label>表達 (30)</label>
+                        <div class="slider-container">
+                            <div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div>
+                            <span class="score-display">${scoreExpr}</span>
                         </div>
+                    </div>
+                    
+                    <!-- 結構 -->
+                    <div class="score-item">
+                        <label>結構 (20)</label>
+                        <div class="slider-container">
+                            <div class="progress-bar-container"><div style="width:${avg.struct*10}%" class="progress-bar-fill"></div></div>
+                            <span class="score-display">${scoreStruct}</span>
+                        </div>
+                    </div>
+
+                    <!-- 標點字體 (預設) -->
+                    <div class="score-item">
+                        <label>標點 (10)</label>
+                        <div class="slider-container">
+                            <div class="progress-bar-container"><div style="width:50%" class="progress-bar-fill"></div></div>
+                            <span class="score-display">${scorePunc}</span>
+                        </div>
+                    </div>
+
+                    <!-- 錯別字 (獎勵) -->
+                    <div class="score-item">
+                        <label>錯別字 (+3)</label>
+                        <div class="slider-container">
+                            <div class="progress-bar-container"><div style="width:33%" class="progress-bar-fill"></div></div>
+                            <span class="score-display">+${scoreTypo}</span>
+                        </div>
+                    </div>
+
+                    <div class="total-score-container">
+                        <span style="font-size:1.1em; color:#555;">平均總分: ${totalScore} / 100</span>
+                        <span style="font-size:2em; font-weight:bold; color:#d9534f;">${determineGrade(totalScore)}</span>
+                    </div>
+                </div>
+                
+                <!-- 2. 右側：雷達圖 (縮圖，點擊放大) -->
+                <div class="grading-radar-thumbnail" onclick='openEnlargedChart("${title}", ${avgStr})'>
+                    <h3>能力分佈圖</h3>
+                    <div class="radar-chart-mini-container">
+                        <canvas id="${id}"></canvas>
                     </div>
                 </div>
             </div>
-        </div>`;
-    }
+        </div>
+    </div>`;
+}
     
    // === 新增：全域變數，用來儲存班級報告的圖表實例 ===
 let classReportChartInstances = {}; 

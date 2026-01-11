@@ -274,8 +274,8 @@
     .radar-chart-container { 
         position: relative; 
         width: 100% !important; 
-        max-width: 400px !important; /* 縮小 */
-        height: 320px !important;    /* 縮小高度 */
+        max-width: 200px !important; /* 縮小 */
+        height: 220px !important;    /* 縮小高度 */
         margin: 0 auto;
         overflow: visible !important;
     }
@@ -865,19 +865,37 @@
         </div>`;
     }
     
-    function renderClassChart(id, avg) {
-        const ctx = document.getElementById(id); if(!ctx) return;
-        new Chart(ctx.getContext('2d'), {
+   function renderClassChart(id, avg) {
+    const ctx = document.getElementById(id); if(!ctx) return;
+    new Chart(ctx.getContext('2d'), {
+        type: 'radar',
+        data: { 
             type: 'radar',
-            data: { labels: ['立意','取材','扣題','詳略','詞彙','文學性'], datasets: [{ label: '班級平均', data: [(avg.content*0.6+avg.struct*0.4).toFixed(1), (avg.content*0.8+avg.expr*0.2).toFixed(1), (avg.content*0.7+avg.struct*0.3).toFixed(1), (avg.struct*0.7+avg.content*0.3).toFixed(1), avg.expr, avg.expr], backgroundColor: 'rgba(94, 112, 103, 0.4)', borderColor: '#5e7067', borderWidth: 2, pointBackgroundColor: '#5e7067' }] },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } }, 
-                plugins: { legend: { display: false } } 
-            }
-        });
-    }
+            data: {labels: ['立意','取材','扣題','詳略','詞彙','文學性'], 
+            datasets: [{ label: '班級平均', data: [(avg.content*0.6+avg.struct*0.4).toFixed(1), (avg.content*0.8+avg.expr*0.2).toFixed(1), (avg.content*0.7+avg.struct*0.3).toFixed(1), (avg.struct*0.7+avg.content*0.3).toFixed(1), avg.expr, avg.expr], backgroundColor: 'rgba(94, 112, 103, 0.4)', borderColor: '#5e7067', borderWidth: 2, pointBackgroundColor: '#5e7067' }] 
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            scales: { 
+                r: { 
+                    suggestedMin: 0, 
+                    suggestedMax: 10, 
+                    ticks: { display: false },
+                    
+                    /* === 新增這段設定來縮小文字 === */
+                    pointLabels: {
+                        font: {
+                            size: 10  // 設定字體大小，原本預設約為 12-14
+                        }
+                    }
+                    /* =========================== */
+                } 
+            }, 
+            plugins: { legend: { display: false } } 
+        }
+    });
+}
     async function callAPI(prompt) {
         let k = READING_API_KEYS[Math.floor(Math.random() * READING_API_KEYS.length)];
         const r = await fetch(READING_API_URL, { method: "POST", headers: { "Authorization": `Bearer ${k}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: READING_MODEL, messages: [{ role: "user", content: prompt }], max_tokens: 4000 }) });

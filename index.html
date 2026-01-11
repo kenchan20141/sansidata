@@ -1525,43 +1525,115 @@ async function runYearTransition() {
 }
 
 // === S3 分班面板邏輯 ===
+// === S3 分班面板邏輯 (修訂版：按班別及班號分組排序) ===
 function checkAndRenderS3AllocationPanel() {
     const panel = document.getElementById('s3AllocationPanel');
     const listDiv = document.getElementById('s3PendingList');
     
     db.ref('pending_allocation').once('value', snapshot => {
         const data = snapshot.val();
+        
         if (!data) {
             panel.style.display = 'none';
             return;
         }
+
         panel.style.display = 'block';
         listDiv.innerHTML = '';
 
-        // 排序：按原班級 A, B, C, D 排序方便老師找人
-        const sortedEntries = Object.entries(data).sort((a, b) => {
-            const clsA = a[1].profile?.class || "";
-            const clsB = b[1].profile?.class || "";
-            return clsA.localeCompare(clsB);
+        // 1. 準備容器：按班別分類
+        const groups = {
+            'A': [],
+            'B': [],
+            'C': [],
+            'D': [],
+            'Other': [] // 防呆：處理異常資料
+        };
+
+        // 2. 將學生分配到對應班級容器
+        Object.entries(data).forEach(([name, studentData]) => {
+            const cls = studentData.profile?.class || 'Other';
+            if (groups[cls]) {
+                groups[cls].push({ name, ...studentData });
+            } else {
+                groups['Other'].push({ name, ...studentData });
+            }
         });
 
-        sortedEntries.forEach(([name, studentData]) => {
-            const oldClass = studentData.profile.class || "?";
-            const oldNum = studentData.profile.number || "?";
+        // 3. 定義班號排序邏輯 (確保 2 排在 10 前面)
+        const sortByNumber = (a, b) => {
+            const numA = parseInt(a.profile?.number) || 0;
+            const numB = parseInt(b.profile?.number) || 0;
+            return numA - numB;
+        };
+
+        // 4. 依序渲染 A, B, C, D 班
+        const classOrder = ['A', 'B', 'C', 'D', 'Other'];
+        
+        classOrder.forEach(cls => {
+            const students = groups[cls];
             
-            const item = document.createElement('label');
-            item.style.cssText = "display: flex; align-items: center; background: #fff; padding: 10px; border: 1px solid #ddd; border-radius: 5px; cursor: pointer; transition: background 0.2s;";
-            item.onmouseover = () => item.style.background = "#f5f5f5";
-            item.onmouseout = () => item.style.background = "#fff";
-            
-            item.innerHTML = `
-                <input type="checkbox" class="s3-student-checkbox" value="${name}" style="transform: scale(1.3); margin-right: 10px;">
-                <div>
-                    <div style="font-weight:bold; color: #333;">${name}</div>
-                    <div style="font-size: 0.8em; color: #888;">原 3${oldClass} (${oldNum})</div>
-                </div>
-            `;
-            listDiv.appendChild(item);
+            if (students.length > 0) {
+                // A. 對該班學生進行班號排序
+                students.sort(sortByNumber);
+
+                // B. 加入班級標題分隔線 (使用 grid-column 跨滿整行)
+                const header = document.createElement('div');
+                header.style.cssText = "grid-column: 1 / -1; margin-top: 15px; margin-bottom: 5px; border-bottom: 2px solid #e65100; color: #e65100; font-weight: bold; padding-bottom: 5px; font-size: 1.1em;";
+                
+                // 顯示標題文字 (例如：中三 A 班)
+                const displayTitle = cls === 'Other' ? '未分類 / 其他' : `原中三 ${cls} 班`;
+                header.innerHTML = `<i class="fas fa-users"></i> ${displayTitle} <span style="font-size:0.8em; color:#888; font-weight:normal;">(尚餘 ${students.length} 人)</span>`;
+                listDiv.appendChild(header);
+
+                // C. 渲染該班的學生卡片
+                students.forEach(student => {
+                    const oldNum = student.profile?.number || "?";
+                    const name = student.name;
+                    
+                    const item = document.createElement('label');
+                    // 為了方便閱讀，這裡可以稍微加深一點邊框顏色
+                    item.style.cssText = "display: flex; align-items: center; background: #fff; padding: 10px; border: 1px solid #ddd; border-left: 4px solid #ffcc80; border-radius: 5px; cursor: pointer; transition: all 0.2s;";
+                    
+                    // 滑鼠懸停效果
+                    item.onmouseover = () => { 
+                        item.style.background = "#fff3e0"; 
+                        item.style.transform = "translateY(-2px)";
+                        item.style.boxShadow = "0 2px 5px rgba(0,0,0,0.1)";
+                    };
+                    item.onmouseout = () => { 
+                        item.style.background = "#fff"; 
+                        item.style.transform = "translateY(0)";
+                        item.style.boxShadow = "none";
+                    };
+                    
+                    // 點擊後變色 (選中效果) 由 CSS checkbox 控制，這裡亦可加強視覺回饋
+                    item.onclick = (e) => {
+                        // 稍微延遲以獲取 checkbox 最新狀態
+                        setTimeout(() => {
+                            const cb = item.querySelector('input');
+                            if(cb.checked) {
+                                item.style.borderLeftColor = "#e65100"; // 選中變深橙色
+                                item.style.backgroundColor = "#ffe0b2";
+                            } else {
+                                item.style.borderLeftColor = "#ffcc80"; // 取消變回淺橙色
+                                item.style.backgroundColor = "#fff";
+                            }
+                        }, 50);
+                    };
+
+                    item.innerHTML = `
+                        <input type="checkbox" class="s3-student-checkbox" value="${name}" style="transform: scale(1.3); margin-right: 12px; accent-color: #e65100;">
+                        <div>
+                            <div style="font-weight:bold; color: #333; font-size: 1.05em;">
+                                <span style="display:inline-block; width:25px; text-align:center; background:#eee; border-radius:3px; margin-right:5px; font-size:0.9em; color:#666;">${oldNum}</span>
+                                ${name}
+                            </div>
+                        </div>
+                    `;
+                    listDiv.appendChild(item);
+                });
+            }
         });
     });
 }

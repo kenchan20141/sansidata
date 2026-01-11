@@ -298,7 +298,22 @@
     .overall-grade-tag { background-color: #fff; color: #d9534f; padding: 5px 25px; border-radius: 50px; font-size: 1.4rem; font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 2px solid #d69a92; display: flex; align-items: center; gap: 8px; }
     .overall-grade-label { font-size: 0.8rem; color: #888; font-weight: normal; text-transform: uppercase; letter-spacing: 1px; }
     .report-category-badge:not(.badge-general) { display: inline-flex; align-items: center; gap: 10px; padding: 10px 25px; border-radius: 50px; color: white; font-weight: bold; font-size: 1.3rem; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); letter-spacing: 1px; }
-    .report-text-card { background-color: #fdfcf8; border: 1px solid #e0ddd7; border-radius: 12px; padding: 25px; line-height: 1.9; color: #4a4a4a; font-size: 1.05rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); text-align: justify; margin-top: 10px; display: block; }
+   .report-text-card { 
+    background-color: #fdfcf8; 
+    border: 1px solid #e0ddd7; 
+    border-radius: 12px; 
+    padding: 25px; 
+    line-height: 1.9; 
+    color: #4a4a4a; 
+    font-size: 1.05rem; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03); 
+    text-align: justify; 
+    margin-top: 40px !important; /* 增加上邊距 */
+    display: block; 
+    clear: both; /* 清除浮動 */
+    position: relative; /* 確保正常文檔流 */
+    z-index: 1; /* 確保在正常層級 */
+}
     /* 請確保您的 CSS 中，canvas 沒有被強制設為 absolute */
 canvas {
     max-width: 100%;
@@ -413,8 +428,45 @@ canvas {
         margin-bottom: 70px !important;
     }
 
+            /* 手機版改為垂直堆疊 */
+    .report-section {
+        min-height: 800px !important;
+    }
+    
+    .report-section > div > div[style*="inline-block"] {
+        display: block !important;
+        width: 100% !important;
+        margin-bottom: 30px;
+    }
+
         
     }
+
+
+/* ★★★ 防止雷達圖與文字重疊的終極防禦 ★★★ */
+.report-section {
+    position: relative;
+    display: block !important;
+    min-height: 500px; /* 強制最小高度 */
+    margin-bottom: 80px !important;
+    overflow: visible;
+}
+
+/* 確保所有報告區塊內的元素按順序排列 */
+.report-section > * {
+    position: relative;
+    z-index: auto;
+}
+
+/* 雷達圖容器絕對不能超出範圍 */
+canvas {
+    max-width: 100%;
+    max-height: 380px;
+    display: block;
+}
+
+
+    
 </style>
 </head>
 <body>
@@ -1167,11 +1219,8 @@ function generateClassChartHTML(type, avg, count) {
     const totalScore = Math.min(100, scoreContent + scoreExpr + scoreStruct + scorePunc + scoreTypo);
     
     return `
-    <!-- 
-       ★ 修正重點：最外層使用 display: block 確保獨佔一行 
-       margin-bottom: 50px 強制推開下方文字
-    -->
-    <div class="report-section" style="display: block; width: 100%; margin-bottom: 50px; border-bottom: 1px dashed #e0ddd7; padding-bottom: 30px;">
+    <!-- ★★★ 修正：最外層使用 block 並強制最小高度 ★★★ -->
+    <div class="report-section" style="display: block; width: 100%; margin-bottom: 80px; border-bottom: 1px dashed #e0ddd7; padding-bottom: 40px; min-height: 500px;">
         
         <!-- 標題 -->
         <div class="report-category-badge ${cls}" style="margin-bottom: 25px; display: inline-flex;">
@@ -1179,14 +1228,12 @@ function generateClassChartHTML(type, avg, count) {
         </div>
         
         <!-- 
-           Flex 容器：負責左右排列
-           align-items: flex-start 確保高度不會互相拉伸導致變形
-           flex-wrap: wrap 確保手機版會自動換行
+           ★★★ 關鍵修改：不使用 Flex，改用傳統的 inline-block 並排 ★★★
         -->
-        <div style="display: flex; flex-wrap: wrap; gap: 30px; align-items: flex-start; width: 100%;">
+        <div style="width: 100%; display: block; overflow: hidden;">
             
-            <!-- 左側：評分條 (設定 min-width 防止被擠壓) -->
-            <div style="flex: 1; min-width: 300px; background: #fdfcf8; border: 1px solid #eee; border-radius: 12px; padding: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+            <!-- 左側：評分條 -->
+            <div style="display: inline-block; width: 48%; vertical-align: top; min-width: 300px; background: #fdfcf8; border: 1px solid #eee; border-radius: 12px; padding: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-right: 2%;">
                 <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555; margin-bottom: 20px;">
                     班級平均表現 <small style="font-weight:normal; color:#999;">(${count}份)</small>
                 </h3>
@@ -1203,27 +1250,20 @@ function generateClassChartHTML(type, avg, count) {
                 </div>
             </div>
             
-            <!-- 
-               右側：雷達圖容器
-               ★ 關鍵修正：這裡不依賴 flex 計算高度，而是內部撐開
-            -->
-            <div style="flex: 1; min-width: 300px; background:#fff; border:1px solid #eee; border-radius:12px; padding:20px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+            <!-- 右側：雷達圖容器 -->
+            <div style="display: inline-block; width: 48%; vertical-align: top; min-width: 300px; background:#fff; border:1px solid #eee; border-radius:12px; padding:20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
                 <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555; margin-bottom: 15px;">能力分佈</h3>
                 
-                <!-- 
-                   ★ 絕對防禦：強制設定高度 height: 320px
-                   這樣就算 Chart 還沒畫出來，這個 div 也會佔據 320px 的高度，
-                   下方的文字絕對不可能跑上來重疊。
-                -->
-             <div style="position: relative; width: 100%; max-width: 350px; height: 350px !important; overflow: hidden; margin-bottom: 30px;">
-    <canvas id="${id}"></canvas>
-</div>
+                <!-- ★★★ 絕對固定高度容器 ★★★ -->
+                <div style="position: relative; width: 100%; max-width: 350px; height: 380px; margin: 0 auto; overflow: visible;">
+                    <canvas id="${id}" style="display: block;"></canvas>
+                </div>
             </div>
 
         </div>
         
-   <!-- 墊片:確保下方內容被推開 -->
-<div style="height: 80px; width: 100%; clear: both;"></div>
+        <!-- ★★★ 超大墊片：強制推開下方內容 ★★★ -->
+        <div style="height: 100px; width: 100%; clear: both; display: block;"></div>
         
     </div>`;
 }
@@ -1266,8 +1306,9 @@ function renderClassChart(id, avg) {
         },
         options: { 
             responsive: true, 
-            maintainAspectRatio: false, 
-            scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } }, // 縮圖不顯示刻度
+            maintainAspectRatio: true, // ★ 改為 true
+            aspectRatio: 1, // ★ 新增：強制 1:1 比例
+            scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } },
             plugins: { legend: { display: false } } 
         }
     });

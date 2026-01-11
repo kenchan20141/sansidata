@@ -196,32 +196,27 @@
         background-size: 40px 40px; background-attachment: local;
     }
 
-    /* === 重要修正：使用標準 Block 佈局，拒絕 Flex 混排，從物理上保證不重疊 === */
+    /* === 2025修訂：左右並置佈局 (Flexbox) === */
     
-    /* 1. 容器：標準 Block */
-    .grading-container { 
-        display: block;
-        margin-top: 25px; 
-        width: 100%; 
-        box-sizing: border-box;
-        overflow: visible;
+    /* 1. 容器：Flexbox，左右排列 */
+    .grading-side-by-side {
+        display: flex;
+        flex-wrap: wrap; /* 允許換行，適應小螢幕 */
+        gap: 30px;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 50px;
     }
-    
-    /* 2. 網格/佈局層：標準 Block */
-    .grading-grid { 
-        display: block; /* 關鍵：使用 Block 流，元素會自然由上而下堆疊 */
-        width: 100%;
-        text-align: center; /* 讓內部元素置中 */
-    }
-    
-    /* 3. 評分條區塊 */
+
+    /* 2. 左側評分條區塊 */
     .grading-scores {
-        display: block;
-        width: 100%;       
-        max-width: 400px;  /* 限制寬度 */
-        margin: 0 auto 30px auto; /* 上下留白，水平置中 */
-        padding-bottom: 20px;
-        border-bottom: 1px dashed #ddd; 
+        flex: 1; /* 佔據剩餘空間 */
+        min-width: 300px; /* 最小寬度，避免過窄 */
+        padding: 20px;
+        background: #fdfcf8;
+        border-radius: 12px;
+        /* 移除底線，因為現在是左右排列 */
+        border: 1px solid #eee;
     }
     
     .score-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; }
@@ -232,31 +227,62 @@
     .score-display { font-weight: bold; width: 25px; text-align: right; color: #0056b3; font-size: 1rem; }
     .total-score-container { margin-top: 10px; padding-top: 10px; border-top: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; }
     
-    /* 4. 雷達圖區塊：標準 Block */
-    .grading-radar {
-        display: block;
-        width: 100%;
-        margin-bottom: 50px; /* 【核心】給予足夠的底部 Margin，物理推開下方文字 */
+    /* 3. 右側雷達圖區塊 (縮圖) */
+    .grading-radar-thumbnail {
+        flex: 0 0 260px; /* 固定寬度 */
+        width: 260px;
         text-align: center;
+        cursor: pointer; /* 手型游標 */
+        position: relative;
+        transition: transform 0.2s, box-shadow 0.2s;
+        border-radius: 12px;
+        background: #fff;
+        padding: 10px;
+        border: 1px solid transparent;
     }
 
-    .grading-radar h3 {
+    .grading-radar-thumbnail:hover {
+        transform: scale(1.03);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        border-color: var(--m-blue);
+    }
+    
+    .grading-radar-thumbnail::after {
+        content: '\f00e  點擊放大圖表'; /* FontAwesome search-plus icon content */
+        font-family: "Font Awesome 5 Free";
+        font-weight: 900;
+        position: absolute;
+        top: 50%; left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(255,255,255,0.85);
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-size: 0.9em;
+        color: var(--m-blue);
+        opacity: 0;
+        transition: opacity 0.2s;
+        pointer-events: none;
+    }
+
+    .grading-radar-thumbnail:hover::after {
+        opacity: 1;
+    }
+
+    .grading-radar-thumbnail h3 {
         color: var(--m-blue);
         border-bottom: none; 
         padding-bottom: 5px;
         width: 100%;
         text-align: center;
-        margin-bottom: 15px;
-        font-size: 1.1em;
+        margin: 0 0 10px 0;
+        font-size: 1em;
     }
 
-    /* 5. 圖表容器：給定明確高度，防止塌陷 */
-    .radar-chart-container { 
-        display: inline-block; /* 或 block + margin auto */
+    /* 縮圖 Canvas 容器 */
+    .radar-chart-mini-container { 
         position: relative; 
-        width: 100%; 
-        max-width: 300px; /* 限制圖表大小 */
-        height: 300px;    /* 【核心】固定高度，佔據物理空間 */
+        width: 240px; 
+        height: 240px;
         margin: 0 auto;
     }
 
@@ -325,9 +351,13 @@
     
     @media (max-width: 600px) { 
         .copyright-footer p { font-size: 12px; } 
-        .grading-scores, .grading-radar { max-width: 100% !important; padding: 0 0 15px 0; }
+        /* 手機版：評分表與雷達圖改為垂直堆疊 */
+        .grading-side-by-side { flex-direction: column; }
+        .grading-scores { width: 100%; min-width: auto; }
+        .grading-radar-thumbnail { width: 100% !important; flex: none; }
+        
         .score-item label { width: auto; min-width: 60px; font-size: 0.9em; }
-        .radar-chart-container { max-width: 280px !important; height: 280px !important; }
+        .radar-chart-mini-container { width: 100% !important; max-width: 280px; height: 280px !important; }
         .modal-body { width: 100%; border-radius: 0; margin: 0; }
         .modal-overlay { padding: 40px 0 100px 0; }
     }
@@ -557,6 +587,7 @@
 
 <!-- Modals -->
 
+<!-- 歷史檢閱視窗 -->
 <div id="historyViewerModal" class="modal-overlay">
     <div class="modal-body">
         <div class="modal-header">
@@ -579,6 +610,7 @@
     </div>
 </div>
 
+<!-- 提交檢閱視窗 -->
 <div id="submissionViewerModal" class="modal-overlay">
     <div class="modal-body">
         <div class="modal-header">
@@ -597,6 +629,7 @@
     </div>
 </div>
 
+<!-- 班級報告視窗 -->
 <div id="classReportModal" class="modal-overlay">
     <div class="modal-body" style="max-width: 900px;">
         <div class="modal-header">
@@ -604,6 +637,19 @@
             <button onclick="document.getElementById('classReportModal').style.display='none'" style="font-size:28px; border:none; background:none; cursor:pointer; color:#999;">&times;</button>
         </div>
         <div id="classReportContent" class="modal-content-scroll" style="background:#f9f9f9; padding: 0;"></div>
+    </div>
+</div>
+
+<!-- 2025 新增：圖表放大專用視窗 (Modal) -->
+<div id="chartEnlargeModal" class="modal-overlay" style="z-index: 10001;">
+    <div class="modal-body" style="width: 90%; max-width: 700px; height: auto;">
+        <div class="modal-header" style="background: #fff; border-bottom: none;">
+            <h3 id="enlargeChartTitle" style="margin:0; color:var(--m-blue);">能力分析詳情</h3>
+            <button onclick="document.getElementById('chartEnlargeModal').style.display='none'" style="font-size:28px; border:none; background:none; cursor:pointer; color:#999;">&times;</button>
+        </div>
+        <div style="padding: 10px 30px 40px 30px; height: 500px; position: relative; width: 100%; box-sizing: border-box;">
+            <canvas id="bigChartCanvas"></canvas>
+        </div>
     </div>
 </div>
 
@@ -788,36 +834,41 @@
         if(data.stats.argumentTotal>0) { const b=d.querySelector('.badge-argument'); if(b) b.outerHTML=generateClassChartHTML('argument', data.stats.argAvg, data.stats.argumentTotal); }
         c.innerHTML = `<div style="text-align:right;color:#999;padding:20px 20px 0 0;">報告日期：${data.dateStr}</div><div style="padding:20px;">${d.innerHTML}</div>`;
         m.style.display = 'flex';
+        // Render charts slightly delayed to ensure DOM is ready
         setTimeout(() => { if(data.stats.narrativeTotal>0) renderClassChart('narrativeClassChart', data.stats.narrAvg); if(data.stats.argumentTotal>0) renderClassChart('argumentClassChart', data.stats.argAvg); }, 200);
     }
     
+   // === 關鍵修訂：生成左右並置的 HTML ===
    function generateClassChartHTML(type, avg, total) {
         const id = type==='narrative'?'narrativeClassChart':'argumentClassChart';
         const title = type==='narrative'?'敘事抒情':'議論';
         const cls = type==='narrative'?'badge-narrative':'badge-argument';
         
+        // 將 avg 物件轉換為 JSON 字串，以便 onclick 傳遞
+        const avgStr = JSON.stringify(avg).replace(/"/g, '&quot;');
+        
         return `
         <div class="report-section">
             <div class="report-category-badge ${cls}"><i class="fas fa-book"></i> ${title}</div>
-            <div class="report-radar-wrapper" style="border:none; box-shadow:none; background:transparent;">
-                <div class="grading-container" style="margin:0; border:none; padding:0;">
-                    <div class="grading-grid">
-                        
-                        <!-- 1. 評分表 (Block) -->
-                        <div class="grading-scores">
-                            <h3>班級平均表現</h3>
-                            <div class="score-item"><label>內容 (40)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.content*4}</span></div></div>
-                            <div class="score-item"><label>表達 (30)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.expr*3}</span></div></div>
-                            <div class="score-item"><label>結構 (20)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.struct*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.struct*2}</span></div></div>
-                            <div class="total-score-container"><span style="font-size:1.1em; color:#555;">平均總分: ${total} / 100</span><span style="font-size:2em; font-weight:bold; color:#d9534f;">${determineGrade(total)}</span></div>
-                        </div>
-                        
-                        <!-- 2. 雷達圖 (Block, 下方有 margin) -->
-                        <div class="grading-radar">
-                            <h3>能力分佈圖</h3>
-                            <div class="radar-chart-container">
-                                <canvas id="${id}"></canvas>
-                            </div>
+            
+            <div class="report-radar-wrapper">
+                <!-- 左右並置容器 -->
+                <div class="grading-side-by-side">
+                    
+                    <!-- 1. 左側：評分條 -->
+                    <div class="grading-scores">
+                        <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center;">班級平均表現</h3>
+                        <div class="score-item"><label>內容 (40)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.content*4}</span></div></div>
+                        <div class="score-item"><label>表達 (30)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.expr*3}</span></div></div>
+                        <div class="score-item"><label>結構 (20)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.struct*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.struct*2}</span></div></div>
+                        <div class="total-score-container"><span style="font-size:1.1em; color:#555;">平均總分: ${total} / 100</span><span style="font-size:2em; font-weight:bold; color:#d9534f;">${determineGrade(total)}</span></div>
+                    </div>
+                    
+                    <!-- 2. 右側：雷達圖 (縮圖，點擊放大) -->
+                    <div class="grading-radar-thumbnail" onclick='openEnlargedChart("${title}", ${avgStr})'>
+                        <h3>能力分佈圖</h3>
+                        <div class="radar-chart-mini-container">
+                            <canvas id="${id}"></canvas>
                         </div>
                     </div>
                 </div>
@@ -825,6 +876,7 @@
         </div>`;
     }
     
+    // 渲染縮圖 (保持原有邏輯)
     function renderClassChart(id, avg) {
         const ctx = document.getElementById(id); if(!ctx) return;
         new Chart(ctx.getContext('2d'), {
@@ -833,11 +885,75 @@
             options: { 
                 responsive: true, 
                 maintainAspectRatio: false, 
-                scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } }, 
+                scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } }, // 縮圖不顯示刻度
                 plugins: { legend: { display: false } } 
             }
         });
     }
+    
+    // === 新增：打開放大圖表的 Modal 並渲染大圖 ===
+    let bigChartInstance = null;
+    function openEnlargedChart(title, avg) {
+        document.getElementById('chartEnlargeModal').style.display = 'flex';
+        document.getElementById('enlargeChartTitle').innerHTML = `<i class="fas fa-chart-area"></i> ${title} - 能力詳細分析`;
+        
+        const ctx = document.getElementById('bigChartCanvas').getContext('2d');
+        if (bigChartInstance) bigChartInstance.destroy(); // 銷毀舊圖表
+
+        bigChartInstance = new Chart(ctx, {
+            type: 'radar',
+            data: { 
+                labels: ['立意 (深淺)', '取材 (廣度)', '扣題 (緊密)', '詳略 (佈局)', '詞彙 (豐富)', '文學性 (修辭)'], 
+                datasets: [{ 
+                    label: '班級平均', 
+                    data: [
+                        (avg.content*0.6+avg.struct*0.4).toFixed(1), 
+                        (avg.content*0.8+avg.expr*0.2).toFixed(1), 
+                        (avg.content*0.7+avg.struct*0.3).toFixed(1), 
+                        (avg.struct*0.7+avg.content*0.3).toFixed(1), 
+                        avg.expr, 
+                        avg.expr
+                    ], 
+                    backgroundColor: 'rgba(148, 167, 181, 0.5)', 
+                    borderColor: '#94a7b5', 
+                    borderWidth: 3, 
+                    pointBackgroundColor: '#fff',
+                    pointBorderColor: '#94a7b5',
+                    pointHoverBackgroundColor: '#94a7b5',
+                    pointHoverBorderColor: '#fff',
+                    pointRadius: 5,
+                    pointHoverRadius: 8
+                }] 
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                scales: { 
+                    r: { 
+                        suggestedMin: 0, 
+                        suggestedMax: 10,
+                        angleLines: { color: '#eee' },
+                        grid: { color: '#e0ddd7' },
+                        pointLabels: {
+                            font: { size: 14, family: "'Noto Serif TC', serif", weight: 'bold' },
+                            color: '#555'
+                        },
+                        ticks: { display: true, backdropColor: 'transparent', z: 10 }
+                    } 
+                }, 
+                plugins: { 
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(0,0,0,0.8)',
+                        titleFont: { size: 16 },
+                        bodyFont: { size: 14 },
+                        padding: 12
+                    }
+                } 
+            }
+        });
+    }
+
     async function callAPI(prompt) {
         let k = READING_API_KEYS[Math.floor(Math.random() * READING_API_KEYS.length)];
         const r = await fetch(READING_API_URL, { method: "POST", headers: { "Authorization": `Bearer ${k}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: READING_MODEL, messages: [{ role: "user", content: prompt }], max_tokens: 4000 }) });

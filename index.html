@@ -192,28 +192,11 @@
         .badge-expand { background-color: #d69a92; }
         
         /* 2. 整體概況標題容器 (增強版) */
-        /* 2. 整體概況標題容器 (修改為無印米色風格) */
-.badge-general {
-    width: 100%; 
-    max-width: 100%; 
-    box-sizing: border-box; 
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    justify-content: center;
-    padding: 20px 10px; 
-    margin-bottom: 10px; 
-    
-    /* === 修改重點：無印風．暖麻米色 === */
-    background: linear-gradient(135deg, #C5B4A1 0%, #A99885 100%);
-    box-shadow: 0 8px 20px rgba(169, 152, 133, 0.35);
-    /* ============================== */
-
-    color: white; 
-    border-radius: 12px; 
-    position: relative; 
-    overflow: hidden;
-}
+        .badge-general {
+            width: 100%; max-width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 20px 10px; margin-bottom: 10px; background: linear-gradient(135deg, #5e7067 0%, #4b5e56 100%);
+            color: white; border-radius: 12px; box-shadow: 0 8px 20px rgba(94, 112, 103, 0.3); position: relative; overflow: hidden;
+        }
         .badge-general-title { font-size: 1.6rem; font-weight: bold; letter-spacing: 2px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
         
         /* 3. 綜合評級 */
@@ -349,8 +332,6 @@
         <!-- 3. 學生報告頁面 (新增) -->
         <div id="tab-reports" class="box" style="display:none;">
             <h2>學生學習報告管理</h2>
-            
-            <!-- 篩選與操作區 -->
             <div class="filter-group">
                 <label><i class="fas fa-filter" style="color:var(--m-blue);"></i> 篩選：</label>
                 <select id="reportGrade" onchange="loadReportStudentList()">
@@ -369,23 +350,6 @@
                 </button>
             </div>
             
-            <!-- === 新增：全班報告歷史紀錄區塊 === -->
-            <!-- 預設隱藏 (display:none)，當 JS 偵測到有紀錄時才會顯示 -->
-            <div id="classReportHistoryContainer" style="margin-bottom: 25px; padding: 20px; background: #fdfcf8; border-radius: 12px; border: 1px solid var(--border-color); border-left: 5px solid #7da3c0; display:none; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                    <h3 style="margin:0; border:none; padding:0; font-size:1.1em; color:var(--text-main); display:flex; align-items:center; gap:8px;">
-                        <i class="fas fa-history" style="color:#7da3c0;"></i> 過往全班綜合報告紀錄
-                    </h3>
-                    <small style="color:#999; font-style:italic;">點擊下方按鈕以重看報告</small>
-                </div>
-                
-                <!-- 這裡的內容會由 JS (loadClassReportHistory) 動態填充 -->
-                <div id="classReportList" style="display:flex; gap:12px; overflow-x:auto; padding:5px 0; align-items: center; scroll-behavior: smooth;">
-                </div>
-            </div>
-            <!-- === 歷史紀錄區塊結束 === -->
-
-            <!-- 個別學生列表 -->
             <div id="reportStudentListContainer" class="student-grid">
                 <p style="text-align:center; width:100%; color:#aaa; padding:30px;">請選擇年級和班別以載入報告列表</p>
             </div>
@@ -603,16 +567,13 @@
             });
         }
 
-        // === 新增：載入學生報告列表與歷史紀錄 ===
+        // === 新增：載入學生報告列表 ===
         function loadReportStudentList() {
             const g = document.getElementById('reportGrade').value;
             const c = document.getElementById('reportClass').value;
             const container = document.getElementById('reportStudentListContainer');
             container.innerHTML = '<p style="text-align:center; padding:20px; width:100%; color:#888;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
             
-            // 同時載入歷史報告列表
-            loadClassReportHistory();
-
             db.ref(`students/${g}/${c}`).once('value', snapshot => {
                 const data = snapshot.val();
                 if (!data) { container.innerHTML = '<p style="text-align:center; width:100%; color:#aaa;">暫無資料。</p>'; return; }
@@ -714,11 +675,12 @@
                     return;
                 }
 
-                // 計算平均分
+                // 計算平均分 (0-100 scale -> 轉回 0-10 scale for charts if needed, or keeping total)
+                // 為了顯示雷達圖，我們將分數標準化為 0-10
                 const narrAvg = {
-                    content: narrativeTotal.count ? Math.round((narrativeTotal.content / narrativeTotal.count) / 4) : 0, 
-                    expr: narrativeTotal.count ? Math.round((narrativeTotal.expr / narrativeTotal.count) / 3) : 0,    
-                    struct: narrativeTotal.count ? Math.round((narrativeTotal.struct / narrativeTotal.count) / 2) : 0 
+                    content: narrativeTotal.count ? Math.round((narrativeTotal.content / narrativeTotal.count) / 4) : 0, // /40 * 10
+                    expr: narrativeTotal.count ? Math.round((narrativeTotal.expr / narrativeTotal.count) / 3) : 0,    // /30 * 10
+                    struct: narrativeTotal.count ? Math.round((narrativeTotal.struct / narrativeTotal.count) / 2) : 0 // /20 * 10
                 };
                 const argAvg = {
                     content: argumentTotal.count ? Math.round((argumentTotal.content / argumentTotal.count) / 4) : 0,
@@ -771,27 +733,39 @@
 
                 const response = await callAPI(prompt);
 
-                // --- 4. 儲存與顯示 ---
-                const reportData = {
-                    timestamp: firebase.database.ServerValue.TIMESTAMP,
-                    dateStr: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
-                    stats: {
-                        narrAvg: narrAvg,
-                        argAvg: argAvg,
-                        narrativeTotal: Math.round((narrativeTotal.content+narrativeTotal.expr+narrativeTotal.struct)/narrativeTotal.count) || 0,
-                        argumentTotal: Math.round((argumentTotal.content+argumentTotal.expr+argumentTotal.struct)/argumentTotal.count) || 0
-                    },
-                    aiHtml: response // 只儲存 AI 生成的原始 HTML
-                };
-
-                // 4-1. 存入 Firebase
-                await db.ref(`class_reports/${g}/${c}`).push(reportData);
+                // 4. 顯示結果 & 插入圖表
+                const modal = document.getElementById('classReportModal');
+                const content = document.getElementById('classReportContent');
                 
-                // 4-2. 刷新歷史列表
-                loadClassReportHistory();
+                // 構建包含圖表的 HTML
+                // 我們需要在 AI 回傳的 HTML 中插入圖表容器，然後用 JS 渲染
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = response;
 
-                // 4-3. 開啟顯示
-                openClassReportModal(reportData);
+                // 插入敘事圖表
+                const narrBadge = tempDiv.querySelector('.badge-narrative');
+                if (narrBadge && narrativeTotal.count > 0) {
+                    const chartHTML = generateClassChartHTML('narrative', narrAvg, Math.round((narrativeTotal.content+narrativeTotal.expr+narrativeTotal.struct)/narrativeTotal.count));
+                    narrBadge.outerHTML = chartHTML; // 替換標題為包含圖表的完整區塊
+                    // 注意：AI 生成的 badge 下方會有 text-card，我們需要調整結構
+                    // 這裡簡化處理：直接把 AI 的 text-card 內容搬進去
+                }
+
+                // 插入議論圖表
+                const argBadge = tempDiv.querySelector('.badge-argument');
+                if (argBadge && argumentTotal.count > 0) {
+                    const chartHTML = generateClassChartHTML('argument', argAvg, Math.round((argumentTotal.content+argumentTotal.expr+argumentTotal.struct)/argumentTotal.count));
+                    argBadge.outerHTML = chartHTML;
+                }
+
+                content.innerHTML = `<div style="text-align:right; color:#999; padding:20px 20px 0 0;">生成日期：${new Date().toLocaleDateString()}</div><div style="padding:20px;">` + tempDiv.innerHTML + `</div>`;
+                modal.style.display = 'flex';
+
+                // 5. 渲染圖表 (延遲執行)
+                setTimeout(() => {
+                    renderClassChart('narrativeClassChart', narrAvg);
+                    renderClassChart('argumentClassChart', argAvg);
+                }, 200);
 
             } catch (e) {
                 console.error(e);
@@ -800,77 +774,6 @@
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)';
             }
-        }
-
-        // === 新增：載入與顯示歷史全班報告 ===
-        function loadClassReportHistory() {
-            const g = document.getElementById('reportGrade').value;
-            const c = document.getElementById('reportClass').value;
-            const container = document.getElementById('classReportHistoryContainer');
-            const list = document.getElementById('classReportList');
-
-            db.ref(`class_reports/${g}/${c}`).once('value', snapshot => {
-                const data = snapshot.val();
-                if (!data) {
-                    container.style.display = 'none';
-                    return;
-                }
-
-                container.style.display = 'block';
-                list.innerHTML = '';
-
-                // 將資料轉為陣列並按時間倒序排列
-                Object.entries(data)
-                    .sort(([,a], [,b]) => b.timestamp - a.timestamp)
-                    .forEach(([key, report]) => {
-                        const btn = document.createElement('button');
-                        btn.className = 'btn-action';
-                        btn.style.cssText = 'background:white; color:#555; border:1px solid #ccc; flex-shrink:0;';
-                        btn.innerHTML = `<i class="far fa-file-alt"></i> ${report.dateStr || '未知日期'}`;
-                        btn.onclick = () => openClassReportModal(report);
-                        list.appendChild(btn);
-                    });
-            });
-        }
-
-        function openClassReportModal(reportData) {
-            const modal = document.getElementById('classReportModal');
-            const content = document.getElementById('classReportContent');
-            
-            // 構建 HTML
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = reportData.aiHtml;
-
-            // 處理敘事圖表 (取代 AI 的標籤)
-            const narrBadge = tempDiv.querySelector('.badge-narrative');
-            if (narrBadge && reportData.stats.narrativeTotal > 0) {
-                const chartHTML = generateClassChartHTML('narrative', reportData.stats.narrAvg, reportData.stats.narrativeTotal);
-                narrBadge.outerHTML = chartHTML; 
-            }
-
-            // 處理議論圖表 (取代 AI 的標籤)
-            const argBadge = tempDiv.querySelector('.badge-argument');
-            if (argBadge && reportData.stats.argumentTotal > 0) {
-                const chartHTML = generateClassChartHTML('argument', reportData.stats.argAvg, reportData.stats.argumentTotal);
-                argBadge.outerHTML = chartHTML;
-            }
-
-            // 填入內容
-            content.innerHTML = `
-                <div style="text-align:right; color:#999; padding:20px 20px 0 0;">
-                    報告日期：${reportData.dateStr}
-                </div>
-                <div style="padding:20px;">
-                    ${tempDiv.innerHTML}
-                </div>`;
-            
-            modal.style.display = 'flex';
-
-            // 延遲渲染 Canvas 圖表
-            setTimeout(() => {
-                if(reportData.stats.narrativeTotal > 0) renderClassChart('narrativeClassChart', reportData.stats.narrAvg);
-                if(reportData.stats.argumentTotal > 0) renderClassChart('argumentClassChart', reportData.stats.argAvg);
-            }, 200);
         }
 
         // 生成圖表 HTML 結構 (與學生端一致)
@@ -913,7 +816,7 @@
             const ctxEl = document.getElementById(canvasId);
             if (!ctxEl) return;
             
-            // 估算細項
+            // 估算細項 (因為資料庫只存了總分，這裡做合理推算)
             const radarData = [
                 (avg.content * 0.6 + avg.struct * 0.4).toFixed(1), // 立意
                 (avg.content * 0.8 + avg.expr * 0.2).toFixed(1),   // 取材
@@ -1050,27 +953,55 @@
             });
         }
         function moveIndividualStudent() {
-            const n = document.querySelector('input[name="ts"]:checked')?.value;
-            if (!n) return alert("請選擇學生");
-            const fg = document.getElementById('indivFromGrade').value;
-            const fc = document.getElementById('indivFromClass').value;
-            const tg = document.getElementById('indivToGrade').value;
-            const tc = document.getElementById('indivToClass').value;
-            const nn = document.getElementById('indivNewNumber').value;
-            if (!nn) return alert("請輸入新班號");
-            const oldPath = `students/${fg}/${fc}/${n}`;
-            const newPath = `students/${tg}/${tc}/${n}`;
-            db.ref(oldPath).once('value', s => {
-                const d = s.val();
-                if (!d) return;
-                d.profile = d.profile || {}; d.profile.grade = tg; d.profile.class = tc; d.profile.number = nn;
-                if (oldPath === newPath) {
-                    db.ref(newPath).update(d, e => { if (!e) { alert("班號已更新"); populateTransferStudentList(); } else alert("更新失敗：" + e.message); });
+    const n = document.querySelector('input[name="ts"]:checked')?.value;
+    if (!n) return alert("請選擇學生");
+
+    const fg = document.getElementById('indivFromGrade').value;
+    const fc = document.getElementById('indivFromClass').value;
+    const tg = document.getElementById('indivToGrade').value;
+    const tc = document.getElementById('indivToClass').value;
+    const nn = document.getElementById('indivNewNumber').value;
+
+    if (!nn) return alert("請輸入新班號");
+
+    const oldPath = `students/${fg}/${fc}/${n}`;
+    const newPath = `students/${tg}/${tc}/${n}`;
+
+    db.ref(oldPath).once('value', s => {
+        const d = s.val();
+        if (!d) return;
+
+        // 更新資料物件中的 profile
+        d.profile = d.profile || {};
+        d.profile.grade = tg;
+        d.profile.class = tc;
+        d.profile.number = nn;
+
+        // 判斷是否為同班移動（例如只改班號）
+        if (oldPath === newPath) {
+            // 同路徑：直接更新，不要執行 remove
+            db.ref(newPath).update(d, e => {
+                if (!e) {
+                    alert("班號已更新");
+                    populateTransferStudentList();
                 } else {
-                    db.ref(newPath).set(d, e => { if (!e) { db.ref(oldPath).remove(); alert("學生已成功轉班"); populateTransferStudentList(); } else alert("移轉失敗：" + e.message); });
+                    alert("更新失敗：" + e.message);
+                }
+            });
+        } else {
+            // 跨班移動：先在新位置建立，再刪除舊位置
+            db.ref(newPath).set(d, e => {
+                if (!e) {
+                    db.ref(oldPath).remove();
+                    alert("學生已成功轉班");
+                    populateTransferStudentList();
+                } else {
+                    alert("移轉失敗：" + e.message);
                 }
             });
         }
+    });
+}
         function deleteStudent() {
             const n=document.querySelector('input[name="ts"]:checked')?.value;
             if(n && confirm(`刪除 ${n}?`)) db.ref(`students/${document.getElementById('indivFromGrade').value}/${document.getElementById('indivFromClass').value}/${n}`).remove(e=>{ if(!e) populateTransferStudentList(); });

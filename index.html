@@ -976,17 +976,17 @@ function loadStudentList() {
         const prompt = `你是一位中文科科主任。分析 ${g}年${c}班 數據：
         敘事平均表現(10分制)：內容${narrAvg.content}, 表達${narrAvg.expr}, 結構${narrAvg.struct}。
         議論平均表現(10分制)：內容${argAvg.content}, 表達${argAvg.expr}, 結構${argAvg.struct}。
-        大綱表現：${outlineSummary}
-        閱讀表現：${readingSummary}
-        整合表現：${expandSummary}
-        成品摘要：${classSummary}
+        「大綱」表現：${outlineSummary}
+        「閱讀」表現：${readingSummary}
+        「整合拓展」表現：${expandSummary}
+        學習報告：${classSummary}
 
         任務：生成「全班綜合學習評估報告」。
         
         【格式要求 (必須嚴格遵守 HTML)】：
         1. <div class="report-section"><div class="report-category-badge badge-general"><div class="badge-general-title">${g}${c}班 綜合評估</div></div><div class="report-text-card"><p>總結</p></div></div><div class="report-separator"></div>
-        
-        2. 請針對以下四個範疇撰寫分析，並【必須】使用以下指定的 HTML 標題格式：
+        2. 嚴禁使用「'」等符號，有需要時必須運用中文的開關引號，即「」。
+        3. 請針對以下四個範疇撰寫分析，並【必須】使用以下指定的 HTML 標題格式：
            
            (敘事)：
            <div class="report-section">

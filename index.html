@@ -239,7 +239,7 @@
         text-align: left; /* 強制內容靠左 */
     }
 
-    /* === 修復：雷達圖與評分表樣式 (強制垂直版 Fix 2) === */
+  /* === 修復：彈性寬度與垂直佈局 (Flex Column with Max-Width) === */
     .grading-container { 
         margin-top: 25px; 
         border-top: 2px dashed #aeb6bf; 
@@ -249,44 +249,55 @@
         overflow-x: hidden; 
     }
     
-    /* 強制使用 Flex Column，廢除 Grid 左右排列 */
+    /* 強制垂直排列，並置中對齊 (不再拉伸到全寬) */
     .grading-grid { 
         display: flex !important; 
         flex-direction: column !important; /* 垂直堆疊 */
-        gap: 30px; 
-        align-items: center; /* 置中對齊 */
+        align-items: center !important;    /* 核心：水平置中，讓寬度由內容或 max-width 決定 */
+        gap: 25px; 
         width: 100%;
     }
     
-    .grading-scores, .grading-radar, .report-radar-wrapper {
+    /* 設定卡片樣式與寬度限制 */
+    .grading-scores, .grading-radar {
         background-color: #f8f9fa; 
         border: 1px solid #dee2e6; 
         border-radius: 8px; 
-        padding: 20px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.04); 
+        padding: 20px 25px; /* 增加一點內距讓文字舒服 */
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
         box-sizing: border-box; 
-        width: 100% !important; /* 佔滿寬度 */
-        max-width: 100% !important;
+        
+        width: 100% !important;       /* 手機版佔滿 */
+        max-width: 550px !important;  /* 電腦版核心修正：限制最大寬度，不再過寬 */
+        min-width: 280px;             /* 防止過窄 */
         margin: 0 !important;
-        min-width: 0;
     }
     
-    .score-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; }
-    .score-item label { font-weight: bold; color: #495057; flex-shrink: 0; margin-right: 10px; }
-    .slider-container { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 160px; }
-    .progress-bar-container { width: 120px; height: 12px; background-color: #e9ecef; border-radius: 6px; overflow: hidden; border: 1px solid #ced4da; }
+    /* 評分項目微調 */
+    .score-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 15px; }
+    .score-item label { font-weight: bold; color: #495057; flex-shrink: 0; width: 80px; /* 固定標籤寬度 */ }
+    .slider-container { flex-grow: 1; display: flex; align-items: center; gap: 10px; max-width: none; /* 讓拉桿自適應剩餘空間 */ }
+    .progress-bar-container { flex-grow: 1; height: 10px; background-color: #e9ecef; border-radius: 6px; overflow: hidden; border: 1px solid #ced4da; }
     .progress-bar-fill { height: 100%; width: 0%; background-color: #007bff; border-radius: 6px; }
-    .score-display { font-weight: bold; width: 25px; text-align: center; color: #0056b3; }
-    .total-score-container { margin-top: 20px; padding-top: 15px; border-top: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
+    .score-display { font-weight: bold; width: 30px; text-align: right; color: #0056b3; font-size: 1rem; }
+    .total-score-container { margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; }
     
-    /* 雷達圖容器設定：給予足夠高度，避免被壓縮 */
+    /* 雷達圖容器修正：限制高度與比例 */
     .radar-chart-container { 
         position: relative; 
         width: 100% !important; 
-        height: 500px !important; /* 強制高度，確保不被切斷 */
-        max-height: 60vh; /* 在超小螢幕上不過高 */
+        height: auto !important; 
+        aspect-ratio: 1 / 1;          /* 保持正方形，避免變形 */
+        max-height: 350px !important; /* 核心修正：限制最大高度，避免撐爆畫面 */
         margin: 0 auto;
-        overflow: visible; /* 允許標籤溢出 */
+        overflow: visible; 
+    }
+
+    /* 手機版微調 */
+    @media (max-width: 600px) { 
+        .grading-scores, .grading-radar { max-width: 100% !important; padding: 15px; }
+        .score-item label { width: auto; min-width: 60px; font-size: 0.9em; }
+        .radar-chart-container { max-height: 300px !important; }
     }
 
     .copyright-footer { position: fixed; bottom: 0; right: 0; padding: 5px 10px; background-color: #f1f1f1; z-index: 999; }
@@ -767,34 +778,31 @@
         setTimeout(() => { if(data.stats.narrativeTotal>0) renderClassChart('narrativeClassChart', data.stats.narrAvg); if(data.stats.argumentTotal>0) renderClassChart('argumentClassChart', data.stats.argAvg); }, 200);
     }
     
-    function generateClassChartHTML(type, avg, total) {
+   function generateClassChartHTML(type, avg, total) {
         const id = type==='narrative'?'narrativeClassChart':'argumentClassChart';
         const title = type==='narrative'?'敘事抒情':'議論';
         const cls = type==='narrative'?'badge-narrative':'badge-argument';
         
-        // ★★★ 核心修改：強制垂直堆疊的 HTML 結構 (配合 CSS .grading-grid column) ★★★
         return `
         <div class="report-section">
             <div class="report-category-badge ${cls}"><i class="fas fa-book"></i> ${title}</div>
             <div class="report-radar-wrapper">
                 <div class="grading-container" style="margin:0; border:none; padding:0;">
-                    <!-- 這裡會用到 display: flex; flex-direction: column; -->
                     <div class="grading-grid">
                         
-                        <!-- 1. 評分表 -->
-                        <div class="grading-scores" style="padding:15px;">
+                        <!-- 1. 評分表 (寬度已由 CSS 限制為 max-width: 550px) -->
+                        <div class="grading-scores">
                             <h3>班級平均表現</h3>
                             <div class="score-item"><label>內容 (40)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.content*4}</span></div></div>
                             <div class="score-item"><label>表達 (30)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.expr*3}</span></div></div>
                             <div class="score-item"><label>結構 (20)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.struct*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.struct*2}</span></div></div>
-                            <div class="total-score-container"><span style="font-size:1.1em; color:#555;">平均總分: ${total} / 100</span><span style="font-size:2em; font-weight:bold; color:#d9534f; margin-left:auto;">${determineGrade(total)}</span></div>
+                            <div class="total-score-container"><span style="font-size:1.1em; color:#555;">平均總分: ${total} / 100</span><span style="font-size:2em; font-weight:bold; color:#d9534f;">${determineGrade(total)}</span></div>
                         </div>
                         
-                        <!-- 2. 雷達圖 (垂直排列在下方) -->
-                        <div class="grading-radar" style="padding:15px;">
+                        <!-- 2. 雷達圖 (垂直排列在下方，寬度與高度已限制) -->
+                        <div class="grading-radar">
                             <h3>能力分佈</h3>
-                            <!-- 強制高度，確保顯示 -->
-                            <div class="radar-chart-container" style="height: 500px; width: 100%;">
+                            <div class="radar-chart-container">
                                 <canvas id="${id}"></canvas>
                             </div>
                         </div>

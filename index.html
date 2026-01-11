@@ -1007,153 +1007,62 @@
     }
 
     // 歷史紀錄詳情
-   function renderDetail(r) {
-    ['historyLevel1','historyLevel2','historyLevel3'].forEach(id=>document.getElementById(id).style.display='none');
-    document.getElementById('historyDetail').style.display='block';
-    document.getElementById('teacherBreadcrumb').style.display='none';
-    
-    // 1. 處理使用者輸入內容
-    let uContent = '';
-    if(r.userContent) {
-        const lines = r.userContent.split('\n');
-        let html = `<div class="history-parsed-container history-theme-context-${currentThemeIndex}">`;
-        let currentLabel = '輸入內容'; 
-        let currentContent = []; 
-        const labelRegex = /^(.{2,10}?)[：:](.*)$/;
-        
-        lines.forEach((line) => {
-            const match = line.match(labelRegex);
-            if (match) {
+  function renderDetail(r) {
+            ['historyLevel1','historyLevel2','historyLevel3'].forEach(id=>document.getElementById(id).style.display='none');
+            document.getElementById('historyDetail').style.display='block';
+            document.getElementById('teacherBreadcrumb').style.display='none';
+            
+            let uContent = '';
+            // 嘗試解析使用者輸入的格式 (如：題目：xxx)
+            if(r.userContent) {
+                const lines = r.userContent.split('\n');
+                let html = `<div class="history-parsed-container history-theme-context-${currentThemeIndex}">`;
+                let currentLabel = '輸入內容'; 
+                let currentContent = []; 
+                const labelRegex = /^(.{2,10}?)[：:](.*)$/;
+                
+                lines.forEach((line) => {
+                    const match = line.match(labelRegex);
+                    if (match) {
+                        if (currentContent.length > 0) {
+                            html += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${currentContent.join('\n')}</div></div>`;
+                        }
+                        currentLabel = match[1].trim(); 
+                        const rest = match[2].trim(); 
+                        currentContent = rest ? [rest] : [];
+                    } else if (line.trim() !== "") {
+                        currentContent.push(line);
+                    }
+                });
+                // 處理最後一塊
                 if (currentContent.length > 0) {
                     html += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${currentContent.join('\n')}</div></div>`;
                 }
-                currentLabel = match[1].trim(); 
-                const rest = match[2].trim(); 
-                currentContent = rest ? [rest] : [];
-            } else if (line.trim() !== "") {
-                currentContent.push(line);
+                html += `</div>`;
+                uContent = `<div style="background:#fff;padding:20px;border:1px solid #eee;border-radius:12px;margin-bottom:20px; box-shadow:0 2px 10px rgba(0,0,0,0.03);">${html}</div>`;
+            } else {
+                uContent = `<div style="padding:20px; color:#999; text-align:center;">無使用者輸入內容</div>`;
             }
-        });
-        if (currentContent.length > 0) {
-            html += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${currentContent.join('\n')}</div></div>`;
+
+            document.getElementById('historyDetail').innerHTML = `
+                <div style="margin-bottom:15px;">
+                    <button class="nav-btn" onclick="renderLevel3('${currentSubFunction}',${currentThemeIndex})" style="padding:5px 15px;font-size:0.9em;">
+                        <i class="fas fa-arrow-left"></i> 返回列表
+                    </button>
+                </div>
+                <div class="detail-view">
+                    <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:20px;">
+                        <h2 style="text-align:left; margin:0; color:#333;">${r.title}</h2>
+                        <p style="color:#888; margin-top:5px;">${r.dateStr}</p>
+                    </div>
+                    ${uContent}
+                    <div class="detail-ai-box" style="margin-top:20px;">
+                        <h4 style="color:var(--m-green); margin-bottom:10px;">AI 生成結果：</h4>
+                        ${r.aiContent}
+                    </div>
+                </div>`;
         }
-        html += `</div>`;
-        uContent = `<div style="background:#fff;padding:20px;border:1px solid #eee;border-radius:12px;margin-bottom:20px; box-shadow:0 2px 10px rgba(0,0,0,0.03);">${html}</div>`;
-    } else {
-        uContent = `<div style="padding:20px; color:#999; text-align:center;">無使用者輸入內容</div>`;
-    }
 
-    // 2. 嘗試從 AI 內容中提取分數 (支援格式：內容：x.x / 表達：x.x / 結構：x.x)
-    let scoreHTML = '';
-    let chartScript = '';
-    
-    // 簡單的正則表達式來抓取分數
-    const contentScore = (r.aiContent.match(/內容[：:]\s*(\d+(\.\d+)?)/) || [0,0])[1];
-    const exprScore = (r.aiContent.match(/表達[：:]\s*(\d+(\.\d+)?)/) || [0,0])[1];
-    const structScore = (r.aiContent.match(/結構[：:]\s*(\d+(\.\d+)?)/) || [0,0])[1];
-    const totalScore = (r.aiContent.match(/總分[：:]\s*(\d+)/) || [0,0])[1];
-
-    // 如果抓取到有效分數，生成圖表 HTML
-    if (parseFloat(contentScore) > 0 || parseFloat(exprScore) > 0) {
-        const c = parseFloat(contentScore);
-        const e = parseFloat(exprScore);
-        const s = parseFloat(structScore);
-        
-        // 計算百分比 (假設滿分：內容40, 表達30, 結構20，或依比例轉換為10分制)
-        // 這裡將分數標準化為 0-10 用於雷達圖
-        const cNorm = (c > 10) ? c / 4 : c; // 若分數大於10，假設是40分制
-        const eNorm = (e > 10) ? e / 3 : e;
-        const sNorm = (s > 10) ? s / 2 : s;
-
-        scoreHTML = `
-        <div class="grading-container">
-            <h3 style="margin-top:0;"><i class="fas fa-chart-pie"></i> 能力分析圖表</h3>
-            <div class="grading-grid">
-                <!-- 左側：分數條 -->
-                <div class="grading-scores">
-                    <div class="score-item"><label>內容</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${Math.min(cNorm*10, 100)}%" class="progress-bar-fill"></div></div><span class="score-display">${c}</span></div></div>
-                    <div class="score-item"><label>表達</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${Math.min(eNorm*10, 100)}%" class="progress-bar-fill"></div></div><span class="score-display">${e}</span></div></div>
-                    <div class="score-item"><label>結構</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${Math.min(sNorm*10, 100)}%" class="progress-bar-fill"></div></div><span class="score-display">${s}</span></div></div>
-                    <div class="total-score-container">
-                        <span style="color:#666;">總分估算</span>
-                        <span style="font-size:1.5em; font-weight:bold; color:var(--m-red);">${totalScore > 0 ? totalScore : (c+e+s)}</span>
-                    </div>
-                </div>
-                <!-- 右側：雷達圖 -->
-                <div class="grading-radar">
-                    <div class="radar-chart-container">
-                        <canvas id="detailRadarChart"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>`;
-
-        // 延遲執行 Chart.js 繪圖
-        chartScript = `
-        setTimeout(() => {
-            const ctx = document.getElementById('detailRadarChart');
-            if(ctx) {
-                new Chart(ctx, {
-                    type: 'radar',
-                    data: {
-                        labels: ['立意', '取材', '結構', '文句', '詳略', '情感'],
-                        datasets: [{
-                            label: '能力評估',
-                            data: [${cNorm}, ${cNorm}, ${sNorm}, ${eNorm}, ${sNorm}, ${eNorm}], // 模擬映射六維度
-                            backgroundColor: 'rgba(148, 167, 181, 0.4)',
-                            borderColor: '#94a7b5',
-                            pointBackgroundColor: '#94a7b5',
-                            borderWidth: 2
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            r: {
-                                angleLines: { display: true },
-                                suggestedMin: 0,
-                                suggestedMax: 10,
-                                ticks: { display: false } // 隱藏刻度數字讓畫面更乾淨
-                            }
-                        },
-                        plugins: { legend: { display: false } }
-                    }
-                });
-            }
-        }, 300);
-        `;
-    }
-
-    // 3. 組合最終 HTML
-    document.getElementById('historyDetail').innerHTML = `
-        <div style="margin-bottom:15px;">
-            <button class="nav-btn" onclick="renderLevel3('${currentSubFunction}',${currentThemeIndex})" style="padding:5px 15px;font-size:0.9em;">
-                <i class="fas fa-arrow-left"></i> 返回列表
-            </button>
-        </div>
-        <div class="detail-view">
-            <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:20px;">
-                <h2 style="text-align:left; margin:0; color:#333;">${r.title}</h2>
-                <p style="color:#888; margin-top:5px;">${r.dateStr}</p>
-            </div>
-            ${scoreHTML} <!-- 插入圖表 -->
-            ${uContent}
-            <div class="detail-ai-box" style="margin-top:20px;">
-                <h4 style="color:var(--m-green); margin-bottom:10px;">AI 生成結果：</h4>
-                ${r.aiContent}
-            </div>
-        </div>`;
-
-    // 4. 執行繪圖腳本
-    if (chartScript) {
-        const script = document.createElement("script");
-        script.textContent = chartScript;
-        document.body.appendChild(script);
-        // 執行後移除 script 標籤保持乾淨
-        setTimeout(() => document.body.removeChild(script), 1000);
-    }
-}
     
     function updateBreadcrumb(c,s) { const b=document.getElementById('teacherBreadcrumb'); b.style.display='flex'; document.getElementById('breadCategory').innerText=c; document.getElementById('breadSub').innerText=s||''; document.getElementById('breadSep2').style.display=s?'inline':'none'; }
     

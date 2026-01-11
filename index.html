@@ -1014,14 +1014,13 @@
         });
     }
 
-   let analyticsChartInstance = null;
+  let analyticsChartInstance = null;
 
     async function fetchAndRenderStats() {
         const scope = document.getElementById('statScope').value;
         const mode = document.getElementById('statTimeMode').value;
         let y, m, d;
         
-        // 取得時間參數
         if (mode === 'day') { 
             const p = document.getElementById('statDate').value.split('-'); 
             y=p[0]; m=p[1]; d=p[2]; 
@@ -1030,7 +1029,6 @@
             if(mode==='month') m=document.getElementById('statMonth').value; 
         }
         
-        // 建構資料庫路徑
         let path = `analytics/${y}`; 
         if(mode==='day') path+=`/${m}/${d}`; 
         else if(mode==='month') path+=`/${m}`;
@@ -1039,35 +1037,41 @@
             const snap = await db.ref(path).once('value');
             const data = snap.val();
             
-            // 若無數據，清空圖表並返回
             if (!data) { 
                 alert("此時段無數據紀錄"); 
+                if(analyticsChartInstance) analyticsChartInstance.destroy(); 
                 document.getElementById('dispUnique').innerText = 0;
                 document.getElementById('dispVisits').innerText = 0;
                 document.getElementById('dispDuration').innerText = 0;
                 document.getElementById('dispAvg').innerText = 0;
-                if(analyticsChartInstance) analyticsChartInstance.destroy(); 
                 return; 
             }
 
-            // 初始化統計變數
             let agg = {};
-            let globalUniqueSet = new Set(); // 用於計算實際不重複人數
+            let globalUniqueSet = new Set(); 
             let totalVisits = 0;
             let totalDuration = 0;
 
-            // 核心處理函數：遍歷資料節點
             function proc(node, label) {
                 if(!node) return;
                 let targets = [];
+                
+                // 用來統計該節點下所有「已識別學生」的總和，以便計算訪客差額
+                let currentNodeStudentVisits = 0;
+                let currentNodeStudentDuration = 0;
 
-                // 1. 處理學生數據 (現有邏輯)
+                // 1. 處理學生數據
                 if(scope==='global' || scope==='school') {
                     if(node.students) {
-                        Object.keys(node.students).forEach(gKey => { // Grade
-                            Object.keys(node.students[gKey]).forEach(cKey => { // Class
-                                Object.keys(node.students[gKey][cKey]).forEach(sName => { // Student
-                                    targets.push({ id: `${gKey}_${cKey}_${sName}`, data: node.students[gKey][cKey][sName] });
+                        Object.keys(node.students).forEach(gKey => {
+                            Object.keys(node.students[gKey]).forEach(cKey => {
+                                Object.keys(node.students[gKey][cKey]).forEach(sName => {
+                                    const sData = node.students[gKey][cKey][sName];
+                                    targets.push({ id: `${gKey}_${cKey}_${sName}`, data: sData });
+                                    
+                                    // 累加學生數據
+                                    currentNodeStudentVisits += parseInt(sData.visits || 0);
+                                    currentNodeStudentDuration += parseInt(sData.duration || 0);
                                 });
                             });
                         });
@@ -1075,12 +1079,10 @@
                 } else if (scope==='class') {
                     const g=document.getElementById('statGrade').value, c=document.getElementById('statClass').value;
                     if(selectedAnalyticsStudent) {
-                        // 單一學生
                         if(node.students && node.students[g] && node.students[g][c] && node.students[g][c][selectedAnalyticsStudent]) {
                             targets.push({ id: selectedAnalyticsStudent, data: node.students[g][c][selectedAnalyticsStudent] });
                         }
                     } else {
-                        // 整班學生
                         if(node.students && node.students[g] && node.students[g][c]) {
                             Object.keys(node.students[g][c]).forEach(sName => {
                                 targets.push({ id: sName, data: node.students[g][c][sName] });
@@ -1089,17 +1091,30 @@
                     }
                 }
 
-                // 2. ★★★ 修訂重點：處理訪客數據 (guests) ★★★
-                // 只有當選擇「所有用家 (含訪客)」時才讀取 guests 節點
-                if (scope === 'global') {
-                    if (node.guests) {
-                        Object.keys(node.guests).forEach(guestId => {
-                            targets.push({ id: `guest_${guestId}`, data: node.guests[guestId] });
+                // 2. ★★★ 修正重點：計算隱藏的訪客數據 ★★★
+                // 邏輯：Global總數 - 所有學生總數 = 訪客數
+                if (scope === 'global' && node.global) {
+                    const globalVisits = parseInt(node.global.visits || 0);
+                    const globalDuration = parseInt(node.global.duration || 0);
+                    
+                    // 計算差額 (這就是訪客的數據)
+                    const guestVisits = globalVisits - currentNodeStudentVisits;
+                    const guestDuration = globalDuration - currentNodeStudentDuration;
+
+                    if (guestVisits > 0) {
+                        // 建立一個虛擬的「訪客」項目加入統計
+                        targets.push({ 
+                            id: 'guest_users', // 使用固定ID，讓訪客在圖表中合併顯示為一條
+                            data: { 
+                                visits: guestVisits, 
+                                duration: guestDuration 
+                            },
+                            isGuest: true 
                         });
                     }
                 }
 
-                // 3. 數據加總
+                // 3. 數據匯總
                 if(targets.length > 0) {
                     if(!agg[label]) agg[label] = { v: 0, d: 0, uSet: new Set() };
                     targets.forEach(item => {
@@ -1108,10 +1123,12 @@
                         if(v > 0) {
                             agg[label].v += v;
                             agg[label].d += d;
-                            agg[label].uSet.add(item.id);
                             
-                            // 更新全域統計
+                            // 訪客不計入 Unique User ID (或者視為 1 個群體)
+                            // 這裡我們將所有訪客視為 "1" 個群體單位，或者您可以選擇不計入 uSet
+                            agg[label].uSet.add(item.id);
                             globalUniqueSet.add(item.id);
+                            
                             totalVisits += v;
                             totalDuration += d;
                         }
@@ -1119,24 +1136,19 @@
                 }
             }
 
-            // 根據模式執行遍歷
             if(mode==='day') proc(data, '本日');
             else if(mode==='month') Object.keys(data).sort().forEach(k=>proc(data[k], parseInt(k)+'日'));
             else if(mode==='year') Object.keys(data).sort().forEach(mk=>{ Object.keys(data[mk]).forEach(dk=>proc(data[mk][dk], parseInt(mk)+'月')); });
 
-            // 4. 更新介面顯示
-            const activeUserCount = globalUniqueSet.size === 0 ? 1 : globalUniqueSet.size; // 防止除以零
+            // 顯示邏輯：
+            // 如果選了 Global，總人數 = 學生ID數 + 1 (代表訪客群體)
+            const activeUserCount = globalUniqueSet.size || 1; 
 
-            document.getElementById('dispUnique').innerText = globalUniqueSet.size; // 總使用人數 (含訪客)
-            document.getElementById('dispVisits').innerText = totalVisits;          // 總進入次數 (含訪客)
-            document.getElementById('dispDuration').innerText = Math.round(totalDuration/60); // 總時長
-            
-            // ★★★ 修訂重點：平均時長計算 ★★★
-            // 修改前：除以 registeredCount (可能為 1 或靜態人數)
-            // 修改後：除以 activeUserCount (實際有產生的數據人數)
+            document.getElementById('dispUnique').innerText = activeUserCount;
+            document.getElementById('dispVisits').innerText = totalVisits;
+            document.getElementById('dispDuration').innerText = Math.round(totalDuration/60);
             document.getElementById('dispAvg').innerText = Math.round((totalDuration/60) / activeUserCount);
 
-            // 5. 繪製圖表
             const mPurple = '#b6a6ca'; const mBlue = '#94a7b5'; const mRed = '#d69a92';
             const ctx = document.getElementById('analyticsChart').getContext('2d');
             
@@ -1152,16 +1164,10 @@
                         { label: '時長(分)', data: Object.values(agg).map(a=>Math.round(a.d/60)), type: 'line', borderColor: mRed, backgroundColor: 'rgba(214, 154, 146, 0.2)', borderWidth: 2, yAxisID: 'y1' }
                     ] 
                 },
-                options: { 
-                    maintainAspectRatio: false, 
-                    scales: { 
-                        y: { beginAtZero: true, position: 'left', title: {display:true, text:'人數 / 次數'} }, 
-                        y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, title: {display:true, text:'分鐘'} } 
-                    } 
-                }
+                options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true, position: 'left', title: {display:true, text:'人數 / 次數'} }, y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, title: {display:true, text:'分鐘'} } } }
             });
 
-        } catch(e) { console.error(e); alert("讀取數據失敗：" + e.message); }
+        } catch(e) { console.error(e); alert("讀取失敗"); }
     }
 
     // === 共用功能與共用 HTML 解析函式 ===

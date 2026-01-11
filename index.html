@@ -539,52 +539,72 @@
         </div>
     </div>
 
-    <!-- 5. 學年管理頁面 -->
-    <div id="tab-management" class="box" style="display:none;">
-        <h2>學年過渡管理</h2>
-        <div style="text-align:center; margin-bottom:30px;">
-            <div style="font-size:1.2em; color:var(--m-brown); font-weight:bold; margin-bottom:10px;">當前學年設定</div>
-            <div style="display:inline-flex; align-items:center; gap:10px; background:#fff; padding:10px 20px; border-radius:50px; border:1px solid #ccc;">
-                <input type="text" id="currentYearInput" value="2025-2026" style="border:none; text-align:center; font-weight:bold; font-size:1.1em; width:120px;">
-                <button class="btn-action btn-manage" style="padding:5px 15px; font-size:0.8em;" onclick="updateYearConfig()">儲存</button>
-            </div>
-        </div>
-        <div class="management-section">
-            <div class="section-title"><i class="fas fa-user-cog"></i> 個別學生調動 / 刪除</div>
-            <div class="transfer-grid">
-                <div class="transfer-column">
-                    <div style="display:flex; gap:10px; align-items:center;">
-                        <span style="font-weight:bold; color:var(--m-red);">來源：</span>
-                        <select id="indivFromGrade" onchange="populateTransferStudentList()"><option value="6">中六</option><option value="5">中五</option><option value="4">中四</option><option value="3">中三</option><option value="2">中二</option><option value="1">中一</option></select>
-                        <select id="indivFromClass" onchange="populateTransferStudentList()"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
-                    </div>
-                    <div id="transferStudentListBox" class="transfer-list-box"><div style="padding:20px; text-align:center; color:#999;">請先選擇班級...</div></div>
+  <!-- 5. 學年管理頁面 (修訂版) -->
+<div id="tab-management" class="box" style="display:none;">
+    <h2>學年過渡管理</h2>
+    
+    <!-- 個別學生調動 (保留) -->
+    <div class="management-section">
+        <div class="section-title"><i class="fas fa-user-cog"></i> 個別學生調動 / 刪除</div>
+        <div class="transfer-grid">
+            <div class="transfer-column">
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <span style="font-weight:bold; color:var(--m-red);">來源：</span>
+                    <select id="indivFromGrade" onchange="populateTransferStudentList()"><option value="6">中六</option><option value="5">中五</option><option value="4">中四</option><option value="3">中三</option><option value="2">中二</option><option value="1">中一</option></select>
+                    <select id="indivFromClass" onchange="populateTransferStudentList()"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
                 </div>
-                <div class="transfer-arrow-icon" style="align-self:center; color:#ccc; font-size:1.5em;"><i class="fas fa-arrow-right"></i></div>
-                <div class="transfer-column" style="justify-content:center;">
-                    <div style="background:#fff; border:1px solid #eee; padding:20px; border-radius:10px;">
-                        <div style="font-weight:bold; color:var(--m-green); margin-bottom:10px;">目標設定：</div>
-                        <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
-                            <select id="indivToGrade" style="flex:1;"><option value="6">中六</option><option value="5">中五</option><option value="4">中四</option><option value="3">中三</option><option value="2">中二</option><option value="1">中一</option></select>
-                            <select id="indivToClass" style="flex:1;"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
-                        </div>
-                        <div style="margin-bottom:20px;">
-                            <label style="font-size:0.9em; color:#666;">分配新班號：</label>
-                            <input type="number" id="indivNewNumber" placeholder="例如：25" style="width:100%; margin-top:5px; text-align:center; box-sizing:border-box;">
-                        </div>
-                        <div style="display:flex; flex-direction:column; gap:10px;">
-                            <button class="btn-action btn-manage" style="justify-content:center;" onclick="moveIndividualStudent()"><i class="fas fa-exchange-alt"></i> 確認調動</button>
-                            <button class="btn-action btn-delete" style="justify-content:center;" onclick="deleteStudent()"><i class="fas fa-trash-alt"></i> 刪除此學生</button>
-                        </div>
+                <div id="transferStudentListBox" class="transfer-list-box"><div style="padding:20px; text-align:center; color:#999;">請先選擇班級...</div></div>
+            </div>
+            <div class="transfer-arrow-icon" style="align-self:center; color:#ccc; font-size:1.5em;"><i class="fas fa-arrow-right"></i></div>
+            <div class="transfer-column" style="justify-content:center;">
+                <div style="background:#fff; border:1px solid #eee; padding:20px; border-radius:10px;">
+                    <div style="font-weight:bold; color:var(--m-green); margin-bottom:10px;">目標設定：</div>
+                    <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
+                        <select id="indivToGrade" style="flex:1;"><option value="6">中六</option><option value="5">中五</option><option value="4">中四</option><option value="3">中三</option><option value="2">中二</option><option value="1">中一</option></select>
+                        <select id="indivToClass" style="flex:1;"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
+                    </div>
+                    <div style="margin-bottom:20px;">
+                        <label style="font-size:0.9em; color:#666;">分配新班號：</label>
+                        <input type="number" id="indivNewNumber" placeholder="例如：25" style="width:100%; margin-top:5px; text-align:center; box-sizing:border-box;">
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:10px;">
+                        <button class="btn-action btn-manage" style="justify-content:center;" onclick="moveIndividualStudent()"><i class="fas fa-exchange-alt"></i> 確認調動</button>
+                        <button class="btn-action btn-delete" style="justify-content:center;" onclick="deleteStudent()"><i class="fas fa-trash-alt"></i> 刪除此學生</button>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="year-transition-card">
-            <div style="font-size:1.3em; font-weight:bold; color:#555;">一鍵全校升班 (學年過渡)</div>
-            <div class="year-arrow"><i class="fas fa-chevron-down"></i></div>
-            <button class="btn-action btn-manage" style="padding:15px 40px; font-size:1.1em; width:100%;" onclick="runYearTransition()"><i class="fas fa-rocket"></i> 開始新學年過渡</button>
+    </div>
+
+    <!-- 一鍵過渡卡片 -->
+    <div class="year-transition-card">
+        <div style="font-size:1.3em; font-weight:bold; color:#555;">一鍵全校升班 (學年過渡)</div>
+        <p style="color: #d9534f; font-size: 0.9em; margin: 10px 0;">
+            <i class="fas fa-exclamation-triangle"></i> 注意：此操作將清除所有舊功課、刪除中六學生，並將中三學生移至待分班區。
+        </p>
+        <div class="year-arrow"><i class="fas fa-chevron-down"></i></div>
+        <button class="btn-action btn-manage" style="padding:15px 40px; font-size:1.1em; width:100%;" onclick="runYearTransition()"><i class="fas fa-rocket"></i> 開始新學年過渡</button>
+    </div>
+
+    <!-- 新增：中三升中四 分班專用區 (預設隱藏) -->
+    <div id="s3AllocationPanel" class="box" style="display:none; border: 2px solid #ffa726; background-color: #fff8e1; margin-top: 20px;">
+        <h3 style="color: #e65100; border-left: 5px solid #e65100; margin-top:0;"><i class="fas fa-random"></i> 中三升中四：重新分班</h3>
+        <p style="color: #666;">以下學生原為中三，請勾選學生並分配至新的中四班別。</p>
+        
+        <div style="background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #ffe0b2; display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
+            <span style="font-weight: bold; color: #e65100;">將選取的學生編入：</span>
+            <select id="targetS4Class" style="padding: 8px; border:1px solid #ccc; border-radius:5px;">
+                <option value="A">中四 A 班</option>
+                <option value="B">中四 B 班</option>
+                <option value="C">中四 C 班</option>
+                <option value="D">中四 D 班</option>
+            </select>
+            <button class="btn-action" style="background-color: #fb8c00;" onclick="allocateSelectedS3()">
+                <i class="fas fa-check"></i> 確認分班
+            </button>
         </div>
+
+        <div id="s3PendingList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; max-height: 400px; overflow-y: auto;"></div>
     </div>
 </div>
 
@@ -1419,16 +1439,185 @@ let analyticsChartInstance = null;
         const oldPath = `students/${fg}/${fc}/${n}`, newPath = `students/${tg}/${tc}/${n}`;
         db.ref(oldPath).once('value', s => { const d = s.val(); if (!d) return; d.profile = d.profile || {}; d.profile.grade = tg; d.profile.class = tc; d.profile.number = nn; if (oldPath === newPath) db.ref(newPath).update(d, e => { if (!e) { alert("更新成功"); populateTransferStudentList(); }}); else db.ref(newPath).set(d, e => { if (!e) { db.ref(oldPath).remove(); alert("轉班成功"); populateTransferStudentList(); }}); });
     }
-    function deleteStudent() { const n=document.querySelector('input[name="ts"]:checked')?.value; if(n && confirm(`刪除 ${n}?`)) db.ref(`students/${document.getElementById('indivFromGrade').value}/${document.getElementById('indivFromClass').value}/${n}`).remove(e=>{ if(!e) populateTransferStudentList(); }); }
-    function updateYearConfig() { db.ref('config/currentYear').set(document.getElementById('currentYearInput').value, e=>alert(e?'失敗':'成功')); }
-    async function runYearTransition() {
-        if(prompt("密碼")!=="23262036") return; if(!confirm("確定全校升班？")) return;
-        const all = (await db.ref('students').once('value')).val(); if(!all) return;
-        const y = document.getElementById('currentYearInput').value; await db.ref(`archives/${y}/students`).set(all);
-        let n = {}; for(let g=1; g<=5; g++) { if(all[g]) { n[g+1] = all[g]; for(let c in n[g+1]) for(let s in n[g+1][c]) if(n[g+1][c][s].profile) n[g+1][c][s].profile.grade=(g+1).toString(); } }
-        if(all[6]) await db.ref(`graduates/${y}`).set(all[6]);
-        db.ref('students').set(n, e=>alert(e?'失敗':'成功'));
+
+
+
+// === 核心：新學年過渡邏輯 (徹底清理版) ===
+async function runYearTransition() {
+    // 1. 安全驗證
+    if (prompt("請輸入密碼以確認清除舊紀錄並升班：") !== "23262036") return;
+    if (!confirm("⚠️ 高危操作警告 ⚠️\n\n1. 所有「課業」和「繳交紀錄」將被永久刪除。\n2. 中六學生將被「永久刪除」 (不再保留)。\n3. 中一、二、四、五將自動原班升級。\n4. 中三學生將進入「待分班名單」。\n\n確定要開始新學年嗎？")) return;
+
+    const btn = event.target;
+    const oldBtnText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
+
+    try {
+        const snapshot = await db.ref('students').once('value');
+        const allStudents = snapshot.val() || {};
+
+        let newStudentsMap = {}; // 存放升班後的學生 (1,2,4,5)
+        let pendingS3Map = {};   // 存放等待分班的原中三學生
+
+        // 2. 遍歷並分類學生
+        for (const grade in allStudents) {
+            const classes = allStudents[grade];
+            for (const cls in classes) {
+                const studentsInClass = classes[cls];
+                for (const studentName in studentsInClass) {
+                    const studentData = studentsInClass[studentName];
+                    const currentGrade = parseInt(grade);
+
+                    // A. 中六：什麼都不做 -> 等同於刪除 (不會被寫入新 map)
+                    if (currentGrade === 6) {
+                        continue; 
+                    } 
+                    // B. 中三：移入待分班區
+                    else if (currentGrade === 3) {
+                        pendingS3Map[studentName] = studentData;
+                    } 
+                    // C. 其他年級：自動升班
+                    else {
+                        const newGrade = (currentGrade + 1).toString();
+                        if (studentData.profile) studentData.profile.grade = newGrade; // 更新資料內的年級
+                        
+                        if (!newStudentsMap[newGrade]) newStudentsMap[newGrade] = {};
+                        if (!newStudentsMap[newGrade][cls]) newStudentsMap[newGrade][cls] = {};
+                        
+                        newStudentsMap[newGrade][cls][studentName] = studentData;
+                    }
+                }
+            }
+        }
+
+        // 3. 執行資料庫重置 (破壞性操作)
+        
+        // A. 清空舊功課
+        await db.ref('assignments').remove();
+        await db.ref('assignments_submissions').remove();
+        
+        // B. 寫入新的學生名單 (覆蓋舊的) - 這樣中六就消失了，中三也不見了
+        await db.ref('students').set(newStudentsMap);
+
+        // C. 寫入待分班學生
+        if (Object.keys(pendingS3Map).length > 0) {
+            await db.ref('pending_allocation').set(pendingS3Map);
+        } else {
+            await db.ref('pending_allocation').remove();
+        }
+
+        // D. (可選) 如果您想連 class_reports (全班報告) 也刪除，可加這行：
+        // await db.ref('class_reports').remove();
+
+        alert("✅ 新學年過渡成功！\n\n- 舊功課已清除\n- 中六學生已刪除\n- 中三學生請在下方分班");
+        
+        // 4. 顯示分班介面
+        checkAndRenderS3AllocationPanel();
+
+    } catch (error) {
+        console.error(error);
+        alert("❌ 失敗：" + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = oldBtnText;
     }
+}
+
+// === S3 分班面板邏輯 ===
+function checkAndRenderS3AllocationPanel() {
+    const panel = document.getElementById('s3AllocationPanel');
+    const listDiv = document.getElementById('s3PendingList');
+    
+    db.ref('pending_allocation').once('value', snapshot => {
+        const data = snapshot.val();
+        if (!data) {
+            panel.style.display = 'none';
+            return;
+        }
+        panel.style.display = 'block';
+        listDiv.innerHTML = '';
+
+        // 排序：按原班級 A, B, C, D 排序方便老師找人
+        const sortedEntries = Object.entries(data).sort((a, b) => {
+            const clsA = a[1].profile?.class || "";
+            const clsB = b[1].profile?.class || "";
+            return clsA.localeCompare(clsB);
+        });
+
+        sortedEntries.forEach(([name, studentData]) => {
+            const oldClass = studentData.profile.class || "?";
+            const oldNum = studentData.profile.number || "?";
+            
+            const item = document.createElement('label');
+            item.style.cssText = "display: flex; align-items: center; background: #fff; padding: 10px; border: 1px solid #ddd; border-radius: 5px; cursor: pointer; transition: background 0.2s;";
+            item.onmouseover = () => item.style.background = "#f5f5f5";
+            item.onmouseout = () => item.style.background = "#fff";
+            
+            item.innerHTML = `
+                <input type="checkbox" class="s3-student-checkbox" value="${name}" style="transform: scale(1.3); margin-right: 10px;">
+                <div>
+                    <div style="font-weight:bold; color: #333;">${name}</div>
+                    <div style="font-size: 0.8em; color: #888;">原 3${oldClass} (${oldNum})</div>
+                </div>
+            `;
+            listDiv.appendChild(item);
+        });
+    });
+}
+
+// 執行分班
+async function allocateSelectedS3() {
+    const targetClass = document.getElementById('targetS4Class').value;
+    const checkboxes = document.querySelectorAll('.s3-student-checkbox:checked');
+    
+    if (checkboxes.length === 0) return alert("請至少選擇一名學生！");
+    if (!confirm(`確定將選取的 ${checkboxes.length} 名學生編入【中四 ${targetClass} 班】嗎？`)) return;
+
+    try {
+        const updates = {};
+        const removeKeys = {};
+        
+        // 讀取目前的 pending 資料
+        const snapshot = await db.ref('pending_allocation').once('value');
+        const pendingData = snapshot.val() || {};
+
+        checkboxes.forEach(cb => {
+            const name = cb.value;
+            const studentData = pendingData[name];
+            
+            if (studentData) {
+                // 更新資料
+                if (!studentData.profile) studentData.profile = {};
+                studentData.profile.grade = "4";
+                studentData.profile.class = targetClass;
+                // studentData.profile.number = ""; // 如果想清空班號可解開這行
+
+                // 準備移動
+                updates[`students/4/${targetClass}/${name}`] = studentData;
+                removeKeys[`pending_allocation/${name}`] = null;
+            }
+        });
+
+        await db.ref().update(updates);
+        await db.ref().update(removeKeys);
+
+        alert("✅ 分班成功！");
+        checkAndRenderS3AllocationPanel();
+
+    } catch (error) {
+        console.error(error);
+        alert("分班失敗：" + error.message);
+    }
+}
+
+// 頁面載入時自動檢查是否有未完成的分班工作
+document.addEventListener('DOMContentLoaded', checkAndRenderS3AllocationPanel);
+
+    
+    function deleteStudent() { const n=document.querySelector('input[name="ts"]:checked')?.value; if(n && confirm(`刪除 ${n}?`)) db.ref(`students/${document.getElementById('indivFromGrade').value}/${document.getElementById('indivFromClass').value}/${n}`).remove(e=>{ if(!e) populateTransferStudentList(); }); }
+   
+  
 </script>
 
 <footer class="copyright-footer">

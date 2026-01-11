@@ -121,12 +121,15 @@
         .breadcrumb-item:hover { color: #5e5e5e; text-decoration: underline; }
         .breadcrumb-current { color: #5e5e5e; background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 4px; font-weight: bold; }
 
-        /* === 內容結構化顯示樣式 === */
+        /* === 內容結構化顯示樣式 (與學生端 100% 相同) === */
         .history-parsed-container { background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #e1e4e8; border-left: 5px solid #ccc; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
         .history-item-block { margin-bottom: 15px; }
         .history-item-label { font-weight: bold; font-size: 1em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
         .history-item-label::before { content: ''; display: block; width: 8px; height: 8px; border-radius: 50%; opacity: 0.8; }
-        .history-item-content { background: #fcfcfc; border: 1px solid #e1e4e8; border-radius: 4px; padding: 12px 16px; color: #444; line-height: 1.8; white-space: pre-wrap; word-break: break-word; }
+        /* 關鍵：使用者輸入的內容、AI 回覆內容的對齊設定 */
+        .history-item-content { background: #fcfcfc; border: 1px solid #e1e4e8; border-radius: 4px; padding: 12px 16px; color: #444; line-height: 1.8; white-space: pre-wrap; word-break: break-word; text-align: justify; }
+        /* 強制列表靠左，解決「參考論點」被置中的問題 */
+        .history-item-content ul, .history-item-content ol { text-align: left; padding-left: 20px; }
         
         /* 定義主題色對應 */
         .history-theme-context-1 { border-left-color: var(--m-color-1); } .history-theme-context-1 .history-item-label { color: var(--m-color-1); } .history-theme-context-1 .history-item-label::before { background-color: var(--m-color-1); } .history-theme-context-1 .history-item-content { border-left: 4px solid var(--m-color-1); }
@@ -192,45 +195,52 @@
         .badge-narrative { background-color: #7da3c0; } .badge-argument { background-color: #a692c2; } .badge-reading { background-color: #8da399; } .badge-expand { background-color: #d69a92; }
         .badge-general { width: 100%; max-width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; margin-bottom: 10px; background: linear-gradient(135deg, #C5B4A1 0%, #A99885 100%); box-shadow: 0 8px 20px rgba(169, 152, 133, 0.35); color: white; border-radius: 12px; position: relative; overflow: hidden; }
         .badge-general-title { font-size: 1.6rem; font-weight: bold; letter-spacing: 2px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        
         .report-text-card { background-color: #fdfcf8; border: 1px solid #e0ddd7; border-radius: 12px; padding: 25px; line-height: 1.9; color: #4a4a4a; font-size: 1.05rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); text-align: justify; margin-top: 10px; }
+        /* 強制報告內的列表靠左對齊，避免參考論點被置中 */
+        .report-text-card ul, .report-text-card ol { text-align: left; }
+
         .report-quote-card { position: relative; background-color: #fffefb; border: 1px solid #e0ddd7; border-radius: 8px; padding: 30px 30px 30px 65px; margin-top: 40px; box-shadow: 4px 4px 0px rgba(0,0,0,0.05); text-align: left; background-image: linear-gradient(to right, transparent 49px, #eebdbd 50px, transparent 51px), radial-gradient(circle at 25px 50%, #d1cdc5 8px, transparent 9px); background-size: 100% 100%, 100% 40px; background-repeat: no-repeat, repeat-y; background-position: 0 0, 0 15px; }
         .report-quote-content { font-family: 'Noto Serif TC', serif; font-size: 1.2rem; font-weight: bold; color: #5d4037; font-style: italic; line-height: 1.6; }
         .report-quote-author { margin-top: 10px; font-size: 0.9rem; color: #888; text-align: right; font-style: normal; }
         .report-separator { position: relative; height: 1px; border: 0; border-top: 3px dashed #b6a6ca; margin: 40px 0 50px 0; opacity: 0.6; }
         .report-separator::after { content: '▼'; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #fdfcf8; padding: 0 10px; color: #b6a6ca; font-size: 12px; }
-        .report-radar-wrapper { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #eee; }
         
       /* === 修復：雷達圖與評分表樣式 (移植自學生端 - 終極版) === */
-        .grading-container { 
-            margin-top: 25px; 
-            border-top: 2px dashed #aeb6bf; 
-            padding-top: 20px; 
-            width: 100%; /* 確保容器寬度 */
+        .report-radar-wrapper { 
+            margin-bottom: 30px; 
+            background: #fff; 
+            padding: 20px; 
+            border-radius: 12px; 
+            border: 1px solid #eee; 
+            width: 100%;
             box-sizing: border-box;
-            overflow-x: hidden; 
+        }
+
+        .grading-container { 
+            width: 100%; 
+            box-sizing: border-box;
         }
         
-        /* 默認 Grid 佈局：改用 minmax 增強彈性 */
+        /* 默認 Grid 佈局：使用 minmax 增強彈性 */
         .grading-grid { 
             display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* 自動斷行，比固定 1fr 1fr 更安全 */
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); 
             gap: 20px; 
-            align-items: flex-start; 
+            align-items: center; 
             width: 100%;
         }
         
-        /* ★★★ 核心修復：加入 min-width: 0 並修正寬度 ★★★ */
+        /* ★★★ 核心修復：加入 min-width: 0 防止 Canvas 撐爆 Grid ★★★ */
         .grading-scores, .grading-radar {
             background-color: #f8f9fa; 
             border: 1px solid #dee2e6; 
             border-radius: 8px; 
             padding: 20px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.04); 
-            max-width: 100%; 
-            box-sizing: border-box; 
-            width: 100%;        /* 改為 100%，不再使用 90% */
-            min-width: 0;       /* 【關鍵】允許 Grid 子元素縮小，防止 Canvas 撐爆容器 */
-            margin: 0;          /* 取消 auto margin */
+            width: 100%;        
+            min-width: 0;       /* 【關鍵】允許 Grid 子元素縮小 */
+            box-sizing: border-box;
         }
         
         .score-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; }
@@ -241,32 +251,15 @@
         .score-display { font-weight: bold; width: 25px; text-align: center; color: #0056b3; }
         .total-score-container { margin-top: 20px; padding-top: 15px; border-top: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
         
-      /* === 微縮雷達圖專用樣式 === */
-.mini-radar-wrapper {
-    margin: 20px auto;
-    padding: 15px;
-    background: #fff;
-    border: 1px solid #eee;
-    border-radius: 12px;
-    max-width: 250px; /* 限制外框寬度 */
-    text-align: center;
-}
-
-.radar-chart-container { 
-    position: relative; 
-    width: 100%; 
-    max-width: 200px;     /* 強制圖表最大寬度 */
-    aspect-ratio: 1 / 1;  /* 保持正方形 */
-    margin: 0 auto;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-
-.radar-chart-container canvas {
-    width: 100% !important;
-    height: 100% !important;
-}
+        /* === 關鍵修復：雷達圖容器，強制 1:1 比例且不溢出 === */
+        .radar-chart-container { 
+            position: relative; 
+            width: 100%; 
+            height: auto; 
+            aspect-ratio: 1 / 1; 
+            max-height: 400px; /* 限制最大高度 */
+            margin: 0 auto;
+        }
 
         /* === 關鍵修復：手機版/窄螢幕強制垂直堆疊 === */
         @media (max-width: 768px) {
@@ -280,22 +273,15 @@
                 flex-direction: column !important; /* 強制垂直排列 */
                 gap: 20px !important; 
                 width: 100% !important; 
-                margin: 0 !important; 
             }
             .grading-scores, .grading-radar, .report-radar-wrapper { 
                 width: 100% !important; 
-                max-width: 100% !important; 
-                box-sizing: border-box !important; 
                 padding: 15px !important; 
                 margin: 0 !important; 
-                overflow: hidden !important; 
             }
             .radar-chart-container { 
                 width: 100% !important; 
-                height: auto !important; 
-                aspect-ratio: 1/1 !important; 
                 max-height: 350px !important; 
-                margin: 0 auto !important; 
             }
             .score-item { flex-wrap: wrap; } .score-item label { width: 100%; margin-bottom: 5px; } .score-item .slider-container { max-width: 100%; }
             
@@ -762,11 +748,32 @@
         m.style.display = 'flex';
         setTimeout(() => { if(data.stats.narrativeTotal>0) renderClassChart('narrativeClassChart', data.stats.narrAvg); if(data.stats.argumentTotal>0) renderClassChart('argumentClassChart', data.stats.argAvg); }, 200);
     }
+    
+    // === 修復：更新 Chart HTML 生成結構，符合 CSS Grid 佈局 ===
     function generateClassChartHTML(type, avg, total) {
         const id = type==='narrative'?'narrativeClassChart':'argumentClassChart';
         const title = type==='narrative'?'敘事抒情':'議論';
         const cls = type==='narrative'?'badge-narrative':'badge-argument';
-        return `<div class="report-section"><div class="report-category-badge ${cls}"><i class="fas fa-book"></i> ${title}</div><div class="report-radar-wrapper"><div class="grading-grid"><div class="grading-scores"><h3>班級平均表現</h3><div class="score-item"><label>內容</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.content*4}</span></div></div><div class="score-item"><label>表達</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.expr*3}</span></div></div><div class="score-item"><label>結構</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.struct*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.struct*2}</span></div></div><div class="total-score-container"><span style="font-size:1.1em;">平均總分: ${total}</span><span style="font-size:2em;font-weight:bold;color:#d9534f;">${determineGrade(total)}</span></div></div><div class="grading-radar"><div class="radar-chart-container"><canvas id="${id}"></canvas></div></div></div></div></div>`;
+        return `
+        <div class="report-section">
+            <div class="report-category-badge ${cls}"><i class="fas fa-book"></i> ${title}</div>
+            <div class="report-radar-wrapper">
+                <div class="grading-grid">
+                    <div class="grading-scores">
+                        <h3>班級平均表現</h3>
+                        <div class="score-item"><label>內容</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.content*4}</span></div></div>
+                        <div class="score-item"><label>表達</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.expr*3}</span></div></div>
+                        <div class="score-item"><label>結構</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.struct*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.struct*2}</span></div></div>
+                        <div class="total-score-container"><span style="font-size:1.1em;">平均總分: ${total}</span><span style="font-size:2em;font-weight:bold;color:#d9534f;">${determineGrade(total)}</span></div>
+                    </div>
+                    <div class="grading-radar">
+                        <div class="radar-chart-container">
+                            <canvas id="${id}"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>`;
     }
     function renderClassChart(id, avg) {
         const ctx = document.getElementById(id); if(!ctx) return;
@@ -987,7 +994,8 @@
         });
     }
     
-    // 共用解析函式：確保歷史紀錄與作業檢閱的學生內容排版 100% 一致
+    // === 關鍵修復：共用解析函式 ===
+    // 確保歷史紀錄與作業檢閱的學生內容排版，與學生端生成時 100% 一致 (莫蘭迪色塊、對話框模式)
     function renderParsedUserContent(userContent, themeIndex = 1) {
         if (!userContent) return '<div style="padding:20px; color:#999; text-align:center;">無使用者輸入內容</div>';
         
@@ -1023,149 +1031,37 @@
     }
 
     // 歷史紀錄詳情
- // Detail: 顯示詳細內容 (修訂版：自動解析分數並重繪雷達圖)
-function renderDetail(r) {
-    ['historyLevel1','historyLevel2','historyLevel3'].forEach(id=>document.getElementById(id).style.display='none');
-    document.getElementById('historyDetail').style.display='block';
-    document.getElementById('teacherBreadcrumb').style.display='none';
-    
-    // 1. 處理使用者輸入內容 (保持不變)
-    let uContent = '';
-    if(r.userContent) {
-        const lines = r.userContent.split('\n');
-        let html = `<div class="history-parsed-container history-theme-context-${currentThemeIndex}">`;
-        let currentLabel = '輸入內容'; 
-        let currentContent = []; 
-        const labelRegex = /^(.{2,10}?)[：:](.*)$/;
-        lines.forEach((line) => {
-            const match = line.match(labelRegex);
-            if (match) {
-                if (currentContent.length > 0) html += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${currentContent.join('\n')}</div></div>`;
-                currentLabel = match[1].trim(); 
-                const rest = match[2].trim(); 
-                currentContent = rest ? [rest] : [];
-            } else if (line.trim() !== "") currentContent.push(line);
-        });
-        if (currentContent.length > 0) html += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${currentContent.join('\n')}</div></div>`;
-        html += `</div>`;
-        uContent = `<div style="background:#fff;padding:20px;border:1px solid #eee;border-radius:12px;margin-bottom:20px; box-shadow:0 2px 10px rgba(0,0,0,0.03);">${html}</div>`;
-    } else {
-        uContent = `<div style="padding:20px; color:#999; text-align:center;">無使用者輸入內容</div>`;
-    }
-
-    // 2. 嘗試從 AI 內容中提取分數 (新邏輯)
-    // 假設格式為 "內容：4" 或 "內容: 4" 或 "內容給分：4"
-    const scores = { content: 0, expr: 0, struct: 0, hasScore: false };
-    const text = r.aiContent || "";
-    
-    // 使用正則表達式抓取分數
-    const matchContent = text.match(/內容[^：:\d]*[：:]\s*(\d+)/);
-    const matchExpr = text.match(/表達[^：:\d]*[：:]\s*(\d+)/);
-    const matchStruct = text.match(/結構[^：:\d]*[：:]\s*(\d+)/);
-
-    if (matchContent && matchExpr && matchStruct) {
-        scores.content = parseInt(matchContent[1]);
-        scores.expr = parseInt(matchExpr[1]);
-        scores.struct = parseInt(matchStruct[1]);
-        scores.hasScore = true;
-    }
-
-    // 3. 移除 AI 內容中可能存在的舊 HTML 圖表代碼 (避免重複顯示爛掉的舊圖)
-    // 這裡簡單地移除 <canvas> 標籤和相關容器
-    let cleanAiContent = r.aiContent.replace(/<div class="radar-chart-wrapper".*?<\/div>/gs, '')
-                                    .replace(/<canvas.*?<\/canvas>/gs, '');
-
-    // 4. 構建 HTML
-    let chartHtml = '';
-    if (scores.hasScore) {
-        chartHtml = `
-        <div class="mini-radar-wrapper">
-            <h4 style="margin:0 0 15px 0; color:#555; font-size:0.9em;">能力分析雷達圖</h4>
-            <div class="radar-chart-container">
-                <canvas id="detailRadarChart"></canvas>
-            </div>
-            <div style="margin-top:10px; font-size:0.8em; color:#888;">
-                內容: ${scores.content*4} | 表達: ${scores.expr*3} | 結構: ${scores.struct*2}
-            </div>
-        </div>`;
-    }
-
-    document.getElementById('historyDetail').innerHTML = `
-        <div style="margin-bottom:15px;">
-            <button class="nav-btn" onclick="renderLevel3('${currentSubFunction}',${currentThemeIndex})" style="padding:5px 15px;font-size:0.9em;">
-                <i class="fas fa-arrow-left"></i> 返回列表
-            </button>
-        </div>
-        <div class="detail-view">
-            <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:20px;">
-                <h2 style="text-align:left; margin:0; color:#333;">${r.title}</h2>
-                <p style="color:#888; margin-top:5px;">${r.dateStr}</p>
-            </div>
-            ${uContent}
-            <div class="detail-ai-box" style="margin-top:20px;">
-                <h4 style="color:var(--m-green); margin-bottom:10px;">AI 生成結果：</h4>
-                ${cleanAiContent}
-                ${chartHtml} <!-- 插入新圖表 -->
-            </div>
-        </div>`;
-
-    // 5. 如果有分數，立即繪製圖表 (延遲一點點確保 DOM 已渲染)
-    if (scores.hasScore) {
-        setTimeout(() => {
-            renderMiniRadar('detailRadarChart', scores);
-        }, 100);
-    }
-}
-
-
-    function renderMiniRadar(canvasId, s) {
-    const ctx = document.getElementById(canvasId);
-    if (!ctx) return;
-
-    // 確保銷毀舊實例
-    const existingChart = Chart.getChart(ctx);
-    if (existingChart) existingChart.destroy();
-
-    new Chart(ctx.getContext('2d'), {
-        type: 'radar',
-        data: {
-            labels: ['內容', '表達', '結構', '詞彙', '詳略'], // 簡化標籤以節省空間
-            datasets: [{
-                label: '得分',
-                // 根據抓取到的分數模擬 5 個維度 (詞彙和詳略用推算的)
-                data: [s.content, s.expr, s.struct, s.expr, s.struct],
-                backgroundColor: 'rgba(143, 163, 152, 0.5)', // 莫蘭迪綠
-                borderColor: '#8fa398',
-                borderWidth: 1,       // 極細線條
-                pointRadius: 1.5,     // 極小圓點
-                pointBackgroundColor: '#fff',
-                pointBorderColor: '#8fa398'
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false, // 讓它填滿 200px 容器
-            layout: { padding: 2 },     // 極小內距
-            scales: {
-                r: {
-                    min: 0,
-                    max: 6, // 假設滿分是 5 或 6
-                    ticks: { display: false, stepSize: 1 }, // 不顯示刻度數字
-                    pointLabels: {
-                        font: { size: 9, family: "'Noto Serif TC', serif" }, // 9px 字體
-                        color: '#666'
-                    },
-                    grid: { color: '#eee', lineWidth: 0.5 },
-                    angleLines: { color: '#eee', lineWidth: 0.5 }
-                }
-            },
-            plugins: {
-                legend: { display: false },
-                tooltip: { enabled: false } // 關閉 Tooltip 讓畫面更乾淨
+  function renderDetail(r) {
+            ['historyLevel1','historyLevel2','historyLevel3'].forEach(id=>document.getElementById(id).style.display='none');
+            document.getElementById('historyDetail').style.display='block';
+            document.getElementById('teacherBreadcrumb').style.display='none';
+            
+            // 使用共用解析函式
+            let uContent = '';
+            if(r.userContent) {
+                uContent = renderParsedUserContent(r.userContent, currentThemeIndex);
+            } else {
+                uContent = `<div style="padding:20px; color:#999; text-align:center;">無使用者輸入內容</div>`;
             }
+
+            document.getElementById('historyDetail').innerHTML = `
+                <div style="margin-bottom:15px;">
+                    <button class="nav-btn" onclick="renderLevel3('${currentSubFunction}',${currentThemeIndex})" style="padding:5px 15px;font-size:0.9em;">
+                        <i class="fas fa-arrow-left"></i> 返回列表
+                    </button>
+                </div>
+                <div class="detail-view">
+                    <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:20px;">
+                        <h2 style="text-align:left; margin:0; color:#333;">${r.title}</h2>
+                        <p style="color:#888; margin-top:5px;">${r.dateStr}</p>
+                    </div>
+                    ${uContent}
+                    <div class="detail-ai-box" style="margin-top:20px;">
+                        <h4 style="color:var(--m-green); margin-bottom:10px;">AI 生成結果：</h4>
+                        ${r.aiContent}
+                    </div>
+                </div>`;
         }
-    });
-}
 
     
     function updateBreadcrumb(c,s) { const b=document.getElementById('teacherBreadcrumb'); b.style.display='flex'; document.getElementById('breadCategory').innerText=c; document.getElementById('breadSub').innerText=s||''; document.getElementById('breadSep2').style.display=s?'inline':'none'; }

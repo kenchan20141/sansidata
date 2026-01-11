@@ -159,28 +159,25 @@
     .publish-inputs { display: flex; gap: 15px; width: 100%; flex-wrap: wrap; }
     .publish-inputs input { flex: 1 1 auto; min-width: 200px; padding: 15px; font-size: 1.1em; border: 1px solid #ddd; }
     
-    /* === 模態視窗與單一滾動條設定 (Fix 2) === */
+    /* === 核心修正：模態視窗與滾動設定 (Fix) === */
     .modal-overlay { 
         position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
         background: rgba(0,0,0,0.6); 
         display: none; 
         justify-content: center; 
-        align-items: flex-start; /* 內容過長時從頂部開始 */
+        align-items: flex-start; /* 內容過長時從頂部開始，不垂直置中 */
         z-index: 1000; 
         backdrop-filter: blur(4px); 
-        overflow-y: auto; /* 核心：滾動條移動到這裡 */
-        padding-top: 60px !important;    /* 增加頂部距離 */
-        padding-bottom: 60px !important; /* 增加底部距離 */
-        box-sizing: border-box;
+        overflow-y: auto; /* 滾動條在最外層，方便手機操作 */
+        padding: 50px 0; /* 增加上下緩衝，避免貼邊 */
     }
     
     .modal-body { 
         background: #fff; 
         width: 95%; 
         max-width: 1100px; 
-        /* 移除固定高度和內部滾動限制 */
-         height: auto !important;
-        min-height: auto !important;
+        /* 移除固定高度限制，隨內容長大 */
+        height: auto !important;
         max-height: none !important;
         overflow: visible !important;
         
@@ -189,18 +186,18 @@
         flex-direction: column; 
         box-shadow: 0 20px 50px rgba(0,0,0,0.3); 
         animation: fadeIn 0.3s; 
-        margin: 20px auto !important;
+        margin: 0 auto; 
         position: relative;
+        margin-bottom: 50px; /* 確保底部有空間 */
     }
     
     .modal-header { padding: 20px 30px; background: #fdfcf8; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; border-radius: 15px 15px 0 0; }
     
-    /* 移除內部滾動 */
     .modal-content-scroll { 
         flex: 1; 
+        overflow: visible !important; 
         height: auto !important;
-        padding-bottom: 120px !important; 
-        overflow: visible !important;
+        padding: 20px 30px; 
     }
     
     .detail-view { background: #fff; padding: 10px; }
@@ -215,46 +212,74 @@
         background-image: linear-gradient(transparent 39px, rgba(42, 150, 137, 0.2) 39px, rgba(42, 150, 137, 0.2) 40px, transparent 40px), linear-gradient(90deg, transparent 39px, rgba(0,0,0,0.02) 39px, rgba(0,0,0,0.02) 40px, transparent 40px);
         background-size: 40px 40px; background-attachment: local;
     }
-    .detail-ai-box th:nth-child(2), .detail-ai-box td:nth-child(2) { min-width: 150px; }
-    .detail-ai-box th:nth-child(3), .detail-ai-box td:nth-child(3) { min-width: 180px; }
 
-    /* === 修復：彈性寬度與垂直佈局 (Flex Column with Max-Width) === */
-    .grading-container {
-        width: 100% !important;
-        height: auto !important;
-        overflow: visible !important; /* 關鍵：讓內容自然流出，不產生滾動條 */
-        border: none !important;      /* 移除分隔線 */
-        margin-top: 10px !important;
-        padding-top: 0 !important;
+    /* === 核心修正：評等圖與雷達圖樣式 (Vertical Layout) === */
+    .grading-container { 
+        margin-top: 25px; 
+        /* border-top: 2px dashed #aeb6bf;  */
+        padding-top: 20px; 
+        width: 100%; 
+        box-sizing: border-box;
+        overflow-x: hidden; /* 禁止橫向滾動 */
     }
     
     /* 強制垂直排列，並置中對齊 */
-    .grading-grid {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        width: 100% !important;
-        gap: 40px !important; /* 增加圖表與圖表間的間距 */
+    .grading-grid { 
+        display: flex !important; 
+        flex-direction: column !important; /* 垂直排列 */
+        align-items: center !important; 
+        gap: 30px; 
+        width: 100%;
     }
     
-   /* 確保評分條與雷達圖寬度適當且不會溢出 */
-    .grading-scores, .grading-radar {
-        width: 100% !important;
-        max-width: 600px !important; /* 限制最大寬度以保持美觀 */
-        box-shadow: none !important; /* 移除卡片陰影，使其看起來更像文件的一部分 */
-        border: 1px solid #eee !important; /* 保留輕微邊框或設為 none 完全移除 */
-        background-color: #fff !important;
+    /* 設定卡片樣式 */
+    .grading-scores {
+        background-color: #f8f9fa; 
+        border: 1px solid #dee2e6; 
+        border-radius: 8px; 
+        padding: 20px 25px; 
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
+        box-sizing: border-box; 
+        width: 100% !important;       
+        max-width: 600px !important;  
         margin: 0 !important;
     }
-
-    /* 雷達圖畫布容器：確保完整顯示 */
-    .radar-chart-container {
-        overflow: visible !important;
-        height: auto !important;
-        min-height: 400px !important;
-        margin-bottom: 20px !important;
-    }
     
+    /* 雷達圖樣式：去除灰色框，讓其融入背景 */
+    .grading-radar {
+        background-color: transparent !important; 
+        border: none !important;                  
+        box-shadow: none !important;              
+        padding: 10px 0 !important;               
+        width: 100% !important;
+        max-width: 100% !important;               
+        margin: 0 !important;
+        margin-bottom: 40px !important; /* 與下方文字保持距離 */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .grading-radar h3 {
+        color: var(--m-blue);
+        border-bottom: 2px solid #eee;
+        padding-bottom: 10px;
+        width: 100%;
+        max-width: 600px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    /* 雷達圖 Canvas 容器：確保有足夠高度顯示 */
+    .radar-chart-container { 
+        position: relative; 
+        width: 100% !important; 
+        max-width: 500px !important; 
+        height: 450px !important;    /* 增加高度 */
+        margin: 0 auto;
+        overflow: visible !important; /* 顯示所有標籤 */
+    }
+
     .score-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 15px; }
     .score-item label { font-weight: bold; color: #495057; flex-shrink: 0; width: 80px; }
     .slider-container { flex-grow: 1; display: flex; align-items: center; gap: 10px; max-width: none; }
@@ -263,16 +288,6 @@
     .score-display { font-weight: bold; width: 30px; text-align: right; color: #0056b3; font-size: 1rem; }
     .total-score-container { margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; }
     
-    /* === 雷達圖容器修正：限制最大寬度與高度 (Fix 1) === */
-    .radar-chart-container { 
-        position: relative; 
-        width: 100% !important; 
-        max-width: 350px !important; /* 限制寬度，確保不撐滿灰色區域 */
-        height: 350px !important;    /* 固定高度，確保方形 */
-        margin: 0 auto;              /* 水平置中 */
-        overflow: hidden; 
-    }
-
     /* 報告樣式 */
     .report-section { margin-bottom: 50px; }
     .report-category-badge { display: inline-flex; align-items: center; gap: 10px; padding: 10px 25px; border-radius: 50px; color: white; font-weight: bold; font-size: 1.3rem; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); letter-spacing: 1px; }
@@ -281,38 +296,21 @@
     .badge-general-title { font-size: 1.6rem; font-weight: bold; letter-spacing: 2px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
     .overall-grade-tag { background-color: #fff; color: #d9534f; padding: 5px 25px; border-radius: 50px; font-size: 1.4rem; font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 2px solid #d69a92; display: flex; align-items: center; gap: 8px; }
     .overall-grade-label { font-size: 0.8rem; color: #888; font-weight: normal; text-transform: uppercase; letter-spacing: 1px; }
-    .report-category-badge:not(.badge-general) { display: inline-flex; align-items: center; gap: 10px; padding: 10px 25px; border-radius: 50px; color: white; font-weight: bold; font-size: 1.3rem; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); letter-spacing: 1px; }
+    
+    /* 報告文字卡片 */
     .report-text-card { background-color: #fdfcf8; border: 1px solid #e0ddd7; border-radius: 12px; padding: 25px; line-height: 1.9; color: #4a4a4a; font-size: 1.05rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); text-align: justify; margin-top: 10px; }
     .report-quote-card { position: relative; background-color: #fffefb; border: 1px solid #e0ddd7; border-radius: 8px; padding: 30px 30px 30px 65px; margin-top: 40px; box-shadow: 4px 4px 0px rgba(0,0,0,0.05); text-align: left; background-image: linear-gradient(to right, transparent 49px, #eebdbd 50px, transparent 51px), radial-gradient(circle at 25px 50%, #d1cdc5 8px, transparent 9px); background-size: 100% 100%, 100% 40px; background-repeat: no-repeat, repeat-y; background-position: 0 0, 0 15px; }
     .report-quote-content { font-family: 'Noto Serif TC', serif; font-size: 1.2rem; font-weight: bold; color: #5d4037; font-style: italic; line-height: 1.6; }
     .report-quote-author { margin-top: 10px; font-size: 0.9rem; color: #888; text-align: right; font-style: normal; }
     .report-separator { position: relative; height: 1px; border: 0; border-top: 3px dashed #b6a6ca; margin: 40px 0 50px 0; opacity: 0.6; }
     .report-separator::after { content: '▼'; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #fdfcf8; padding: 0 10px; color: #b6a6ca; font-size: 12px; }
-      .report-radar-wrapper {
-        border: none !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        padding: 0 !important;
-        margin: 0 0 30px 0 !important;
-        overflow: visible !important; /* 禁止出現內部滾動軸 */
-    }
+    .report-radar-wrapper { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #eee; }
 
-    /* === 點評與建議列表視覺區分 (Fix 3：字體統一樣式) === */
+    /* 統一字體樣式 */
     .rewrite-explanation-container { margin-top: 20px; }
     .explanation-point { display: flex; align-items: flex-start; margin-bottom: 20px; padding: 18px; background-color: #fff; border: 1px solid #e9ecef; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-    .explanation-point:last-child { margin-bottom: 0; }
-    .explanation-number { flex-shrink: 0; width: 28px; height: 28px; background-color: #0288d1; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; border-radius: 50%; margin-right: 15px; font-size: 1em; margin-top: 2px; }
     .explanation-text { font-size: 1em; line-height: 1.8; color: #444; text-align: left; font-family: 'Noto Serif TC', serif; }
-    
-    /* 統一改寫範例卡片內的字體 */
-    .rewrite-explanation-card p {
-        font-size: 1em;
-        line-height: 1.8;
-        color: #444;
-        text-align: left;
-        margin: 0;
-        font-family: 'Noto Serif TC', serif;
-    }
+    .rewrite-explanation-card p { font-size: 1em; line-height: 1.8; color: #444; text-align: left; margin: 0; font-family: 'Noto Serif TC', serif; }
 
     .modal-content-container { display: flex; height: 100%; overflow: hidden; }
     .submission-sidebar { width: 320px; border-right: 1px solid var(--border-color); overflow-y: auto; background: #fafafa; flex-shrink: 0; }
@@ -322,7 +320,15 @@
     .status-badge { font-size: 0.8em; padding: 3px 10px; border-radius: 12px; font-weight: bold; display: flex; align-items: center; gap: 5px; }
     .status-done { background: #e8edea; color: #5e7067; }
     .status-pending { background: #f7ebea; color: #a67069; }
-    .submission-detail-area { flex-grow: 1; padding: 30px; overflow-y: auto; background: #fff; }
+    
+    /* 課業詳細區域 */
+    .submission-detail-area { 
+        flex-grow: 1; 
+        padding: 30px; 
+        padding-bottom: 150px !important; /* 核心修改：大幅增加底部留白，避免貼底 */
+        overflow-y: visible; 
+        background: #fff; 
+    }
     
     .teacher-feedback-section { background-color: #fffaf5; border: 2px solid #e6dace; border-radius: 12px; padding: 20px; margin-top: 30px; box-shadow: 0 4px 15px rgba(141, 110, 99, 0.08); }
     .teacher-feedback-section input, .teacher-feedback-section textarea { width: 100%; padding: 10px; border: 1px solid #e6dace; border-radius: 8px; font-family: 'Noto Serif TC', serif; box-sizing: border-box; margin-top: 5px; background: #fff; font-size: 1rem; color: #555; outline: none; }
@@ -343,52 +349,9 @@
         .copyright-footer p { font-size: 12px; } 
         .grading-scores, .grading-radar { max-width: 100% !important; padding: 15px; }
         .score-item label { width: auto; min-width: 60px; font-size: 0.9em; }
-        .radar-chart-container { max-width: 300px !important; height: 300px !important; }
+        .radar-chart-container { max-width: 300px !important; height: 350px !important; }
+        .modal-body { width: 100%; border-radius: 0; margin-top: 20px; }
     }
-
-/* === 修改 1：雷達圖樣式調整 (去除灰色容器，放大顯示) === */
-    .grading-radar {
-        background-color: transparent !important; /* 去除灰色背景 */
-        border: none !important;                  /* 去除邊框 */
-        box-shadow: none !important;              /* 去除陰影 */
-        padding: 10px 0 !important;               /* 減少內邊距 */
-        width: 100% !important;
-        max-width: 100% !important;               /* 允許更寬的顯示範圍 */
-        margin: 0 !important;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-
-    /* 雷達圖標題樣式 (可選，讓它看起來像獨立標題) */
-    .grading-radar h3 {
-        color: var(--m-blue);
-        border-bottom: 2px solid #eee;
-        padding-bottom: 10px;
-        width: 100%;
-        max-width: 550px;
-        text-align: center;
-        margin-bottom: 20px;
-    }
-
-    .radar-chart-container { 
-        position: relative; 
-        width: 100% !important; 
-        max-width: 500px !important; /* 放寬最大寬度，避免標籤被切掉 */
-        height: 450px !important;    /* 增加高度，讓圖表有空間完整繪製 */
-        margin: 0 auto;
-        overflow: visible !important; /* 重要：允許圖表標籤超出容器邊界而不被隱藏 */
-    }
-
-    /* === 修改 2：課業視窗底部邊距 === */
-    .submission-detail-area { 
-        flex-grow: 1; 
-        padding: 30px; 
-        padding-bottom: 100px !important; /* 核心修改：增加底部留白，避免貼底 */
-        overflow-y: auto; 
-        background: #fff; 
-    }
-
     
 </style>
 </head>

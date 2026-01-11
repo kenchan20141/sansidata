@@ -745,11 +745,9 @@
     const ctx = document.getElementById(id); 
     if(!ctx) return;
     
-    // 1. 銷毀舊圖表 (非常重要！否則舊圖表會在背景撐大容器)
     const existingChart = Chart.getChart(ctx);
     if (existingChart) existingChart.destroy();
 
-    // 2. 建立新圖表
     new Chart(ctx.getContext('2d'), {
         type: 'radar',
         data: { 
@@ -766,41 +764,38 @@
                 ], 
                 backgroundColor: 'rgba(94, 112, 103, 0.4)', 
                 borderColor: '#5e7067', 
-                borderWidth: 2, 
+                borderWidth: 1.5,     // 線條改細，適應小圖
                 pointBackgroundColor: '#5e7067',
-                pointRadius: 3 // 手機上點可以稍微小一點
+                pointRadius: 1.5      // 圓點改小，適應小圖
             }] 
         },
         options: { 
             responsive: true,
-            // 3. 關鍵：設為 false，讓圖表填滿我們在 CSS 設定的 aspect-ratio: 1/1 容器
-            maintainAspectRatio: false, 
+            maintainAspectRatio: false, // 關鍵：讓它乖乖填滿我們設定的 200px 框框
             layout: {
-                // 4. 關鍵：設定內距，防止標籤文字被切掉或超出容器
-                padding: {
-                    top: 10, bottom: 10, left: 10, right: 10
-                }
+                padding: 5  // 在小圖中，padding 不宜過大，設為 5 即可
             },
             scales: { 
                 r: { 
                     suggestedMin: 0, 
                     suggestedMax: 10, 
                     ticks: { 
-                        display: false, // 隱藏 1-10 的刻度數字以節省空間
-                        backdropColor: 'transparent' 
+                        display: false, // 隱藏刻度數字，空間太小放不下
+                        stepSize: 2 
                     },
                     pointLabels: {
                         font: { 
-                            size: 11 // 5. 關鍵：限制字體大小，避免手機上文字太大撐開
+                            size: 9  // 【關鍵】字體縮小到 9px，防止文字超出
                         },
-                        color: '#666' 
+                        color: '#555' 
                     },
-                    grid: { color: '#e0e0e0' },
-                    angleLines: { color: '#e0e0e0' }
+                    grid: { color: '#e0e0e0', lineWidth: 0.5 }, // 網格線變細
+                    angleLines: { color: '#e0e0e0', lineWidth: 0.5 }
                 } 
             }, 
             plugins: { 
-                legend: { display: false } 
+                legend: { display: false },
+                tooltip: { bodyFont: { size: 10 }, titleFont: { size: 10 } } // Tooltip 字體也改小
             } 
         }
     });

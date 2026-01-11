@@ -39,7 +39,7 @@
         background: url('背景.png') center/cover fixed;
         background-color: #f4f4f4;
         color: var(--text-main);
-        overflow-y: scroll; /* 主頁面的滾動 */
+        overflow-y: scroll;
     }
 
     /* === 登入遮罩 === */
@@ -122,15 +122,13 @@
     .breadcrumb-item:hover { color: #5e5e5e; text-decoration: underline; }
     .breadcrumb-current { color: #5e5e5e; background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 4px; font-weight: bold; }
 
-    /* === 內容結構化顯示樣式 (強制靠左) === */
+    /* 內容結構化顯示樣式 */
     .history-parsed-container { background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #e1e4e8; border-left: 5px solid #ccc; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
     .history-item-block { margin-bottom: 15px; }
     .history-item-label { font-weight: bold; font-size: 1em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
     .history-item-label::before { content: ''; display: block; width: 8px; height: 8px; border-radius: 50%; opacity: 0.8; }
-    /* 強制內容靠左 */
     .history-item-content { background: #fcfcfc; border: 1px solid #e1e4e8; border-radius: 4px; padding: 12px 16px; color: #444; line-height: 1.8; white-space: pre-wrap; word-break: break-word; text-align: left !important; }
     
-    /* 定義主題色對應 */
     .history-theme-context-1 { border-left-color: var(--m-color-1); } .history-theme-context-1 .history-item-label { color: var(--m-color-1); } .history-theme-context-1 .history-item-label::before { background-color: var(--m-color-1); } .history-theme-context-1 .history-item-content { border-left: 4px solid var(--m-color-1); }
     .history-theme-context-2 { border-left-color: var(--m-color-2); } .history-theme-context-2 .history-item-label { color: var(--m-color-2); } .history-theme-context-2 .history-item-label::before { background-color: var(--m-color-2); } .history-theme-context-2 .history-item-content { border-left: 4px solid var(--m-color-2); }
     .history-theme-context-3 { border-left-color: var(--m-color-3); } .history-theme-context-3 .history-item-label { color: var(--m-color-3); } .history-theme-context-3 .history-item-label::before { background-color: var(--m-color-3); } .history-theme-context-3 .history-item-content { border-left: 4px solid var(--m-color-3); }
@@ -159,52 +157,40 @@
     .publish-inputs { display: flex; gap: 15px; width: 100%; flex-wrap: wrap; }
     .publish-inputs input { flex: 1 1 auto; min-width: 200px; padding: 15px; font-size: 1.1em; border: 1px solid #ddd; }
     
-    /* === 模態視窗與單一滾動條設定 (關鍵修正：解決貼邊與顯示問題) === */
+    /* 模態視窗與滾動設定 */
     .modal-overlay { 
         position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
         background: rgba(0,0,0,0.6); 
         display: none; 
         justify-content: center; 
-        align-items: flex-start; /* 內容過長時從頂部開始 */
+        align-items: flex-start;
         z-index: 1000; 
         backdrop-filter: blur(4px); 
-        overflow-y: auto; /* 核心：滾動條移動到這裡，允許整個視窗滾動 */
-        padding: 50px 20px 80px 20px; /* 【修正】增加上下 padding，解決貼邊問題 */
-        box-sizing: border-box;
+        overflow-y: auto; 
+        padding: 50px 0;
     }
     
     .modal-body { 
         background: #fff; 
-        width: 100%; 
+        width: 95%; 
         max-width: 1100px; 
-        /* 移除固定高度和內部滾動限制 */
         height: auto !important;
         max-height: none !important;
         overflow: visible !important;
-        
         border-radius: 15px; 
         display: flex; 
         flex-direction: column; 
         box-shadow: 0 20px 50px rgba(0,0,0,0.3); 
         animation: fadeIn 0.3s; 
-        margin: 0 auto; /* 水平置中 */
-        margin-bottom: 50px; /* 【修正】確保底部有額外空間 */
+        margin: 0 auto; 
         position: relative;
+        margin-bottom: 50px; 
     }
     
     .modal-header { padding: 20px 30px; background: #fdfcf8; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; border-radius: 15px 15px 0 0; }
-    
-    /* 移除內部滾動 */
-    .modal-content-scroll { 
-        flex: 1; 
-        overflow: visible !important; /* 顯示所有內容 */
-        height: auto !important;
-        padding: 20px 30px; 
-    }
+    .modal-content-scroll { flex: 1; overflow: visible !important; height: auto !important; padding: 20px 30px; }
     
     .detail-view { background: #fff; padding: 10px; }
-    
-    /* 詳細內容區塊內的表格樣式 */
     .detail-ai-box table { width: 100%; border-collapse: collapse; margin: 15px 0; border: 1px solid #8baea8; font-family: 'Noto Serif TC', 'Songti TC', serif; font-size: 1rem; }
     .detail-ai-box th { background-color: #2A9689; color: white; padding: 10px; border: 1px solid #1e7e72; text-align: left; }
     .detail-ai-box td { 
@@ -214,120 +200,84 @@
         background-image: linear-gradient(transparent 39px, rgba(42, 150, 137, 0.2) 39px, rgba(42, 150, 137, 0.2) 40px, transparent 40px), linear-gradient(90deg, transparent 39px, rgba(0,0,0,0.02) 39px, rgba(0,0,0,0.02) 40px, transparent 40px);
         background-size: 40px 40px; background-attachment: local;
     }
-    .detail-ai-box th:nth-child(2), .detail-ai-box td:nth-child(2) { min-width: 150px; }
-    .detail-ai-box th:nth-child(3), .detail-ai-box td:nth-child(3) { min-width: 180px; }
 
-    /* === 評分與圖表區塊樣式修正 (去除滾動軸與邊框，縮小尺寸) === */
-    .grading-container { 
-        margin-top: 25px; 
-        width: 100%; 
-        box-sizing: border-box;
-        overflow: visible; /* 允許內容溢出，不產生滾動軸 */
-    }
-    
-    /* 垂直排列，確保與下方內容一體化 */
-    .grading-grid { 
-        display: flex; 
-        flex-direction: column; 
-        align-items: center; 
-        gap: 20px; /* 【修正】減少間距 */
+    /* === 修訂：圖表樣式 (分離式設計) === */
+    .chart-integration-block {
+        display: block;
         width: 100%;
+        margin-bottom: 50px; /* 確保與下方文字有足夠距離 */
+        clear: both;
     }
-    
-    /* 評分列表樣式：高度自動，無滾動，尺寸縮小 */
-    .grading-scores {
-        background-color: transparent; 
-        border: none; 
-        border-radius: 0; 
-        padding: 0 0 10px 0; /* 底部留白 */
-        box-shadow: none; 
-        width: 100% !important;       
-        max-width: 400px !important;  /* 【修正】縮小最大寬度 */
-        height: auto !important; 
-        overflow: visible !important; 
-        margin: 0 !important;
-        border-bottom: 1px dashed #ddd; 
-        font-size: 0.95em; /* 【修正】稍微縮小字體 */
+
+    /* 上半部：評分條區塊 */
+    .grading-scores-block {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 12px;
+        padding: 20px 30px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+        margin: 0 auto 30px auto; /* 底部留白，與雷達圖分開 */
+        max-width: 600px;
+        width: 100%;
+        box-sizing: border-box;
     }
-    
-    .score-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; }
-    .score-item label { font-weight: bold; color: #495057; flex-shrink: 0; width: 70px; }
-    .slider-container { flex-grow: 1; display: flex; align-items: center; gap: 8px; max-width: none; }
-    .progress-bar-container { flex-grow: 1; height: 10px; background-color: #e9ecef; border-radius: 6px; overflow: hidden; border: 1px solid #ced4da; }
-    .progress-bar-fill { height: 100%; width: 0%; background-color: #007bff; border-radius: 6px; }
-    .score-display { font-weight: bold; width: 25px; text-align: right; color: #0056b3; font-size: 1rem; }
-    .total-score-container { margin-top: 10px; padding-top: 10px; border-top: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; }
-    
-    /* === 雷達圖容器修正：無邊框，增加底部距離，大幅縮小尺寸 === */
-    .grading-radar {
-        background-color: transparent !important; 
-        border: none !important;                 
-        box-shadow: none !important;            
-        padding: 0 !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 0 50px 0 !important; /* 【修正】大幅增加底部邊距，解決重疊問題 */
+
+    /* 下半部：雷達圖區塊 */
+    .grading-radar-block {
+        background: #fff;
+        border-radius: 12px;
+        padding: 10px;
+        margin: 0 auto;
+        width: 100%;
+        max-width: 450px;
         display: flex;
         flex-direction: column;
         align-items: center;
-        height: auto !important;
-        overflow: visible;
     }
-
-    .grading-radar h3 {
-        color: var(--m-blue);
-        border-bottom: none; 
-        padding-bottom: 5px;
+    
+    .grading-radar-block h3 {
         width: 100%;
         text-align: center;
-        margin-bottom: 10px;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
         font-size: 1.1em;
+        color: var(--m-blue);
     }
 
-    .radar-chart-container { 
-        position: relative; 
-        width: 100% !important; 
-        max-width: 300px !important; /* 【修正】縮小圖表寬度 */
-        height: 300px !important;    /* 【修正】縮小圖表高度 */
+    /* 限制 Canvas 高度與寬度 */
+    .radar-chart-container {
+        position: relative;
+        width: 100%;
+        max-width: 400px;
+        height: 300px; /* 強制高度，避免過大 */
         margin: 0 auto;
-        overflow: visible !important;
     }
+
+    /* 評分條細節 */
+    .score-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 15px; }
+    .score-item label { font-weight: bold; color: #495057; width: 80px; flex-shrink: 0; font-size: 1rem; }
+    .slider-container { flex-grow: 1; display: flex; align-items: center; gap: 10px; }
+    .progress-bar-container { flex-grow: 1; height: 10px; background-color: #e9ecef; border-radius: 10px; overflow: hidden; border: 1px solid #ced4da; }
+    .progress-bar-fill { height: 100%; width: 0%; background-color: #007bff; border-radius: 10px; transition: width 0.5s ease; }
+    .score-display { font-weight: bold; width: 30px; text-align: right; color: #0056b3; font-size: 1rem; }
+    .total-score-container { margin-top: 15px; padding-top: 15px; border-top: 2px dashed #dee2e6; display: flex; justify-content: space-between; align-items: center; }
 
     /* 報告樣式 */
-    .report-section { margin-bottom: 50px; }
-    .report-category-badge { display: inline-flex; align-items: center; gap: 10px; padding: 10px 25px; border-radius: 50px; color: white; font-weight: bold; font-size: 1.3rem; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); letter-spacing: 1px; }
+    .report-section { margin-bottom: 60px; }
+    .report-category-badge { display: inline-flex; align-items: center; gap: 10px; padding: 10px 25px; border-radius: 50px; color: white; font-weight: bold; font-size: 1.3rem; margin-bottom: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); letter-spacing: 1px; }
     .badge-narrative { background-color: #7da3c0; } .badge-argument { background-color: #a692c2; } .badge-reading { background-color: #8da399; } .badge-expand { background-color: #d69a92; }
     .badge-general { width: 100%; max-width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; margin-bottom: 10px; background: linear-gradient(135deg, #C5B4A1 0%, #A99885 100%); box-shadow: 0 8px 20px rgba(169, 152, 133, 0.35); color: white; border-radius: 12px; position: relative; overflow: hidden; }
     .badge-general-title { font-size: 1.6rem; font-weight: bold; letter-spacing: 2px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
     .overall-grade-tag { background-color: #fff; color: #d9534f; padding: 5px 25px; border-radius: 50px; font-size: 1.4rem; font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 2px solid #d69a92; display: flex; align-items: center; gap: 8px; }
     .overall-grade-label { font-size: 0.8rem; color: #888; font-weight: normal; text-transform: uppercase; letter-spacing: 1px; }
-    .report-category-badge:not(.badge-general) { display: inline-flex; align-items: center; gap: 10px; padding: 10px 25px; border-radius: 50px; color: white; font-weight: bold; font-size: 1.3rem; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); letter-spacing: 1px; }
-    .report-text-card { background-color: #fdfcf8; border: 1px solid #e0ddd7; border-radius: 12px; padding: 25px; line-height: 1.9; color: #4a4a4a; font-size: 1.05rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); text-align: justify; margin-top: 10px; }
+    
+    .report-text-card { background-color: #fdfcf8; border: 1px solid #e0ddd7; border-radius: 12px; padding: 25px; line-height: 1.9; color: #4a4a4a; font-size: 1.05rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); text-align: justify; margin-top: 20px; }
     .report-quote-card { position: relative; background-color: #fffefb; border: 1px solid #e0ddd7; border-radius: 8px; padding: 30px 30px 30px 65px; margin-top: 40px; box-shadow: 4px 4px 0px rgba(0,0,0,0.05); text-align: left; background-image: linear-gradient(to right, transparent 49px, #eebdbd 50px, transparent 51px), radial-gradient(circle at 25px 50%, #d1cdc5 8px, transparent 9px); background-size: 100% 100%, 100% 40px; background-repeat: no-repeat, repeat-y; background-position: 0 0, 0 15px; }
     .report-quote-content { font-family: 'Noto Serif TC', serif; font-size: 1.2rem; font-weight: bold; color: #5d4037; font-style: italic; line-height: 1.6; }
     .report-quote-author { margin-top: 10px; font-size: 0.9rem; color: #888; text-align: right; font-style: normal; }
     .report-separator { position: relative; height: 1px; border: 0; border-top: 3px dashed #b6a6ca; margin: 40px 0 50px 0; opacity: 0.6; }
     .report-separator::after { content: '▼'; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #fdfcf8; padding: 0 10px; color: #b6a6ca; font-size: 12px; }
-    
-    /* 雷達圖外層容器，確保無邊框 */
-    .report-radar-wrapper { margin-bottom: 30px; background: #fff; padding: 0 20px; border-radius: 0; border: none; }
-
-    /* === 點評與建議列表視覺區分 === */
-    .rewrite-explanation-container { margin-top: 20px; }
-    .explanation-point { display: flex; align-items: flex-start; margin-bottom: 20px; padding: 18px; background-color: #fff; border: 1px solid #e9ecef; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
-    .explanation-point:last-child { margin-bottom: 0; }
-    .explanation-number { flex-shrink: 0; width: 28px; height: 28px; background-color: #0288d1; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; border-radius: 50%; margin-right: 15px; font-size: 1em; margin-top: 2px; }
-    .explanation-text { font-size: 1em; line-height: 1.8; color: #444; text-align: left; font-family: 'Noto Serif TC', serif; }
-    
-    /* 統一改寫範例卡片內的字體 */
-    .rewrite-explanation-card p {
-        font-size: 1em;
-        line-height: 1.8;
-        color: #444;
-        text-align: left;
-        margin: 0;
-        font-family: 'Noto Serif TC', serif;
-    }
 
     .modal-content-container { display: flex; height: 100%; overflow: hidden; }
     .submission-sidebar { width: 320px; border-right: 1px solid var(--border-color); overflow-y: auto; background: #fafafa; flex-shrink: 0; }
@@ -338,15 +288,7 @@
     .status-done { background: #e8edea; color: #5e7067; }
     .status-pending { background: #f7ebea; color: #a67069; }
     
-    /* 課業詳細區域：增加底部留白 */
-    .submission-detail-area { 
-        flex-grow: 1; 
-        padding: 30px; 
-        padding-bottom: 100px !important; 
-        overflow-y: auto; 
-        background: #fff; 
-    }
-    
+    .submission-detail-area { flex-grow: 1; padding: 30px; padding-bottom: 150px !important; overflow-y: visible; background: #fff; }
     .teacher-feedback-section { background-color: #fffaf5; border: 2px solid #e6dace; border-radius: 12px; padding: 20px; margin-top: 30px; box-shadow: 0 4px 15px rgba(141, 110, 99, 0.08); }
     .teacher-feedback-section input, .teacher-feedback-section textarea { width: 100%; padding: 10px; border: 1px solid #e6dace; border-radius: 8px; font-family: 'Noto Serif TC', serif; box-sizing: border-box; margin-top: 5px; background: #fff; font-size: 1rem; color: #555; outline: none; }
     .teacher-feedback-section input:focus, .teacher-feedback-section textarea:focus { border-color: var(--m-brown); box-shadow: 0 0 5px rgba(199, 178, 153, 0.3); }
@@ -362,22 +304,19 @@
 
     .copyright-footer { position: fixed; bottom: 0; right: 0; padding: 5px 10px; background-color: #f1f1f1; z-index: 999; }
     .copyright-footer p { margin: 0; font-size: 14px; }
-    
     @media (max-width: 600px) { 
         .copyright-footer p { font-size: 12px; } 
-        .grading-scores, .grading-radar { max-width: 100% !important; padding: 0 0 15px 0; }
+        .grading-scores-block, .grading-radar-block { max-width: 100% !important; padding: 15px; }
         .score-item label { width: auto; min-width: 60px; font-size: 0.9em; }
-        /* 手機版圖表尺寸 */
-        .radar-chart-container { max-width: 280px !important; height: 280px !important; }
-        .modal-body { width: 100%; border-radius: 0; margin: 0; margin-bottom: 80px; }
-        .modal-overlay { padding: 0; padding-bottom: 100px; }
+        .radar-chart-container { max-width: 300px !important; height: 300px !important; }
+        .modal-body { width: 100%; border-radius: 0; margin-top: 20px; }
     }
+    
 </style>
 </head>
 <body>
 
 <!-- === 安全登入閘門 === -->
-
 <div id="loginOverlay">
     <div class="login-box">
         <h2 style="color: var(--m-blue); margin-bottom: 10px;">神思・教師後台</h2>
@@ -390,7 +329,6 @@
 </div>
 
 <!-- === 主要應用程式 === -->
-
 <div id="mainApp">
     <div class="title-container">
         <div style="float: right; font-size: 0.9rem;">
@@ -484,7 +422,6 @@
     <!-- 4. 數據統計頁面 -->
     <div id="tab-analytics" class="box" style="display:none;">
         <h2>神思大數據統計</h2>
-        
         <div class="filter-group">
             <label><i class="fas fa-cubes" style="color:var(--m-blue);"></i> 對象：</label>
             <select id="statScope" onchange="updateStatInputs()">
@@ -492,56 +429,31 @@
                 <option value="school">全校 (僅已登入)</option>
                 <option value="class">個別班級</option>
             </select>
-
             <span id="statClassInput" style="display:none;">
                 <select id="statGrade" onchange="loadAnalyticsClassList()"><option value="1">中一</option><option value="2">中二</option><option value="3">中三</option><option value="4">中四</option><option value="5">中五</option><option value="6">中六</option></select>
                 <select id="statClass" onchange="loadAnalyticsClassList()"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
             </span>
-
             <label style="margin-left:15px;"><i class="far fa-clock" style="color:var(--m-brown);"></i> 時間：</label>
             <select id="statTimeMode" onchange="updateTimeInputs()">
                 <option value="day">本日 (實時)</option>
                 <option value="month">本月 (趨勢)</option>
                 <option value="year">本年 (總覽)</option>
             </select>
-            
             <input type="date" id="statDate" style="display:inline-block;">
             <select id="statMonth" style="display:none;"></select>
             <select id="statYear" style="display:none;"><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option></select>
-
-            <button class="btn-action btn-view" onclick="fetchAndRenderStats()">
-                <i class="fas fa-search"></i> 查詢
-            </button>
+            <button class="btn-action btn-view" onclick="fetchAndRenderStats()"><i class="fas fa-search"></i> 查詢</button>
         </div>
-
-        <!-- 學生選擇區域 -->
         <div id="analyticsStudentListContainer" style="display:none;">
-            <h4 style="margin:0 0 10px 0; font-size:1em; color:var(--text-main);">
-                <i class="fas fa-user-friends"></i> 選擇學生 (點擊可切換，再次點擊取消)
-            </h4>
+            <h4 style="margin:0 0 10px 0; font-size:1em; color:var(--text-main);"><i class="fas fa-user-friends"></i> 選擇學生 (點擊可切換，再次點擊取消)</h4>
             <div id="analyticsStudentList" class="analytics-student-list"></div>
         </div>
-
-        <!-- 數據概覽卡片 -->
         <div style="display:flex; gap:20px; justify-content:center; margin:30px 0; flex-wrap:wrap;">
-            <div class="stat-card stat-purple">
-                <div class="val" id="dispUnique">0</div>
-                <div class="label">總使用人數 (不重複)</div>
-            </div>
-            <div class="stat-card stat-blue">
-                <div class="val" id="dispVisits">0</div>
-                <div class="label">總進入次數</div>
-            </div>
-            <div class="stat-card stat-red">
-                <div class="val" id="dispDuration">0</div>
-                <div class="label">總使用時長 (分鐘)</div>
-            </div>
-            <div class="stat-card stat-sand">
-                <div class="val" id="dispAvg">0</div>
-                <div class="label">平均每人時長 (分鐘)</div>
-            </div>
+            <div class="stat-card stat-purple"><div class="val" id="dispUnique">0</div><div class="label">總使用人數 (不重複)</div></div>
+            <div class="stat-card stat-blue"><div class="val" id="dispVisits">0</div><div class="label">總進入次數</div></div>
+            <div class="stat-card stat-red"><div class="val" id="dispDuration">0</div><div class="label">總使用時長 (分鐘)</div></div>
+            <div class="stat-card stat-sand"><div class="val" id="dispAvg">0</div><div class="label">平均每人時長 (分鐘)</div></div>
         </div>
-
         <div class="chart-container" style="position: relative; height:400px; width:100%;">
             <canvas id="analyticsChart"></canvas>
         </div>
@@ -704,13 +616,11 @@
     }
     auth.onAuthStateChanged(user => { if (user && user.email.endsWith('@ccckyc.edu.hk')) showApp(user); });
 
-    // === Tab 切換 ===
     function switchTab(tabId) {
         document.querySelectorAll('.box').forEach(b => b.style.display = 'none');
         document.getElementById('tab-' + tabId).style.display = 'block';
         document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
         event.currentTarget.classList.add('active');
-        
         if(tabId === 'students') loadStudentList();
         if(tabId === 'assignments') loadAssignmentHistory();
         if(tabId === 'reports') loadReportStudentList();
@@ -720,7 +630,7 @@
         }
     }
 
-    // === 歷史檢閱 ===
+    // === 歷史與報告邏輯 ===
     let currentStudentHistory = [], currentCategory = '', currentSubFunction = '', currentThemeIndex = 1, currentViewingAssignmentId = ''; 
     const HISTORY_STRUCTURE = { "閱讀": ["點評", "指引"], "敘事抒情": ["文章點評", "大綱點評", "解題指引", "敘事物象"], "議論": ["文章點評", "大綱點評", "指引"], "整合拓展": ["點評", "指引"], "課外書籍": ["討論紀錄"], "學習報告": ["綜合分析"] };
     const CATEGORY_ASSETS = { "閱讀": { img: '郵筒.png', en: 'READING' }, "敘事抒情": { img: '相機.png', en: 'NARRATIVE' }, "議論": { img: '筆.png', en: 'ARGUMENT' }, "整合拓展": { img: '火車.png', en: 'EXPAND' }, "課外書籍": { img: '書.png', en: 'LIBRARY' }, "學習報告": { img: '書.png', en: 'REPORT' } };
@@ -744,7 +654,6 @@
         });
     }
 
-    // === 報告管理 ===
     function loadReportStudentList() {
         const g = document.getElementById('reportGrade').value, c = document.getElementById('reportClass').value;
         const container = document.getElementById('reportStudentListContainer');
@@ -822,6 +731,7 @@
         });
     }
     function deleteClassReport(key) { if(confirm("確定刪除此報告？")) { const g=document.getElementById('reportGrade').value, c=document.getElementById('reportClass').value; db.ref(`class_reports/${g}/${c}/${key}`).remove().then(()=>loadClassReportHistory()); }}
+    
     function openClassReportModal(data) {
         const m = document.getElementById('classReportModal'), c = document.getElementById('classReportContent');
         const d = document.createElement('div'); d.innerHTML = data.aiHtml;
@@ -832,37 +742,36 @@
         setTimeout(() => { if(data.stats.narrativeTotal>0) renderClassChart('narrativeClassChart', data.stats.narrAvg); if(data.stats.argumentTotal>0) renderClassChart('argumentClassChart', data.stats.argAvg); }, 200);
     }
     
-   function generateClassChartHTML(type, avg, total) {
+    // === 核心修正：生成分離式圖表 HTML 結構 ===
+    function generateClassChartHTML(type, avg, total) {
         const id = type==='narrative'?'narrativeClassChart':'argumentClassChart';
         const title = type==='narrative'?'敘事抒情':'議論';
         const cls = type==='narrative'?'badge-narrative':'badge-argument';
         
+        // 這裡將評分條與雷達圖拆分為兩個獨立的 div，並在它們之間加上 wrapper，與下方文字隔開
         return `
         <div class="report-section">
             <div class="report-category-badge ${cls}"><i class="fas fa-book"></i> ${title}</div>
-            <div class="report-radar-wrapper" style="border:none; box-shadow:none; background:transparent;">
-                <div class="grading-container" style="margin:0; border:none; padding:0;">
-                    <div class="grading-grid">
-                        
-                        <!-- 1. 評分表 -->
-                        <div class="grading-scores" style="margin-bottom: 20px !important;">
-                            <h3>班級平均表現</h3>
-                            <div class="score-item"><label>內容 (40)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.content*4}</span></div></div>
-                            <div class="score-item"><label>表達 (30)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.expr*3}</span></div></div>
-                            <div class="score-item"><label>結構 (20)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.struct*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.struct*2}</span></div></div>
-                            <div class="total-score-container"><span style="font-size:1.1em; color:#555;">平均總分: ${total} / 100</span><span style="font-size:2em; font-weight:bold; color:#d9534f;">${determineGrade(total)}</span></div>
-                        </div>
-                        
-                        <!-- 2. 雷達圖 (無灰色容器，尺寸大幅縮小) -->
-                        <div class="grading-radar">
-                            <h3>能力分佈圖</h3>
-                            <div class="radar-chart-container">
-                                <canvas id="${id}"></canvas>
-                            </div>
-                        </div>
+            
+            <div class="chart-integration-block">
+                <!-- 上半部：評分條區塊 -->
+                <div class="grading-scores-block">
+                    <div class="score-item"><label>內容 (40)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.content*4}</span></div></div>
+                    <div class="score-item"><label>表達 (30)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.expr*3}</span></div></div>
+                    <div class="score-item"><label>結構 (20)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.struct*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.struct*2}</span></div></div>
+                    <div class="total-score-container"><span style="font-size:1.1em; color:#555;">平均總分: ${total} / 100</span><span style="font-size:2em; font-weight:bold; color:#d9534f;">${determineGrade(total)}</span></div>
+                </div>
+
+                <!-- 下半部：雷達圖區塊 -->
+                <div class="grading-radar-block">
+                    <h3>能力分佈圖</h3>
+                    <div class="radar-chart-container">
+                        <canvas id="${id}"></canvas>
                     </div>
                 </div>
             </div>
+            
+            <!-- 文字內容將自動接續在此處下方，不會重疊 -->
         </div>`;
     }
     
@@ -879,6 +788,7 @@
             }
         });
     }
+
     async function callAPI(prompt) {
         let k = READING_API_KEYS[Math.floor(Math.random() * READING_API_KEYS.length)];
         const r = await fetch(READING_API_URL, { method: "POST", headers: { "Authorization": `Bearer ${k}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: READING_MODEL, messages: [{ role: "user", content: prompt }], max_tokens: 4000 }) });
@@ -887,7 +797,6 @@
 
     // === 數據統計 ===
     let selectedAnalyticsStudent = null; 
-
     function initStatUI() {
         const now = new Date();
         const y = now.getFullYear(); const m = String(now.getMonth() + 1).padStart(2, '0'); const d = String(now.getDate()).padStart(2, '0');
@@ -911,7 +820,6 @@
         const list = document.getElementById('analyticsStudentList');
         selectedAnalyticsStudent = null; 
         list.innerHTML = '載入學生中...';
-        
         db.ref(`students/${g}/${c}`).once('value', s => {
             const data = s.val();
             list.innerHTML = '';
@@ -946,7 +854,6 @@
         
         let path = `analytics/${y}`; if(mode==='day') path+=`/${m}/${d}`; else if(mode==='month') path+=`/${m}`;
         
-        // 計算註冊人數
         let registeredCount = 1; 
         if (scope === 'school') {
             const snap = await db.ref('students').once('value');
@@ -975,7 +882,6 @@
             function proc(node, label) {
                 if(!node) return;
                 let targets = [];
-
                 if(scope==='global' || scope==='school') {
                     if(node.students) {
                         Object.keys(node.students).forEach(gKey => {
@@ -1043,25 +949,20 @@
                 },
                 options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true, position: 'left', title: {display:true, text:'人數 / 次數'} }, y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, title: {display:true, text:'分鐘'} } } }
             });
-
         } catch(e) { console.error(e); alert("讀取失敗"); }
     }
 
-    // === 共用功能與共用 HTML 解析函式 ===
     function openHistoryModal(name, h) {
         document.getElementById('viewerTitle').innerHTML = `<i class="fas fa-user-graduate"></i> ${name}`;
         currentStudentHistory = h; document.getElementById('historyViewerModal').style.display = 'flex'; renderLevel1();
     }
     
-    // 渲染主範疇 (已修訂：隱藏學習報告)
     function renderLevel1() {
         ['historyLevel2','historyLevel3','historyDetail'].forEach(id=>document.getElementById(id).style.display='none');
         document.getElementById('historyLevel1').style.display='flex'; document.getElementById('teacherBreadcrumb').style.display='none';
         const c = document.getElementById('historyLevel1'); c.innerHTML='';
         Object.keys(HISTORY_STRUCTURE).forEach(cat => {
-            // 修訂：隱藏學習報告
             if (cat === '學習報告') return;
-
             const count = currentStudentHistory.filter(r => r.category === cat).length;
             const asset = CATEGORY_ASSETS[cat] || { img: '背景.png', en: 'RECORD' };
             const style = count===0 ? 'filter: grayscale(100%); opacity: 0.6;' : '';
@@ -1086,9 +987,7 @@
         const recs=currentStudentHistory.filter(r=>r.category===currentCategory&&r.subFunction===sub).sort((a,b)=>b.timestamp-a.timestamp);
         if(recs.length===0){c.innerHTML='<p style="text-align:center;width:100%;color:#999;grid-column:1/-1;">無紀錄</p>';return;}
         recs.forEach(r=>{
-            // ★★★ 核心修改：使用與學生端一致的卡片結構 (打孔風格) ★★★
             const dateStr = r.dateStr ? r.dateStr.split(' ')[0] : '未知';
-            
             c.innerHTML+=`
             <div class="history-card theme-${theme}" onclick='renderDetail(${JSON.stringify(r).replace(/'/g, "&#39;")})'>
                 <div style="flex-grow: 1;">
@@ -1102,7 +1001,6 @@
         });
     }
     
-    // 共用解析函式
     function renderParsedUserContent(userContent, themeIndex = 1) {
         if (!userContent) return '<div style="padding:20px; color:#999; text-align:center;">無使用者輸入內容</div>';
         const lines = userContent.split('\n');
@@ -1131,12 +1029,10 @@
         return `<div style="background:#fff;padding:20px;border:1px solid #eee;border-radius:12px;margin-bottom:25px; box-shadow:0 2px 10px rgba(0,0,0,0.03);">${html}</div>`;
     }
 
-    // 歷史紀錄詳情
   function renderDetail(r) {
             ['historyLevel1','historyLevel2','historyLevel3'].forEach(id=>document.getElementById(id).style.display='none');
             document.getElementById('historyDetail').style.display='block';
             document.getElementById('teacherBreadcrumb').style.display='none';
-            
             let uContent = '';
             if (r.category === "學習報告") {
                 uContent = ''; 
@@ -1147,7 +1043,6 @@
                     uContent = `<div style="padding:20px; color:#999; text-align:center;">無使用者輸入內容</div>`;
                 }
             }
-
             document.getElementById('historyDetail').innerHTML = `
                 <div style="margin-bottom:15px;">
                     <button class="nav-btn" onclick="renderLevel3('${currentSubFunction}',${currentThemeIndex})" style="padding:5px 15px;font-size:0.9em;">
@@ -1166,11 +1061,8 @@
                     </div>
                 </div>`;
         }
-
-    
     function updateBreadcrumb(c,s) { const b=document.getElementById('teacherBreadcrumb'); b.style.display='flex'; document.getElementById('breadCategory').innerText=c; document.getElementById('breadSub').innerText=s||''; document.getElementById('breadSep2').style.display=s?'inline':'none'; }
     
-    // === 課業管理 ===
     function loadAssignmentHistory() {
         const g = document.getElementById('assignGrade').value, c = document.getElementById('assignClass').value, list = document.getElementById('assignmentHistoryList');
         list.innerHTML = '<p style="text-align:center; padding:20px; color:#999;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
@@ -1208,13 +1100,9 @@
         } catch(e) { console.error(e); }
     }
 
-    // 課業詳情檢閱 (修訂：確保與歷史紀錄顯示一致)
     function showSubDetail(sub) {
         const fb = sub.teacherFeedback || {};
-        
-        // 使用共用解析函式，確保 100% 一致 (預設傳入主題色 1)
         let uContent = renderParsedUserContent(sub.userContent, 1);
-
         document.getElementById('submissionDetailArea').innerHTML = `
             <div class="detail-view">
                 <h2>${sub.studentName}</h2>
@@ -1238,7 +1126,6 @@
     
     function sendFb(name) { db.ref(`assignments_submissions/${currentViewingAssignmentId}/${name}/teacherFeedback`).set({score:document.getElementById('ts').value, comment:document.getElementById('tc').value, timestamp:Date.now(), status:'returned'}, e=>alert(e?'失敗':'成功')); }
 
-    // === 學年管理 ===
     function populateTransferStudentList() {
         const g=document.getElementById('indivFromGrade').value, c=document.getElementById('indivFromClass').value, b=document.getElementById('transferStudentListBox'); b.innerHTML='載入中...';
         db.ref(`students/${g}/${c}`).once('value', s=>{

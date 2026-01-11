@@ -331,6 +331,51 @@
         .score-item label { width: auto; min-width: 60px; font-size: 0.9em; }
         .radar-chart-container { max-width: 300px !important; height: 300px !important; }
     }
+
+/* === 修改 1：雷達圖樣式調整 (去除灰色容器，放大顯示) === */
+    .grading-radar {
+        background-color: transparent !important; /* 去除灰色背景 */
+        border: none !important;                  /* 去除邊框 */
+        box-shadow: none !important;              /* 去除陰影 */
+        padding: 10px 0 !important;               /* 減少內邊距 */
+        width: 100% !important;
+        max-width: 100% !important;               /* 允許更寬的顯示範圍 */
+        margin: 0 !important;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    /* 雷達圖標題樣式 (可選，讓它看起來像獨立標題) */
+    .grading-radar h3 {
+        color: var(--m-blue);
+        border-bottom: 2px solid #eee;
+        padding-bottom: 10px;
+        width: 100%;
+        max-width: 550px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .radar-chart-container { 
+        position: relative; 
+        width: 100% !important; 
+        max-width: 500px !important; /* 放寬最大寬度，避免標籤被切掉 */
+        height: 450px !important;    /* 增加高度，讓圖表有空間完整繪製 */
+        margin: 0 auto;
+        overflow: visible !important; /* 重要：允許圖表標籤超出容器邊界而不被隱藏 */
+    }
+
+    /* === 修改 2：課業視窗底部邊距 === */
+    .submission-detail-area { 
+        flex-grow: 1; 
+        padding: 30px; 
+        padding-bottom: 100px !important; /* 核心修改：增加底部留白，避免貼底 */
+        overflow-y: auto; 
+        background: #fff; 
+    }
+
+    
 </style>
 </head>
 <body>
@@ -791,7 +836,7 @@
         setTimeout(() => { if(data.stats.narrativeTotal>0) renderClassChart('narrativeClassChart', data.stats.narrAvg); if(data.stats.argumentTotal>0) renderClassChart('argumentClassChart', data.stats.argAvg); }, 200);
     }
     
-    function generateClassChartHTML(type, avg, total) {
+   function generateClassChartHTML(type, avg, total) {
         const id = type==='narrative'?'narrativeClassChart':'argumentClassChart';
         const title = type==='narrative'?'敘事抒情':'議論';
         const cls = type==='narrative'?'badge-narrative':'badge-argument';
@@ -799,12 +844,12 @@
         return `
         <div class="report-section">
             <div class="report-category-badge ${cls}"><i class="fas fa-book"></i> ${title}</div>
-            <div class="report-radar-wrapper">
+            <div class="report-radar-wrapper" style="border:none; box-shadow:none; background:transparent;">
                 <div class="grading-container" style="margin:0; border:none; padding:0;">
                     <div class="grading-grid">
                         
-                        <!-- 1. 評分表 (寬度已由 CSS 限制為 max-width: 550px) -->
-                        <div class="grading-scores">
+                        <!-- 1. 評分表 -->
+                        <div class="grading-scores" style="margin-bottom: 40px !important;">
                             <h3>班級平均表現</h3>
                             <div class="score-item"><label>內容 (40)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.content*4}</span></div></div>
                             <div class="score-item"><label>表達 (30)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.expr*3}</span></div></div>
@@ -812,9 +857,9 @@
                             <div class="total-score-container"><span style="font-size:1.1em; color:#555;">平均總分: ${total} / 100</span><span style="font-size:2em; font-weight:bold; color:#d9534f;">${determineGrade(total)}</span></div>
                         </div>
                         
-                        <!-- 2. 雷達圖 (垂直排列在下方，寬度與高度已限制) -->
+                        <!-- 2. 雷達圖 (無灰色容器，尺寸已放大) -->
                         <div class="grading-radar">
-                            <h3>能力分佈</h3>
+                            <h3>能力分佈圖</h3>
                             <div class="radar-chart-container">
                                 <canvas id="${id}"></canvas>
                             </div>

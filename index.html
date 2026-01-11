@@ -1124,7 +1124,7 @@ function generateClassChartHTML(type, avg, count) {
     const title = type==='narrative' ? '敘事抒情' : '議論'; 
     const cls = type==='narrative'?'badge-narrative':'badge-argument';
     
-    // 計算加權分數
+    // 計算分數邏輯 (保持不變)
     const scoreContent = avg.content * 4;
     const scoreExpr = avg.expr * 3;
     const scoreStruct = avg.struct * 2;
@@ -1132,62 +1132,35 @@ function generateClassChartHTML(type, avg, count) {
     const scoreTypo = 1; 
     const totalScore = Math.min(100, scoreContent + scoreExpr + scoreStruct + scorePunc + scoreTypo);
     
-    // ★★★ 修訂開始：參考「文章點評」的 Flexbox 結構 ★★★
+    // ★★★ 修訂重點：確保容器有實體高度，並將下方文字推開 ★★★
     return `
-    <div class="report-section" style="margin-bottom: 60px;"> <!-- 增加底部間距，防止與下方文字太近 -->
-        <div class="report-category-badge ${cls}"><i class="fas fa-book"></i> ${title}</div>
+    <div class="report-section" style="display: block; width: 100%; margin-bottom: 10px;">
         
-        <!-- 使用 grading-side-by-side (Flexbox) 確保左右排列且高度自動撐開 -->
-        <div class="grading-side-by-side" style="align-items: flex-start; margin-bottom: 30px;">
+        <!-- 標題 Badge -->
+        <div class="report-category-badge ${cls}" style="margin-bottom: 25px;">
+            <i class="fas fa-book"></i> ${title}
+        </div>
+        
+        <!-- 
+            主要佈局容器 
+            1. display: flex; 確保左右並排
+            2. position: relative; 建立定位基準
+            3. margin-bottom: 50px; 【關鍵】強制推開下方的敘事描述文字
+        -->
+        <div class="grading-side-by-side" style="display: flex; flex-wrap: wrap; gap: 30px; align-items: flex-start; margin-bottom: 50px;">
             
-            <!-- 左側：評分條 (參考 grading-scores 樣式) -->
-            <div class="grading-scores" style="flex: 1; min-width: 300px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+            <!-- 左側：評分條 -->
+            <div class="grading-scores" style="flex: 1; min-width: 300px; background: #fdfcf8; border: 1px solid #eee; border-radius: 12px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
                 <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555;">
                     班級平均表現 <small style="font-weight:normal; color:#999;">(${count}份)</small>
                 </h3>
                 
-                <!-- 內容 -->
-                <div class="score-item">
-                    <label>內容 (40)</label>
-                    <div class="slider-container">
-                        <div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div>
-                        <span class="score-display">${scoreContent}</span>
-                    </div>
-                </div>
-                
-                <!-- 表達 -->
-                <div class="score-item">
-                    <label>表達 (30)</label>
-                    <div class="slider-container">
-                        <div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div>
-                        <span class="score-display">${scoreExpr}</span>
-                    </div>
-                </div>
-                
-                <!-- 結構 -->
-                <div class="score-item">
-                    <label>結構 (20)</label>
-                    <div class="slider-container">
-                        <div class="progress-bar-container"><div style="width:${avg.struct*10}%" class="progress-bar-fill"></div></div>
-                        <span class="score-display">${scoreStruct}</span>
-                    </div>
-                </div>
-
-                <!-- 標點 & 錯別字 -->
-                <div class="score-item">
-                    <label>標點 (10)</label>
-                    <div class="slider-container">
-                        <div class="progress-bar-container"><div style="width:50%" class="progress-bar-fill"></div></div>
-                        <span class="score-display">${scorePunc}</span>
-                    </div>
-                </div>
-                <div class="score-item">
-                    <label>錯別字 (+3)</label>
-                    <div class="slider-container">
-                        <div class="progress-bar-container"><div style="width:33%" class="progress-bar-fill"></div></div>
-                        <span class="score-display">+${scoreTypo}</span>
-                    </div>
-                </div>
+                <!-- 分數項目 -->
+                <div class="score-item"><label>內容 (40)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div><span class="score-display">${scoreContent}</span></div></div>
+                <div class="score-item"><label>表達 (30)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div><span class="score-display">${scoreExpr}</span></div></div>
+                <div class="score-item"><label>結構 (20)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.struct*10}%" class="progress-bar-fill"></div></div><span class="score-display">${scoreStruct}</span></div></div>
+                <div class="score-item"><label>標點 (10)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:50%" class="progress-bar-fill"></div></div><span class="score-display">${scorePunc}</span></div></div>
+                <div class="score-item"><label>錯別字 (+3)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:33%" class="progress-bar-fill"></div></div><span class="score-display">+${scoreTypo}</span></div></div>
 
                 <div class="total-score-container">
                     <span style="font-size:1.1em; color:#555;">平均總分: ${totalScore} / 100</span>
@@ -1195,17 +1168,26 @@ function generateClassChartHTML(type, avg, count) {
                 </div>
             </div>
             
-            <!-- 右側：雷達圖 (放在 Flex 容器中，確保不重疊) -->
-            <div style="flex: 1; min-width: 300px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#fff; border-radius:12px; border:1px solid #eee; padding:20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
-                <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555;">能力分佈雷達</h3>
+            <!-- 右側：雷達圖容器 -->
+            <!-- 
+               【關鍵修復】
+               1. min-height: 380px; 強制這個白盒子至少有 380px 高，這樣下方的文字絕對擠不進來。
+               2. display: block; 確保它是一個方塊。
+            -->
+            <div style="flex: 1; min-width: 300px; background:#fff; border:1px solid #eee; border-radius:12px; padding:20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 380px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555;">能力分佈</h3>
                 
-                <!-- 明確設定高度容器 -->
-                <div style="position: relative; height: 300px; width: 100%; max-width: 350px;">
+                <!-- Canvas 專用外框：這裡鎖定高度 -->
+                <div style="position: relative; height: 320px; width: 100%; width: 320px;">
                     <canvas id="${id}"></canvas>
                 </div>
             </div>
 
         </div>
+        
+        <!-- 【保險絲】：隱形的隔離牆，防止任何 float 元素造成的重疊 -->
+        <div style="clear: both; height: 20px; width: 100%; display: block;"></div>
+        
     </div>`;
 }
     

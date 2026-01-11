@@ -518,19 +518,19 @@
         <div style="display:flex; gap:20px; justify-content:center; margin:30px 0; flex-wrap:wrap;">
             <div class="stat-card stat-purple">
                 <div class="val" id="dispUnique">0</div>
-                <div class="label">總使用人數 (不重複)</div>
+                <div class="label">訪問人數</div>
             </div>
             <div class="stat-card stat-blue">
                 <div class="val" id="dispVisits">0</div>
-                <div class="label">總進入次數</div>
+                <div class="label">訪問次數</div>
             </div>
             <div class="stat-card stat-red">
                 <div class="val" id="dispDuration">0</div>
-                <div class="label">總使用時長 (分鐘)</div>
+                <div class="label">總訪問時長 (分鐘)</div>
             </div>
             <div class="stat-card stat-sand">
                 <div class="val" id="dispAvg">0</div>
-                <div class="label">平均每人時長 (分鐘)</div>
+                <div class="label">平均訪問時長 (分鐘)</div>
             </div>
         </div>
 
@@ -1133,13 +1133,8 @@ let analyticsChartInstance = null;
 
             // 圖表數據準備
             const labels = Object.keys(agg);
-            
-            // 數據集 1: 使用人數 (放在前景)
             const uniqueData = Object.values(agg).map(a => a.uniqueSet.size);
-            
-            // 數據集 2: 總進入次數 (放在背景，作為總高度)
             const totalVisitsData = Object.values(agg).map(a => a.visits);
-
             const durationData = Object.values(agg).map(a => Math.round(a.duration/60));
 
             const ctx = document.getElementById('analyticsChart').getContext('2d');
@@ -1151,31 +1146,25 @@ let analyticsChartInstance = null;
                     labels: labels, 
                     datasets: [
                         { 
-                            label: '總進入次數 (Total)', 
+                            label: '訪問次數', 
                             data: totalVisitsData, 
-                            // 藍色，半透明背景，讓它看起來像是一個容器或背景
-                            backgroundColor: 'rgba(148, 167, 181, 0.2)', 
-                            borderColor: 'rgba(148, 167, 181, 1)',
-                            borderWidth: 1,
-                            maxBarThickness: 50,
-                            // ★ 關鍵：order 數字大代表在後層 (背景)
-                            order: 2,
-                            // ★ 關鍵：不與其他 bar 併排，而是重疊
+                            // ★ 修改處：改為實色莫蘭迪藍 (#94a7b5)，不透明
+                            backgroundColor: '#94a7b5', 
+                            maxBarThickness: 50, // 較寬，作為背景
+                            order: 2,            // 在後層
                             grouped: false 
                         },
                         { 
-                            label: '使用人數 (Unique)', 
+                            label: '訪問人數', 
                             data: uniqueData, 
-                            // 紫色，較不透明，顯示在前方
-                            backgroundColor: 'rgba(182, 166, 202, 0.85)', 
-                            hoverBackgroundColor: 'rgba(182, 166, 202, 1)',
-                            maxBarThickness: 30, // 稍微窄一點點，製造「內含」的視覺效果
-                            // ★ 關鍵：order 數字小代表在前層 (前景)
-                            order: 1,
+                            // 實色莫蘭迪紫 (#b6a6ca)
+                            backgroundColor: '#b6a6ca', 
+                            maxBarThickness: 30, // 較窄，作為前景 (會嵌在藍色中間)
+                            order: 1,            // 在前層
                             grouped: false
                         },
                         { 
-                            label: '總時長(分)', 
+                            label: '總訪問時長(分)', 
                             data: durationData, 
                             type: 'line', 
                             borderColor: '#d69a92', 
@@ -1190,18 +1179,18 @@ let analyticsChartInstance = null;
                 options: { 
                     maintainAspectRatio: false, 
                     interaction: {
-                        mode: 'index', // 滑鼠懸停時同時顯示所有數據
+                        mode: 'index',
                         intersect: false,
                     },
                     scales: { 
                         x: {
-                            stacked: true, // X 軸堆疊，確保位置對齊
+                            stacked: true, // 確保 X 軸位置重合
                         },
                         y: { 
                             beginAtZero: true, 
                             position: 'left', 
                             title: {display:true, text:'數量'}, 
-                            stacked: false, // ★ 關鍵：Y 軸不堆疊！這樣 4 就是 4，2 就是 2
+                            stacked: false, // 確保 Y 軸不累加，顯示真實高度
                             ticks: {
                                 stepSize: 1, 
                                 callback: function(value) { if (value % 1 === 0) return value; }

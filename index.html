@@ -224,7 +224,7 @@
 .radar-chart-container { 
     position: relative; 
     width: 100%; 
-    max-width: 160px;     /* 稍微調小最大寬度，讓它在手機上更精緻 */
+    max-width: 230px;     /* 稍微調小最大寬度，讓它在手機上更精緻 */
     margin: 0 auto;       /* 居中 */
     aspect-ratio: 1 / 1;  /* 保持正方形 */
     display: flex;
@@ -234,8 +234,8 @@
 }
 
 .radar-chart-container canvas {
-    max-width: 85% !important;
-    max-height: 85% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
     width: auto !important;   /* 改為 auto，讓 aspect ratio 生效 */
     height: auto !important;  /* 改為 auto */
 }
@@ -265,7 +265,7 @@
                 width: 100% !important; 
                 height: auto !important; 
                 aspect-ratio: 1/1 !important; 
-                max-height: 350px !important; 
+                max-height: 230px !important; 
                 margin: 0 auto !important; 
             }
             .score-item { flex-wrap: wrap; } .score-item label { width: 100%; margin-bottom: 5px; } .score-item .slider-container { max-width: 100%; }

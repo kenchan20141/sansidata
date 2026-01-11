@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>神思 - 教研平台</title>
+    <title>神思 - 教師後台</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
     
@@ -259,30 +259,6 @@
             .filter-group select, .filter-group input { width: 100%; } .transfer-grid { flex-direction: column; }
             .modal-content-container { flex-direction: column; } .submission-sidebar { width: 100%; height: 40%; }
         }
-
-
-.copyright-footer {
-    position: fixed;
-    bottom: 0;
-    right: 0;
-    padding: 5px 10px;
-    background-color: #f1f1f1;
-}
-
-.copyright-footer p {
-    margin: 0;
-    font-size: 14px;
-}
-
-@media (max-width: 600px) {
-    .copyright-footer p {
-        font-size: 12px;
-    }
-}
-
-
-
-        
     </style>
 </head>
 <body>
@@ -290,7 +266,7 @@
     <!-- === 安全登入閘門 === -->
     <div id="loginOverlay">
         <div class="login-box">
-            <h2 style="color: var(--m-blue); margin-bottom: 10px;">神思・教研平台</h2>
+            <h2 style="color: var(--m-blue); margin-bottom: 10px;">神思・教師後台</h2>
             <p style="color: #888; margin-bottom: 30px;">請使用學校教師帳號登入以存取資料</p>
             <button id="loginBtn" class="login-btn" onclick="teacherLogin()">
                 <i class="fab fa-google"></i> Google 帳號登入
@@ -312,11 +288,8 @@
         <!-- 導航列 -->
         <div class="nav-bar">
             <button class="nav-btn active" onclick="switchTab('students')"><i class="fas fa-user-graduate"></i> 學生管理</button>
-            
-            <button class="nav-btn" onclick="switchTab('reports')"><i class="fas fa-chart-pie"></i> 學生報告</button>
             <button class="nav-btn" onclick="switchTab('assignments')"><i class="fas fa-edit"></i> 課業管理</button>
-            <!-- 在 nav-bar 內加入這行 -->
-<button class="nav-btn" onclick="switchTab('analytics')"><i class="fas fa-chart-bar"></i> 數據統計</button>
+            <button class="nav-btn" onclick="switchTab('reports')"><i class="fas fa-chart-pie"></i> 學生報告</button>
             <button class="nav-btn" onclick="switchTab('management')"><i class="fas fa-calendar-alt"></i> 學年管理</button>
         </div>
 
@@ -469,82 +442,6 @@
         </div>
     </div>
 
-
-<!-- 5. 數據統計頁面 (全新) -->
-<div id="tab-analytics" class="box" style="display:none;">
-    <h2>神思大數據統計</h2>
-    
-    <div class="filter-group">
-        <!-- 統計對象選擇 -->
-        <label><i class="fas fa-cubes" style="color:var(--m-blue);"></i> 對象：</label>
-        <select id="statScope" onchange="updateStatInputs()">
-            <option value="global">所有用家 (含訪客)</option>
-            <option value="school">全校 (僅已登入)</option>
-            <option value="class">個別班級</option>
-            <option value="student">個別學生</option>
-        </select>
-
-        <!-- 動態顯示的輸入框 (班級/學生) -->
-        <span id="statClassInput" style="display:none;">
-            <select id="statGrade">
-                <option value="1">中一</option><option value="2">中二</option><option value="3">中三</option>
-                <option value="4">中四</option><option value="5">中五</option><option value="6">中六</option>
-            </select>
-            <select id="statClass">
-                <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
-            </select>
-        </span>
-        <span id="statStudentInput" style="display:none;">
-            <input type="text" id="statStudentName" placeholder="學生姓名" style="width:120px;">
-        </span>
-
-        <!-- 時間維度選擇 -->
-        <label style="margin-left:15px;"><i class="far fa-clock" style="color:var(--m-brown);"></i> 時間：</label>
-        <select id="statTimeMode" onchange="updateTimeInputs()">
-            <option value="day">本日 (實時)</option>
-            <option value="month">本月 (趨勢)</option>
-            <option value="year">本年 (總覽)</option>
-        </select>
-        
-        <!-- 日期/月份/年份 選擇器 -->
-        <input type="date" id="statDate" style="display:inline-block;">
-        <select id="statMonth" style="display:none;">
-            <!-- JS 自動填充 1-12 月 -->
-        </select>
-        <select id="statYear" style="display:none;">
-            <option value="2025">2025</option>
-            <option value="2026">2026</option>
-            <option value="2027">2027</option>
-        </select>
-
-        <button class="btn-action btn-view" onclick="fetchAndRenderStats()">
-            <i class="fas fa-search"></i> 查詢
-        </button>
-    </div>
-
-    <!-- 數據概覽卡片 -->
-    <div style="display:flex; gap:20px; justify-content:center; margin-bottom:30px; flex-wrap:wrap;">
-        <div style="background:#f0f7ff; padding:20px; border-radius:12px; text-align:center; flex:1; min-width:150px; border:1px solid #cce5ff;">
-            <div style="color:#007bff; font-size:2em; font-weight:bold;" id="dispVisits">0</div>
-            <div style="color:#666;">總進入次數</div>
-        </div>
-        <div style="background:#fff0f0; padding:20px; border-radius:12px; text-align:center; flex:1; min-width:150px; border:1px solid #ffcccc;">
-            <div style="color:#dc3545; font-size:2em; font-weight:bold;" id="dispDuration">0</div>
-            <div style="color:#666;">總使用時長 (分鐘)</div>
-        </div>
-        <div style="background:#f0fff4; padding:20px; border-radius:12px; text-align:center; flex:1; min-width:150px; border:1px solid #c3e6cb;">
-            <div style="color:#28a745; font-size:2em; font-weight:bold;" id="dispAvg">0</div>
-            <div style="color:#666;">平均每次時長 (分鐘)</div>
-        </div>
-    </div>
-
-    <!-- 圖表容器 -->
-    <div class="chart-container" style="position: relative; height:400px; width:100%;">
-        <canvas id="analyticsChart"></canvas>
-    </div>
-</div>
-    
-
     <!-- Modal: 學生歷史檢閱 (通用) -->
     <div id="historyViewerModal" class="modal-overlay">
         <div class="modal-body">
@@ -630,68 +527,6 @@
         const READING_API_URL = "https://gen.pollinations.ai/v1/chat/completions";
         const READING_MODEL = "deepseek";
 
-
-// ==============================================
-// === OneSignal 推播通知設定 (安全性混淆版) ===
-// ==============================================
-
-// 原始 Key 被拆分並隱藏在雜訊中，防止簡單爬蟲抓取
-const _noise_start = "7bo2joflvzgf5dnzzh2gh7eycx";
-const _part_head = "k5kn45q25uw"; // Key 的前段
-const _noise_mid = "rtgfhd3xfyyxull";
-const _part_tail = "ymlyhqbq746ubu"; // Key 的後段
-const _noise_end = "klptksmnddfdwgpechno4byssraz";
-
-// 動態組裝 API Key
-const _OS_Auth = _part_head + _part_tail; 
-
-/**
- * 呼叫 OneSignal REST API 發送推播
- */
-async function sendClassNotification(targetGrade, targetClass, topic, type) {
-    const notificationData = {
-        // 請確保這裡填入你自己的 OneSignal App ID
-        app_id: "f85da4b8-abae-4c5e-8db9-c9f463fc9815", 
-        
-        // 標題與內容
-        headings: { en: "新課業通知", zh: "📚 新課業發布" },
-        contents: { 
-            en: `New Assignment: ${topic}`, 
-            zh: `老師已發布【${type}】課業：《${topic}》，請盡快查閱。` 
-        },
-        
-        // 關鍵：只發送給符合 Grade 和 Class Tag 的學生
-        filters: [
-            { field: "tag", key: "grade", relation: "=", value: targetGrade },
-            { operator: "AND" },
-            { field: "tag", key: "class", relation: "=", value: targetClass }
-        ],
-        
-        // 點擊通知後開啟的網址 (學生端網址)
-        // 如果學生端網址不同，請在此修改，例如 'https://yourschool.com/student-portal'
-        url: window.location.href 
-    };
-
-    const options = {
-        method: 'POST',
-        headers: {
-            accept: 'application/json',
-            'Content-Type': 'application/json',
-            Authorization: 'Basic ' + _OS_Auth
-        },
-        body: JSON.stringify(notificationData)
-    };
-
-    try {
-        const response = await fetch('https://onesignal.com/api/v1/notifications', options);
-        const data = await response.json();
-        console.log('✅ 推播發送成功:', data);
-    } catch (err) {
-        console.error('❌ 推播發送失敗:', err);
-    }
-}
-
-        
         // 輔助函式：DSE等級計算
         function determineGrade(score) {
             if (score >= 72) return "5**";
@@ -723,216 +558,6 @@ async function sendClassNotification(targetGrade, targetClass, topic, type) {
         }
         auth.onAuthStateChanged(user => { if (user && user.email.endsWith('@ccckyc.edu.hk')) showApp(user); });
 
-
-
-// ==============================================
-        // === 補全：課業管理邏輯 (修復 ReferenceError) ===
-        // ==============================================
-
-        // 1. 載入已派發課業列表
-        function loadAssignmentHistory() {
-            const g = document.getElementById('assignGrade').value;
-            const c = document.getElementById('assignClass').value;
-            const list = document.getElementById('assignmentHistoryList');
-            
-            list.innerHTML = '<p style="text-align:center; padding:20px; color:#999;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
-
-            db.ref(`assignments/${g}/${c}`).once('value', snapshot => {
-                const data = snapshot.val();
-                list.innerHTML = '';
-                
-                if (!data) {
-                    list.innerHTML = '<p style="text-align:center; width:100%; color:#aaa; padding:20px;">此班級暫無已派發的課業。</p>';
-                    return;
-                }
-
-                // 按時間倒序排列
-                Object.entries(data)
-                    .sort(([,a], [,b]) => b.timestamp - a.timestamp)
-                    .forEach(([id, item]) => {
-                        const div = document.createElement('div');
-                        div.className = 'assignment-item';
-                        div.innerHTML = `
-                            <div style="flex:1;">
-                                <div style="font-weight:bold; font-size:1.2em; color:#444;">${item.topic}</div>
-                                <div style="font-size:0.9em; color:#888; margin-top:5px;">
-                                    <span class="tag">${item.type}</span> 
-                                    <i class="far fa-clock"></i> ${item.dateStr || '未知日期'}
-                                </div>
-                            </div>
-                            <div style="display:flex; gap:10px; align-items:center;">
-                                <button class="btn-action btn-view" onclick="viewSubmissions('${id}', '${item.topic}')">
-                                    <i class="fas fa-eye"></i> 檢閱繳交
-                                </button>
-                                <button class="btn-action btn-delete" onclick="deleteAssignment('${id}')">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </div>
-                        `;
-                        list.appendChild(div);
-                    });
-            });
-        }
-
-       // 2. 發布新課業 (已修訂：加入推播功能)
-        function publishAssignment() {
-            const g = document.getElementById('assignGrade').value;
-            const c = document.getElementById('assignClass').value;
-            const topic = document.getElementById('assignTopic').value.trim();
-            const type = document.getElementById('assignType').value;
-            const btn = document.getElementById('btnPublish');
-
-            if (!topic) {
-                alert("請輸入課業題目！");
-                return;
-            }
-
-            // 鎖定按鈕避免重複發送
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 發布中...';
-
-            const newAssignment = {
-                topic: topic,
-                type: type,
-                timestamp: firebase.database.ServerValue.TIMESTAMP,
-                dateStr: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-            };
-
-            // 寫入 Firebase
-            db.ref(`assignments/${g}/${c}`).push(newAssignment)
-                .then(() => {
-                    // === 修改點開始：在這裡呼叫推播函式 ===
-                    console.log("正在發送推播通知...");
-                    
-                    // 呼叫我們在第一步寫好的函式 (不需等待它完成即可顯示成功 alert)
-                    sendClassNotification(g, c, topic, type); 
-                    
-                    // === 修改點結束 ===
-
-                    alert("發布成功！學生將收到通知。");
-                    document.getElementById('assignTopic').value = ''; // 清空輸入框
-                    loadAssignmentHistory(); // 重新載入列表
-                })
-                .catch(err => alert("發布失敗：" + err.message))
-                .finally(() => {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="fas fa-paper-plane"></i> 立即派發';
-                });
-        }
-        // 3. 刪除課業
-        function deleteAssignment(id) {
-            if(!confirm("確定要刪除此課業嗎？\n(注意：這不會刪除學生已提交的內容，但會從列表中移除)")) return;
-            
-            const g = document.getElementById('assignGrade').value;
-            const c = document.getElementById('assignClass').value;
-
-            db.ref(`assignments/${g}/${c}/${id}`).remove()
-                .then(() => loadAssignmentHistory())
-                .catch(err => alert("刪除失敗：" + err.message));
-        }
-
-        // 4. 檢閱繳交狀況 (開啟 Modal)
-        async function viewSubmissions(assignmentId, topic) {
-            const g = document.getElementById('assignGrade').value;
-            const c = document.getElementById('assignClass').value;
-            
-            // 開啟 Modal 並設定標題
-            document.getElementById('submissionViewerModal').style.display = 'flex';
-            document.getElementById('submissionTitle').innerText = topic;
-            document.getElementById('submissionList').innerHTML = '<li style="padding:20px; text-align:center; color:#999;">載入名單中...</li>';
-            document.getElementById('submissionDetailArea').innerHTML = '<div style="text-align:center; color:#ccc; margin-top:100px;"><i class="far fa-file-alt" style="font-size:48px;"></i><p>請選擇學生以檢視內容</p></div>';
-
-            try {
-                // 4.1 獲取該班所有學生名單
-                const studentsSnap = await db.ref(`students/${g}/${c}`).once('value');
-                const students = studentsSnap.val() || {};
-
-                // 4.2 獲取該作業的所有繳交紀錄 (假設繳交紀錄存在 submissions 節點下，或者你需要根據你的數據結構調整)
-                // 這裡假設結構是: submissions/{assignmentId}/{studentName} 
-                // 或者如果你的繳交是直接寫入學生歷史紀錄，這裡需要遍歷學生的 history。
-                // *基於你的系統看起來是寫入學生個人 history，這裡我們採用遍歷學生 History 的方式*
-
-                const submissionListEl = document.getElementById('submissionList');
-                submissionListEl.innerHTML = '';
-
-                let submittedCount = 0;
-                let pendingCount = 0;
-
-                // 排序學生 (按學號)
-                const sortedStudentNames = Object.keys(students).sort((a,b) => 
-                    (parseInt(students[a].profile?.number)||99) - (parseInt(students[b].profile?.number)||99)
-                );
-
-                sortedStudentNames.forEach(name => {
-                    const studentData = students[name];
-                    const history = studentData.history ? Object.values(studentData.history) : [];
-                    
-                    // 尋找是否有匹配此 assignmentId 或 題目的紀錄
-                    // 注意：如果你的學生提交時沒有存 assignmentId，這裡可能需要用題目(title)來匹配
-                    const submission = history.find(h => h.assignmentId === assignmentId || h.title === topic);
-
-                    const li = document.createElement('li');
-                    li.className = `submission-item ${submission ? '' : ''}`;
-                    
-                    const statusHtml = submission 
-                        ? `<span class="status-badge status-done"><i class="fas fa-check"></i> 已交</span>`
-                        : `<span class="status-badge status-pending"><i class="fas fa-times"></i> 未交</span>`;
-                    
-                    if(submission) submittedCount++; else pendingCount++;
-
-                    li.innerHTML = `
-                        <div>
-                            <div style="font-weight:bold;">${name} <small style="color:#888;">(${studentData.profile?.number || '?'})</small></div>
-                            <div style="font-size:0.8em; color:#aaa;">${submission ? submission.dateStr.split(' ')[0] : '-'}</div>
-                        </div>
-                        ${statusHtml}
-                    `;
-
-                    // 點擊事件
-                    if (submission) {
-                        li.onclick = () => {
-                            // 移除其他 active
-                            document.querySelectorAll('.submission-item').forEach(i => i.classList.remove('active'));
-                            li.classList.add('active');
-                            showSubmissionDetail(submission, name);
-                        };
-                    } else {
-                        li.style.cursor = 'default';
-                        li.style.opacity = '0.6';
-                    }
-
-                    submissionListEl.appendChild(li);
-                });
-
-                // 更新計數
-                document.getElementById('submitCount').innerText = submittedCount;
-                document.getElementById('pendingCount').innerText = pendingCount;
-
-            } catch (e) {
-                console.error(e);
-                alert("載入名單失敗");
-            }
-        }
-
-        // 5. 顯示單一繳交內容 (在右側顯示)
-        function showSubmissionDetail(data, studentName) {
-            const container = document.getElementById('submissionDetailArea');
-            container.innerHTML = `
-                <h2 style="border-bottom:1px solid #eee; padding-bottom:10px;">${studentName} 的作業</h2>
-                <div style="margin-top:20px;">
-                    <h4 style="color:var(--m-blue);"><i class="fas fa-align-left"></i> 學生作答：</h4>
-                    <div style="background:#f9f9f9; padding:20px; border-radius:8px; line-height:1.6; white-space:pre-wrap; border:1px solid #eee;">${data.userContent || '(無文字內容)'}</div>
-                </div>
-                <div style="margin-top:30px;">
-                    <h4 style="color:var(--m-green);"><i class="fas fa-robot"></i> AI 評語：</h4>
-                    <div class="detail-ai-box">${data.aiContent || '評語生成中...'}</div>
-                </div>
-            `;
-        }
-
-
-
-        
         // === Tab 切換邏輯 ===
         function switchTab(tabId) {
             document.querySelectorAll('.box').forEach(b => b.style.display = 'none');
@@ -1025,325 +650,188 @@ async function sendClassNotification(targetGrade, targetClass, topic, type) {
         }
 
         // === 新增：生成全班綜合報告邏輯 ===
-// === 最終全功能版 V3：生成全班綜合報告 (含大綱 + 閱讀 + 寫作 + 整合拓展) ===
-async function generateClassReport() {
-    const btn = document.getElementById('btnClassReport');
-    const g = document.getElementById('reportGrade').value;
-    const c = document.getElementById('reportClass').value;
-    
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 分析全班數據中...';
-
-    try {
-        // 1. 抓取全班資料
-        const snapshot = await db.ref(`students/${g}/${c}`).once('value');
-        const data = snapshot.val();
-        
-        if (!data) { alert("此班級無學生資料！"); btn.disabled=false; btn.innerHTML = '<i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)'; return; }
-
-        // 2. 聚合數據
-        let classSummary = "";      // 成品文章摘要 (過往報告)
-        let outlineSummary = "";    // 大綱點評摘要
-        let readingSummary = "";    // 閱讀點評摘要
-        let expandSummary = "";     // ★ 新增：整合拓展摘要
-        let studentCount = 0;
-        
-        // 分數統計 (寫作)
-        let narrativeTotal = { content:0, expr:0, struct:0, count:0 };
-        let argumentTotal = { content:0, expr:0, struct:0, count:0 };
-
-        // 遍歷每位學生
-        Object.entries(data).forEach(([name, d]) => {
-            const h = d.history ? (Array.isArray(d.history) ? d.history : Object.values(d.history)) : [];
+        async function generateClassReport() {
+            const btn = document.getElementById('btnClassReport');
+            const g = document.getElementById('reportGrade').value;
+            const c = document.getElementById('reportClass').value;
             
-            // A. 收集過往「學習報告」摘要 (寫作成品表現)
-            const reports = h.filter(r => r.category === "學習報告").sort((a,b) => b.timestamp - a.timestamp);
-            if (reports.length > 0) {
-                studentCount++;
-                const latestReport = reports[0].aiContent.replace(/<[^>]*>?/gm, ' ').substring(0, 300);
-                classSummary += `學生 ${studentCount}: ${latestReport}...\n`;
-            }
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 分析全班數據中...';
 
-            // B. 遍歷所有紀錄 (分數 + 各範疇點評)
-            h.forEach(r => {
-                // --- 1. 處理寫作分數 ---
-                const scoreMatch = r.aiContent.match(/總分:\s*(\d+)/);
-                if (scoreMatch) {
-                    const score = parseInt(scoreMatch[1]);
-                    if (r.category === "敘事抒情") {
-                        narrativeTotal.content += score * 0.4;
-                        narrativeTotal.expr += score * 0.3;
-                        narrativeTotal.struct += score * 0.2;
-                        narrativeTotal.count++;
-                    } else if (r.category === "議論") {
-                        argumentTotal.content += score * 0.4;
-                        argumentTotal.expr += score * 0.3;
-                        argumentTotal.struct += score * 0.2;
-                        argumentTotal.count++;
+            try {
+                // 1. 抓取全班資料
+                const snapshot = await db.ref(`students/${g}/${c}`).once('value');
+                const data = snapshot.val();
+                
+                if (!data) { alert("此班級無學生資料！"); btn.disabled=false; btn.innerHTML = '<i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)'; return; }
+
+                // 2. 聚合數據 (計算平均分 & 收集摘要)
+                let classSummary = "";
+                let studentCount = 0;
+                let narrativeTotal = { content:0, expr:0, struct:0, count:0 };
+                let argumentTotal = { content:0, expr:0, struct:0, count:0 };
+
+                // 遍歷每位學生
+                Object.entries(data).forEach(([name, d]) => {
+                    const h = d.history ? (Array.isArray(d.history) ? d.history : Object.values(d.history)) : [];
+                    const reports = h.filter(r => r.category === "學習報告").sort((a,b) => b.timestamp - a.timestamp);
+                    
+                    // 收集摘要 (只取最新一份報告的摘要)
+                    if (reports.length > 0) {
+                        studentCount++;
+                        const latestReport = reports[0].aiContent.replace(/<[^>]*>?/gm, ' ').substring(0, 300);
+                        classSummary += `學生[${name}]: ${latestReport}...\n`;
                     }
+
+                    // 收集分數 (遍歷所有寫作紀錄)
+                    h.forEach(r => {
+                        // 嘗試解析分數 (這裡簡化處理，直接從 aiContent 抓取隱藏欄位太複雜，改用正則抓取顯示分數)
+                        const scoreMatch = r.aiContent.match(/總分:\s*(\d+)/);
+                        if (scoreMatch) {
+                            const score = parseInt(scoreMatch[1]);
+                            // 這裡反推單項分數有點難，我們假設分數分佈平均
+                            // 為了生成雷達圖，我們需要 Content/Expr/Struct 分數
+                            // 如果無法精確抓取，我們用總分估算：Content=總分*0.4, Expr=總分*0.3, Struct=總分*0.2
+                            if (r.category === "敘事抒情") {
+                                narrativeTotal.content += score * 0.4;
+                                narrativeTotal.expr += score * 0.3;
+                                narrativeTotal.struct += score * 0.2;
+                                narrativeTotal.count++;
+                            } else if (r.category === "議論") {
+                                argumentTotal.content += score * 0.4;
+                                argumentTotal.expr += score * 0.3;
+                                argumentTotal.struct += score * 0.2;
+                                argumentTotal.count++;
+                            }
+                        }
+                    });
+                });
+
+                if (studentCount === 0 && narrativeTotal.count === 0 && argumentTotal.count === 0) {
+                    alert("此班級數據不足，無法生成報告。");
+                    btn.disabled=false; 
+                    btn.innerHTML = '<i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)';
+                    return;
                 }
 
-                // --- 2. 處理大綱點評 ---
-                if (r.subFunction && r.subFunction.includes("大綱")) {
-                    let rawText = r.aiContent.replace(/<[^>]*>?/gm, ' ');
-                    let extract = "";
-                    const commentIdx = rawText.indexOf("點評");
-                    if (commentIdx !== -1) {
-                        extract = rawText.substring(commentIdx, commentIdx + 120);
-                        outlineSummary += `[${r.category}大綱表現]: ${extract}...\n`;
-                    }
-                }
-
-                // --- 3. 處理閱讀理解 ---
-                if (r.category === "閱讀" && r.subFunction === "點評") {
-                    let rawText = r.aiContent.replace(/<[^>]*>?/gm, ' ');
-                    let extract = "";
-                    const commentIdx = rawText.indexOf("點評");
-                    if (commentIdx !== -1) {
-                        extract = rawText.substring(commentIdx, commentIdx + 150); 
-                        readingSummary += `[閱讀答題表現]: ${extract}...\n`;
-                    }
-                }
-
-                // --- 4. ★ 新增：處理整合拓展 ---
-                if (r.category === "整合拓展" && r.subFunction === "點評") {
-                    let rawText = r.aiContent.replace(/<[^>]*>?/gm, ' ');
-                    let extract = "";
-                    // 整合拓展通常包含「點評」和「建議」
-                    const commentIdx = rawText.indexOf("點評");
-                    if (commentIdx !== -1) {
-                        extract = rawText.substring(commentIdx, commentIdx + 150);
-                        expandSummary += `[整合拓展表現]: ${extract}...\n`;
-                    }
-                }
-            });
-        });
-
-        // 檢查是否有足夠數據
-        if (studentCount === 0 && narrativeTotal.count === 0 && argumentTotal.count === 0 && 
-            outlineSummary === "" && readingSummary === "" && expandSummary === "") {
-            alert("此班級數據不足，無法生成報告。");
-            btn.disabled=false; 
-            btn.innerHTML = '<i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)';
-            return;
-        }
-
-        // 計算平均分 (寫作)
-        const narrAvg = {
-            content: narrativeTotal.count ? Math.round((narrativeTotal.content / narrativeTotal.count) / 4) : 0, 
-            expr: narrativeTotal.count ? Math.round((narrativeTotal.expr / narrativeTotal.count) / 3) : 0,    
-            struct: narrativeTotal.count ? Math.round((narrativeTotal.struct / narrativeTotal.count) / 2) : 0 
-        };
-        const argAvg = {
-            content: argumentTotal.count ? Math.round((argumentTotal.content / argumentTotal.count) / 4) : 0,
-            expr: argumentTotal.count ? Math.round((argumentTotal.expr / argumentTotal.count) / 3) : 0,
-            struct: argumentTotal.count ? Math.round((argumentTotal.struct / argumentTotal.count) / 2) : 0
-        };
-
-        // 3. 呼叫 AI 生成 (保留完整的指令與格式要求)
-        const prompt = `你是一位資深的中文科科主任。以下是 ${g}年級${c}班 的學習數據摘要。
-        
-        ### 班級數據概覽 (寫作評分)：
-        - 敘事抒情文 (平均分 0-10)：內容${narrAvg.content}, 表達${narrAvg.expr}, 結構${narrAvg.struct}
-        - 議論文 (平均分 0-10)：內容${argAvg.content}, 表達${argAvg.expr}, 結構${argAvg.struct}
-
-        ### 學生寫作表現 (大綱構思 + 成品)：
-        ${outlineSummary || "（暫無大綱紀錄）"}
-        ${classSummary}
-
-        ### 學生閱讀理解表現 (來自閱讀練習紀錄)：
-        ${readingSummary || "（暫無閱讀練習紀錄）"}
-
-        ### 學生整合拓展表現 (來自練習紀錄)：
-        ${expandSummary || "（暫無整合拓展紀錄）"}
-
-        ### 你的任務：
-        請生成一份「全班綜合學習評估報告」。
-        **關鍵要求：**
-        1. 整合「讀」、「寫」、「聽/說(整合拓展)」的全方位表現。
-        2. 將「大綱構思」融合到寫作分析中，分析學生在構思與實作間的落差。
-        3. 必須為每個範疇（閱讀、敘事、議論、整合拓展）提供獨立的分析區塊。
-
-        ### 核心指令 (Privacy Protocols)：
-        1. **宏觀視角**：報告必須完全聚焦於「班級整體表現」或「大部分學生」。
-        2. **嚴禁個別提及**：絕對**不可以**在報告中提及任何特定學生編號或具體個案。
-        3. **趨勢分析**：請將個別樣本中的具體問題（如離題、論據不足、拓展方向錯誤）轉化為全班性的強弱項分析。
-
-        ### 輸出格式要求 (嚴格遵守 HTML，樣式需與學生報告一致)：
-        請直接輸出 HTML 代碼，不要使用 Markdown。
-
-        1. **班級整體概況**：
-           <div class="report-section">
-               <div class="report-category-badge badge-general">
-                   <div class="badge-general-title"><i class="fas fa-users"></i> ${g}${c}班 綜合評估</div>
-               </div>
-               <div class="report-text-card">
-                   <p>(約150字，總結班級在「讀」、「寫」、「整合」三方面的整體強弱項，並給予一個總體的學習氛圍評價。)</p>
-               </div>
-           </div>
-           <div class="report-separator"></div>
-
-        2. **範疇深入分析**：
-           <div class="report-section">
-               <div class="report-category-badge badge-reading"><i class="fas fa-book-open"></i> 閱讀</div>
-               <div class="report-text-card">
-                   <p>(分析班級在閱讀理解上的普遍問題，例如理解題意、推論能力或文本依據運用等。)</p>
-               </div>
-           </div>
-           
-           <div class="report-section">
-               <div class="report-category-badge badge-narrative"><i class="fas fa-pen-nib"></i> 敘事抒情</div>
-               <div class="report-text-card">
-                   <p>(分析敘事文的通病與亮點，請融合對大綱構思的觀察，例如立意是否深刻、詳略是否得當。)</p>
-               </div>
-           </div>
-           
-           <div class="report-section">
-               <div class="report-category-badge badge-argument"><i class="fas fa-gavel"></i> 議論</div>
-               <div class="report-text-card">
-                   <p>(分析議論文的通病與亮點，請融合對大綱構思的觀察，例如論點是否清晰、論證是否嚴謹。)</p>
-               </div>
-           </div>
-
-           <div class="report-section">
-               <div class="report-category-badge badge-expand"><i class="fas fa-layer-group"></i> 整合拓展</div>
-               <div class="report-text-card">
-                   <p>(分析班級在整合拓展練習上的表現，例如是否能準確回應主題句、拓展方向是否合理、資料運用是否恰當。)</p>
-               </div>
-           </div>
-
-        3. **教學建議**：
-           <div class="report-quote-card">
-               <div class="report-quote-content">「(給任教老師的整體教學策略建議，涵蓋讀寫結合及思維訓練的方向)」</div>
-               <div class="report-quote-author">—— AI 科主任</div>
-           </div>`;
-
-        const response = await callAPI(prompt);
-
-        // --- 4. 儲存與顯示 ---
-        const reportData = {
-            timestamp: firebase.database.ServerValue.TIMESTAMP,
-            dateStr: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
-            stats: {
-                narrAvg: narrAvg,
-                argAvg: argAvg,
-                narrativeTotal: Math.round((narrativeTotal.content+narrativeTotal.expr+narrativeTotal.struct)/narrativeTotal.count) || 0,
-                argumentTotal: Math.round((argumentTotal.content+argumentTotal.expr+argumentTotal.struct)/argumentTotal.count) || 0
-            },
-            aiHtml: response
-        };
-
-        await db.ref(`class_reports/${g}/${c}`).push(reportData);
-        loadClassReportHistory();
-        openClassReportModal(reportData);
-
-    } catch (e) {
-        console.error(e);
-        alert("生成失敗，請稍後再試。");
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)';
-    }
-}
-        // === 新增：載入與顯示歷史全班報告 ===
-       function loadClassReportHistory() {
-    const g = document.getElementById('reportGrade').value;
-    const c = document.getElementById('reportClass').value;
-    const container = document.getElementById('classReportHistoryContainer');
-    const list = document.getElementById('classReportList');
-
-    db.ref(`class_reports/${g}/${c}`).once('value', snapshot => {
-        const data = snapshot.val();
-        if (!data) {
-            container.style.display = 'none';
-            return;
-        }
-
-        container.style.display = 'block';
-        list.innerHTML = '';
-
-        // 將資料轉為陣列並按時間倒序排列
-        Object.entries(data)
-            .sort(([,a], [,b]) => b.timestamp - a.timestamp)
-            .forEach(([key, report]) => {
-                
-                // 建立一個外層容器 (膠囊狀)
-                const wrapper = document.createElement('div');
-                wrapper.style.cssText = `
-                    display: inline-flex; 
-                    align-items: center; 
-                    background: #fff; 
-                    border: 1px solid #ccc; 
-                    border-radius: 50px; 
-                    padding: 5px 5px 5px 15px; 
-                    flex-shrink: 0; 
-                    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-                    transition: transform 0.2s;
-                `;
-
-                // 1. 檢閱按鈕 (文字部分)
-                const viewSpan = document.createElement('span');
-                viewSpan.style.cssText = "cursor: pointer; color: #555; font-size: 0.95em; font-weight: bold; margin-right: 10px;";
-                viewSpan.innerHTML = `<i class="far fa-file-alt"></i> ${report.dateStr || '未知日期'}`;
-                viewSpan.onclick = () => openClassReportModal(report);
-
-                // 2. 刪除按鈕 (紅色圓形圖示，無文字)
-                const delBtn = document.createElement('button');
-                delBtn.className = 'btn-action';
-                delBtn.title = "刪除此報告"; // 滑鼠懸停提示
-                delBtn.style.cssText = `
-                    background: #fbecec; 
-                    color: #d69a92; 
-                    border: none; 
-                    border-radius: 50%; 
-                    width: 32px; 
-                    height: 32px; 
-                    padding: 0;
-                    display: flex; 
-                    align-items: center; 
-                    justify-content: center;
-                    font-size: 14px;
-                    box-shadow: none;
-                `;
-                
-                delBtn.innerHTML = `<i class="fas fa-trash-alt"></i>`;
-                
-                // 按鈕互動效果
-                delBtn.onmouseover = function() { this.style.background = '#d69a92'; this.style.color = 'white'; };
-                delBtn.onmouseout = function() { this.style.background = '#fbecec'; this.style.color = '#d69a92'; };
-                
-                delBtn.onclick = (e) => {
-                    e.stopPropagation(); // 防止觸發檢閱
-                    deleteClassReport(key);
+                // 計算平均分
+                const narrAvg = {
+                    content: narrativeTotal.count ? Math.round((narrativeTotal.content / narrativeTotal.count) / 4) : 0, 
+                    expr: narrativeTotal.count ? Math.round((narrativeTotal.expr / narrativeTotal.count) / 3) : 0,    
+                    struct: narrativeTotal.count ? Math.round((narrativeTotal.struct / narrativeTotal.count) / 2) : 0 
+                };
+                const argAvg = {
+                    content: argumentTotal.count ? Math.round((argumentTotal.content / argumentTotal.count) / 4) : 0,
+                    expr: argumentTotal.count ? Math.round((argumentTotal.expr / argumentTotal.count) / 3) : 0,
+                    struct: argumentTotal.count ? Math.round((argumentTotal.struct / argumentTotal.count) / 2) : 0
                 };
 
-                // 組合元素
-                wrapper.appendChild(viewSpan);
-                wrapper.appendChild(delBtn);
-                list.appendChild(wrapper);
+                // 3. 呼叫 AI 生成
+                const prompt = `你是一位資深的中文科科主任。以下是 ${g}年級${c}班 的學習數據摘要。
+                
+                ### 班級數據概覽：
+                - 敘事抒情文 (平均分 0-10)：內容${narrAvg.content}, 表達${narrAvg.expr}, 結構${narrAvg.struct}
+                - 議論文 (平均分 0-10)：內容${argAvg.content}, 表達${argAvg.expr}, 結構${argAvg.struct}
+
+                ### 學生個別報告摘要：
+                ${classSummary}
+
+                ### 你的任務：
+                請根據以上資料，生成一份「全班綜合學習評估報告」。
+                
+                ### 輸出格式要求 (嚴格遵守 HTML，樣式需與學生報告一致)：
+                請直接輸出 HTML 代碼，不要使用 Markdown。
+
+                1. **班級整體概況**：
+                   <div class="report-section">
+                       <div class="report-category-badge badge-general">
+                           <div class="badge-general-title"><i class="fas fa-users"></i> ${g}${c}班 綜合評估</div>
+                       </div>
+                       <div class="report-text-card">
+                           <p>(約150字，分析班級整體強弱項，例如整體敘事能力較強但議論邏輯薄弱等。)</p>
+                       </div>
+                   </div>
+                   <div class="report-separator"></div>
+
+                2. **範疇深入分析**：(針對敘事、議論)
+                   請為每個範疇生成一段分析，**不要**包含圖表代碼，圖表會由系統自動插入。
+                   格式：
+                   <div class="report-section">
+                       <div class="report-category-badge badge-[narrative/argument]"><i class="fas fa-book"></i> [範疇名稱]</div>
+                       <div class="report-text-card">
+                           <p>(分析該範疇的班級普遍問題與亮點。)</p>
+                       </div>
+                   </div>
+
+                3. **教學建議**：
+                   <div class="report-quote-card">
+                       <div class="report-quote-content">「(給任教老師的具體教學建議)」</div>
+                       <div class="report-quote-author">—— AI 科主任</div>
+                   </div>`;
+
+                const response = await callAPI(prompt);
+
+                // --- 4. 儲存與顯示 ---
+                const reportData = {
+                    timestamp: firebase.database.ServerValue.TIMESTAMP,
+                    dateStr: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString(),
+                    stats: {
+                        narrAvg: narrAvg,
+                        argAvg: argAvg,
+                        narrativeTotal: Math.round((narrativeTotal.content+narrativeTotal.expr+narrativeTotal.struct)/narrativeTotal.count) || 0,
+                        argumentTotal: Math.round((argumentTotal.content+argumentTotal.expr+argumentTotal.struct)/argumentTotal.count) || 0
+                    },
+                    aiHtml: response // 只儲存 AI 生成的原始 HTML
+                };
+
+                // 4-1. 存入 Firebase
+                await db.ref(`class_reports/${g}/${c}`).push(reportData);
+                
+                // 4-2. 刷新歷史列表
+                loadClassReportHistory();
+
+                // 4-3. 開啟顯示
+                openClassReportModal(reportData);
+
+            } catch (e) {
+                console.error(e);
+                alert("生成失敗，請稍後再試。");
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)';
+            }
+        }
+
+        // === 新增：載入與顯示歷史全班報告 ===
+        function loadClassReportHistory() {
+            const g = document.getElementById('reportGrade').value;
+            const c = document.getElementById('reportClass').value;
+            const container = document.getElementById('classReportHistoryContainer');
+            const list = document.getElementById('classReportList');
+
+            db.ref(`class_reports/${g}/${c}`).once('value', snapshot => {
+                const data = snapshot.val();
+                if (!data) {
+                    container.style.display = 'none';
+                    return;
+                }
+
+                container.style.display = 'block';
+                list.innerHTML = '';
+
+                // 將資料轉為陣列並按時間倒序排列
+                Object.entries(data)
+                    .sort(([,a], [,b]) => b.timestamp - a.timestamp)
+                    .forEach(([key, report]) => {
+                        const btn = document.createElement('button');
+                        btn.className = 'btn-action';
+                        btn.style.cssText = 'background:white; color:#555; border:1px solid #ccc; flex-shrink:0;';
+                        btn.innerHTML = `<i class="far fa-file-alt"></i> ${report.dateStr || '未知日期'}`;
+                        btn.onclick = () => openClassReportModal(report);
+                        list.appendChild(btn);
+                    });
             });
-    });
-}
-
-        // === 新增：刪除全班報告邏輯 ===
-function deleteClassReport(reportKey) {
-    // 二次確認 (雖然不顯示文字按鈕，但 Alert 還是要有文字提示比較安全)
-    if (!confirm("確定要刪除這份全班報告嗎？\n(此動作無法復原)")) return;
-
-    const g = document.getElementById('reportGrade').value;
-    const c = document.getElementById('reportClass').value;
-
-    // 執行 Firebase 刪除
-    db.ref(`class_reports/${g}/${c}/${reportKey}`).remove()
-        .then(() => {
-            // 刪除成功後，重新載入列表
-            loadClassReportHistory();
-        })
-        .catch(err => {
-            console.error(err);
-            alert("刪除失敗：" + err.message);
-        });
-}
+        }
 
         function openClassReportModal(reportData) {
             const modal = document.getElementById('classReportModal');
@@ -1606,323 +1094,6 @@ function deleteClassReport(reportKey) {
             if(all[6]) await db.ref(`graduates/${y}`).set(all[6]);
             db.ref('students').set(n, e=>alert(e?'失敗':'成功'));
         }
-
-
-// === [新增] 數據統計與圖表邏輯 ===
-
-// === [修正版] 初始化介面 (解決時區問題) ===
-function initStatUI() {
-    // 1. 獲取本地時間 (香港時間)
-    const now = new Date();
-    
-    // 2. 手動格式化為 YYYY-MM-DD (避免 UTC 誤差)
-    const y = now.getFullYear();
-    const m = String(now.getMonth() + 1).padStart(2, '0');
-    const d = String(now.getDate()).padStart(2, '0');
-    const dateStr = `${y}-${m}-${d}`;
-
-    // 3. 設定日期選擇器
-    const dateInput = document.getElementById('statDate');
-    if (dateInput) {
-        dateInput.value = dateStr; // 設定為今天 (例如 2026-01-11)
-    }
-    
-    // 4. 設定年份選單
-    const yearSel = document.getElementById('statYear');
-    if (yearSel) yearSel.value = y;
-
-    // 5. 設定月份選單
-    const monthSel = document.getElementById('statMonth');
-    if (monthSel) {
-        monthSel.innerHTML = '';
-        for(let i=1; i<=12; i++) {
-            const opt = document.createElement('option');
-            opt.value = String(i).padStart(2, '0'); // 確保是 "01", "02"
-            opt.text = i + '月';
-            if(String(i).padStart(2, '0') === m) opt.selected = true; // 選中本月
-            monthSel.add(opt);
-        }
-    }
-
-    // 6. 初始化顯示狀態
-    updateStatInputs();
-    updateTimeInputs();
-}
-
-// 2. 更新輸入框顯示狀態
-function updateStatInputs() {
-    const scope = document.getElementById('statScope').value;
-    document.getElementById('statClassInput').style.display = (scope === 'class' || scope === 'student') ? 'inline-block' : 'none';
-    document.getElementById('statStudentInput').style.display = (scope === 'student') ? 'inline-block' : 'none';
-}
-
-function updateTimeInputs() {
-    const mode = document.getElementById('statTimeMode').value;
-    document.getElementById('statDate').style.display = (mode === 'day') ? 'inline-block' : 'none';
-    document.getElementById('statMonth').style.display = (mode === 'month') ? 'inline-block' : 'none';
-    document.getElementById('statYear').style.display = (mode === 'month' || mode === 'year') ? 'inline-block' : 'none';
-}
-
-// 3. 抓取數據並繪圖 (核心邏輯)
-let analyticsChartInstance = null;
-
-// === [修復版] 抓取數據並繪圖 (核心邏輯) ===
-async function fetchAndRenderStats() {
-    const scope = document.getElementById('statScope').value;
-    const mode = document.getElementById('statTimeMode').value;
-    const btn = event.target;
-    
-    // 鎖定按鈕
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    btn.disabled = true;
-
-    // A. 構建路徑參數 (關鍵修復：直接處理字串，避免時區誤差)
-    let year, month, day;
-    
-    if (mode === 'day') {
-        const rawDate = document.getElementById('statDate').value; // 格式: "2026-01-11"
-        if (!rawDate) {
-            alert("請選擇日期");
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-            return;
-        }
-        const parts = rawDate.split('-'); // ["2026", "01", "11"]
-        year = parts[0];
-        month = parts[1];
-        day = parts[2];
-    } else {
-        year = document.getElementById('statYear').value;
-        if (mode === 'month') {
-            month = document.getElementById('statMonth').value; // 確保這裡的值是 "01", "02" (有補零)
-        }
-    }
-
-    // B. 決定要讀取的資料庫路徑
-    let fetchPath = `analytics/${year}`;
-    if (mode === 'day') fetchPath += `/${month}/${day}`;
-    else if (mode === 'month') fetchPath += `/${month}`;
-
-    // ★★★ 除錯訊息 (按 F12 看 Console) ★★★
-    console.log(`正在讀取路徑: ${fetchPath}`);
-    console.log(`篩選對象: ${scope}`);
-
-    try {
-        const snapshot = await db.ref(fetchPath).once('value');
-        const data = snapshot.val();
-        
-        // ★★★ 除錯訊息 ★★★
-        console.log("Firebase 回傳資料:", data);
-
-        if (!data) {
-            console.warn("⚠️ 此路徑無資料回傳");
-            alert(`找不到數據！\n正在讀取路徑：${fetchPath}\n\n請確認 Firebase Console 中該日期是否真的有數據。`);
-            resetCharts();
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-            return;
-        }
-
-        // C. 數據聚合 (Aggregation)
-        let aggregatedData = {}; // { '01日': {visits:10, duration:500}, ... }
-        let totalStats = { visits: 0, duration: 0 };
-
-        // 遞迴函式：找出目標數據節點並累加
-        function processNode(nodeData, dateLabel) {
-            if (!nodeData) return; // 防呆
-
-            let targetNode = null;
-
-            // 根據選擇的對象 (Scope) 深入挖掘
-            if (scope === 'global') {
-                targetNode = nodeData.global;
-            } 
-            else if (scope === 'school') {
-                targetNode = nodeData.school;
-            } 
-            else if (scope === 'class') {
-                const g = document.getElementById('statGrade').value;
-                const c = document.getElementById('statClass').value;
-                // 檢查路徑: classes -> 6A
-                if (nodeData.classes && nodeData.classes[g+c]) {
-                    targetNode = nodeData.classes[g+c];
-                }
-            }
-            else if (scope === 'student') {
-                const g = document.getElementById('statGrade').value;
-                const c = document.getElementById('statClass').value;
-                const n = document.getElementById('statStudentName').value.trim();
-                // 檢查路徑
-                if (nodeData.students && nodeData.students[g] && nodeData.students[g][c] && nodeData.students[g][c][n]) {
-                    targetNode = nodeData.students[g][c][n];
-                }
-            }
-
-            // 如果找到了數據，進行累加
-            if (targetNode) {
-                // 數據清洗：確保是數字
-                const v = parseInt(targetNode.visits || 0);
-                const d = parseInt(targetNode.duration || 0);
-
-                if (!aggregatedData[dateLabel]) aggregatedData[dateLabel] = { visits: 0, duration: 0 };
-                
-                aggregatedData[dateLabel].visits += v;
-                aggregatedData[dateLabel].duration += d;
-                
-                totalStats.visits += v;
-                totalStats.duration += d;
-            }
-        }
-
-        // 根據時間模式遍歷數據
-        if (mode === 'day') {
-            // 本日：直接處理當前節點
-            processNode(data, '本日');
-        } 
-        else if (mode === 'month') {
-            // 本月：data 裡面是 {'01':{...}, '02':{...}}
-            Object.keys(data).sort().forEach(dKey => {
-                processNode(data[dKey], `${parseInt(dKey)}日`);
-            });
-        } 
-        else if (mode === 'year') {
-            // 本年：data 裡面是 {'01':{...}, '02':{...}} (月份)
-            Object.keys(data).sort().forEach(mKey => {
-                const monthData = data[mKey];
-                // 該月內還有很多天，需要再遍歷每一天
-                Object.keys(monthData).forEach(dKey => {
-                    processNode(monthData[dKey], `${parseInt(mKey)}月`);
-                });
-            });
-        }
-
-        // D. 更新上方大字報
-        document.getElementById('dispVisits').innerText = totalStats.visits;
-        document.getElementById('dispDuration').innerText = Math.round(totalStats.duration / 60); // 秒轉分
-        const avg = totalStats.visits > 0 ? Math.round((totalStats.duration / 60) / totalStats.visits) : 0;
-        document.getElementById('dispAvg').innerText = avg;
-
-        // E. 繪製圖表
-        renderAnalyticsChart(aggregatedData);
-
-    } catch (e) {
-        console.error("讀取過程發生錯誤:", e);
-        alert("讀取數據失敗：" + e.message);
-    } finally {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-    }
-}
-
-// 4. 重置圖表
-function resetCharts() {
-    document.getElementById('dispVisits').innerText = 0;
-    document.getElementById('dispDuration').innerText = 0;
-    document.getElementById('dispAvg').innerText = 0;
-    if (analyticsChartInstance) {
-        analyticsChartInstance.destroy();
-        analyticsChartInstance = null;
-    }
-}
-
-// 5. 渲染混合圖表 (Chart.js)
-function renderAnalyticsChart(aggData) {
-    const ctx = document.getElementById('analyticsChart').getContext('2d');
-    if (analyticsChartInstance) analyticsChartInstance.destroy();
-
-    const labels = Object.keys(aggData); // X軸 (日期/月份)
-    const visitData = labels.map(l => aggData[l].visits); // 長條圖數據
-    const durationData = labels.map(l => Math.round(aggData[l].duration / 60)); // 折線圖數據 (分鐘)
-
-    analyticsChartInstance = new Chart(ctx, {
-        type: 'bar', // 預設類型
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: '進入次數 (次)',
-                    data: visitData,
-                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1,
-                    order: 2, // 層級 (在折線圖下面)
-                    yAxisID: 'y'
-                },
-                {
-                    label: '使用時長 (分鐘)',
-                    data: durationData,
-                    type: 'line', // 混合折線圖
-                    borderColor: 'rgba(255, 99, 132, 1)',
-                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
-                    borderWidth: 2,
-                    pointRadius: 4,
-                    tension: 0.3, // 曲線平滑度
-                    order: 1, // 層級 (最上層)
-                    yAxisID: 'y1'
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            },
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            let label = context.dataset.label || '';
-                            if (label) label += ': ';
-                            if (context.parsed.y !== null) label += context.parsed.y;
-                            return label;
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    type: 'linear',
-                    display: true,
-                    position: 'left',
-                    title: { display: true, text: '次數' },
-                    beginAtZero: true
-                },
-                y1: {
-                    type: 'linear',
-                    display: true,
-                    position: 'right',
-                    grid: { drawOnChartArea: false }, // 不顯示右軸網格，保持乾淨
-                    title: { display: true, text: '分鐘' },
-                    beginAtZero: true
-                }
-            }
-        }
-    });
-}
-
-// 6. 修改 tab 切換函式 (確保初始化)
-const originalSwitchTab = window.switchTab;
-window.switchTab = function(tabId) {
-    originalSwitchTab(tabId); // 執行原本的切換邏輯
-    if(tabId === 'analytics') {
-        // 第一次進入時初始化 UI
-        if(document.getElementById('statMonth').options.length === 0) {
-            initStatUI();
-        }
-    }
-};
-
-
-        
     </script>
-
-<footer class="copyright-footer">
-<p>Copyright © 2025 陳冠健. All rights reserved.</p>
-</footer>
-
-    
 </body>
 </html>

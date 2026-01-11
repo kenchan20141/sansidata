@@ -1616,7 +1616,209 @@ document.addEventListener('DOMContentLoaded', checkAndRenderS3AllocationPanel);
     
     function deleteStudent() { const n=document.querySelector('input[name="ts"]:checked')?.value; if(n && confirm(`刪除 ${n}?`)) db.ref(`students/${document.getElementById('indivFromGrade').value}/${document.getElementById('indivFromClass').value}/${n}`).remove(e=>{ if(!e) populateTransferStudentList(); }); }
    
-  
+
+// ==========================================
+// === [補回遺失] 歷史紀錄檢閱系統邏輯 ===
+// ==========================================
+
+// 1. 定義範疇與圖片
+const HISTORY_STRUCTURE_DEF = { 
+    "閱讀": ["點評", "指引"], 
+    "敘事抒情": ["文章點評", "大綱點評", "解題指引", "敘事物象"], 
+    "議論": ["文章點評", "大綱點評", "指引"], 
+    "整合拓展": ["點評", "指引"], 
+    "課外書籍": ["討論紀錄"], 
+    "學習報告": ["綜合分析"] 
+};
+
+const CATEGORY_ASSETS_DEF = { 
+    "閱讀": { img: '郵筒.png', en: 'READING' }, 
+    "敘事抒情": { img: '相機.png', en: 'NARRATIVE' }, 
+    "議論": { img: '筆.png', en: 'ARGUMENT' }, 
+    "整合拓展": { img: '火車.png', en: 'EXPAND' }, 
+    "課外書籍": { img: '書.png', en: 'LIBRARY' }, 
+    "學習報告": { img: '書.png', en: 'REPORT' } 
+};
+
+const SUB_ICONS_DEF = { 
+    "文章點評": "fa-file-alt", 
+    "大綱點評": "fa-list-ol", 
+    "綜合分析": "fa-chart-pie", 
+    "敘事物象": "fa-tree", 
+    "解題指引": "fa-compass", 
+    "指引": "fa-lightbulb", 
+    "點評": "fa-comment-dots", 
+    "討論紀錄": "fa-comments" 
+};
+
+// 全域變數
+let currentStudentHistoryArr = [];
+let currentCategoryName = '';
+let currentSubFunctionName = '';
+let currentThemeIdx = 1;
+
+// 2. 打開歷史紀錄視窗 (入口)
+function openHistoryModal(name, h) {
+    document.getElementById('viewerTitle').innerHTML = `<i class="fas fa-user-graduate"></i> ${name}`;
+    currentStudentHistoryArr = h || []; // 防止 undefined
+    
+    document.getElementById('historyViewerModal').style.display = 'flex';
+    
+    // 重置麵包屑與視圖
+    document.getElementById('teacherBreadcrumb').style.display = 'none';
+    renderLevel1();
+}
+
+// 3. 渲染第一層：主範疇
+function renderLevel1() {
+    // 隱藏其他層級
+    ['historyLevel2', 'historyLevel3', 'historyDetail'].forEach(id => document.getElementById(id).style.display = 'none');
+    document.getElementById('historyLevel1').style.display = 'flex';
+    document.getElementById('teacherBreadcrumb').style.display = 'none';
+
+    const container = document.getElementById('historyLevel1');
+    container.innerHTML = '';
+
+    Object.keys(HISTORY_STRUCTURE_DEF).forEach(cat => {
+        // 隱藏學習報告 (因為有獨立入口)，若想顯示可移除此行
+        if (cat === '學習報告') return;
+
+        // 計算該範疇的紀錄數量
+        const count = currentStudentHistoryArr.filter(r => r.category === cat).length;
+        const asset = CATEGORY_ASSETS_DEF[cat] || { img: '背景.png', en: 'RECORD' };
+        
+        // 若無紀錄則變灰
+        const style = count === 0 ? 'filter: grayscale(100%); opacity: 0.6;' : '';
+
+        // 生成卡片 HTML
+        container.innerHTML += `
+            <div class="anime-card" style="--bg-img: url('${asset.img}'); ${style}" onclick="renderLevel2('${cat}')">
+                <div class="card-overlay"></div>
+                <div class="card-content">
+                    <span class="card-zh">${cat}</span>
+                    <span class="card-en">${count} 筆</span>
+                </div>
+            </div>
+        `;
+    });
+}
+
+// 4. 渲染第二層：子功能
+function renderLevel2(cat) {
+    currentCategoryName = cat;
+    
+    ['historyLevel1', 'historyLevel3', 'historyDetail'].forEach(id => document.getElementById(id).style.display = 'none');
+    document.getElementById('historyLevel2').style.display = 'grid';
+    
+    updateBreadcrumb(cat); // 更新麵包屑
+
+    const container = document.getElementById('historyLevel2');
+    container.innerHTML = '';
+    
+    const subFunctions = HISTORY_STRUCTURE_DEF[cat] || [];
+
+    subFunctions.forEach((sub, i) => {
+        const count = currentStudentHistoryArr.filter(r => r.category === cat && r.subFunction === sub).length;
+        const theme = (i % 5) + 1; // 分配顏色 1-5
+
+        container.innerHTML += `
+            <div class="history-folder-btn history-theme-${theme}" 
+                 style="${count === 0 ? 'opacity:0.6' : ''}" 
+                 onclick="renderLevel3('${sub}', ${theme})">
+                <i class="fas ${SUB_ICONS_DEF[sub] || 'fa-file'}"></i>
+                <span style="font-weight:bold; font-size:1.1em;">${sub}</span>
+                <span style="font-size:0.8em; margin-top:5px; color:#999;">(${count})</span>
+            </div>
+        `;
+    });
+}
+
+// 5. 渲染第三層：紀錄列表
+function renderLevel3(sub, theme) {
+    currentSubFunctionName = sub;
+    currentThemeIdx = theme;
+    
+    ['historyLevel1', 'historyLevel2', 'historyDetail'].forEach(id => document.getElementById(id).style.display = 'none');
+    document.getElementById('historyLevel3').style.display = 'grid';
+    
+    updateBreadcrumb(currentCategoryName, sub);
+
+    const container = document.getElementById('historyLevel3');
+    container.innerHTML = '';
+
+    // 篩選並排序 (新到舊)
+    const records = currentStudentHistoryArr
+        .filter(r => r.category === currentCategoryName && r.subFunction === sub)
+        .sort((a, b) => b.timestamp - a.timestamp);
+
+    if (records.length === 0) {
+        container.innerHTML = '<p style="text-align:center; width:100%; color:#999; grid-column:1/-1;">無紀錄</p>';
+        return;
+    }
+
+    records.forEach(r => {
+        const dateStr = r.dateStr ? r.dateStr.split(' ')[0] : '未知';
+        
+        // 為了避免引號衝突，這裡將物件轉字串時做跳脫處理
+        const recordStr = JSON.stringify(r).replace(/'/g, "&#39;").replace(/"/g, "&quot;");
+
+        container.innerHTML += `
+            <div class="history-card theme-${theme}" onclick='renderDetail(${recordStr})'>
+                <div style="flex-grow: 1;">
+                    <div class="history-meta">
+                        <span class="tag" style="background:var(--m-color-${theme}); color:white; border:none; margin:0;">${r.subFunction}</span>
+                        <span style="font-family: 'Courier New', monospace; font-size: 0.85em; color: #aaa; margin-left: auto;">${dateStr}</span>
+                    </div>
+                    <h4 class="history-title">${r.title || '無標題'}</h4>
+                </div>
+            </div>`;
+    });
+}
+
+// 6. 渲染詳細內容
+function renderDetail(r) {
+    ['historyLevel1', 'historyLevel2', 'historyLevel3'].forEach(id => document.getElementById(id).style.display = 'none');
+    document.getElementById('historyDetail').style.display = 'block';
+    document.getElementById('teacherBreadcrumb').style.display = 'none';
+    
+    // 解析使用者輸入內容
+    let uContent = '';
+    if (r.category === "學習報告") {
+        uContent = ''; 
+    } else {
+        uContent = r.userContent ? renderParsedUserContent(r.userContent, currentThemeIdx) : 
+                   `<div style="padding:20px; color:#999; text-align:center;">無使用者輸入內容</div>`;
+    }
+
+    document.getElementById('historyDetail').innerHTML = `
+        <div style="margin-bottom:15px;">
+            <button class="nav-btn" onclick="renderLevel3('${currentSubFunctionName}', ${currentThemeIdx})" style="padding:5px 15px; font-size:0.9em;">
+                <i class="fas fa-arrow-left"></i> 返回列表
+            </button>
+        </div>
+        <div class="detail-view">
+            <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:20px;">
+                <h2 style="text-align:left; margin:0; color:#333;">${r.title}</h2>
+                <p style="color:#888; margin-top:5px;">${r.dateStr}</p>
+            </div>
+            ${uContent}
+            <div class="detail-ai-box" style="margin-top:20px;">
+                <h4 style="color:var(--m-green); margin-bottom:10px;">AI 生成結果：</h4>
+                ${r.aiContent}
+            </div>
+        </div>`;
+}
+
+// 麵包屑更新
+function updateBreadcrumb(c, s) {
+    const b = document.getElementById('teacherBreadcrumb');
+    b.style.display = 'flex';
+    document.getElementById('breadCategory').innerText = c;
+    document.getElementById('breadSub').innerText = s || '';
+    document.getElementById('breadSep2').style.display = s ? 'inline' : 'none';
+}
+
+    
 </script>
 
 <footer class="copyright-footer">

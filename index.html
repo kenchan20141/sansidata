@@ -21,6 +21,12 @@
             --m-green: #8fa398;   --m-blue: #94a7b5;    --m-purple: #b6a6ca;
             --m-red: #d69a92;     --m-brown: #c7b299;   --bg-color: #fdfcf8;
             --text-main: #5e5e5e; --border-color: #e0ddd7;
+            /* 定義主題色變數供 JS 動態調用 */
+            --m-color-1: #8fa398; 
+            --m-color-2: #94a7b5; 
+            --m-color-3: #b6a6ca; 
+            --m-color-4: #d69a92; 
+            --m-color-5: #c7b299;
         }
 
         body {
@@ -115,12 +121,38 @@
         .breadcrumb-item:hover { color: #5e5e5e; text-decoration: underline; }
         .breadcrumb-current { color: #5e5e5e; background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 4px; font-weight: bold; }
 
-        /* 詳情頁內容 & 學生介面一致性 CSS */
-        .history-parsed-container { background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #e1e4e8; border-left: 5px solid var(--m-blue); margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
+        /* === 內容結構化顯示樣式 (移植自學生端，確保一致性) === */
+        .history-parsed-container { background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #e1e4e8; border-left: 5px solid #ccc; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
         .history-item-block { margin-bottom: 15px; }
-        .history-item-label { font-weight: bold; color: var(--m-blue); font-size: 1em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
-        .history-item-label::before { content: ''; display: block; width: 8px; height: 8px; background-color: var(--m-blue); border-radius: 50%; opacity: 0.8; }
-        .history-item-content { background: #fcfcfc; border: 1px solid #e1e4e8; border-radius: 4px; padding: 12px 16px; color: #444; line-height: 1.8; white-space: pre-wrap; }
+        .history-item-label { font-weight: bold; font-size: 1em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .history-item-label::before { content: ''; display: block; width: 8px; height: 8px; border-radius: 50%; opacity: 0.8; }
+        .history-item-content { background: #fcfcfc; border: 1px solid #e1e4e8; border-radius: 4px; padding: 12px 16px; color: #444; line-height: 1.8; white-space: pre-wrap; word-break: break-word; }
+        
+        /* 定義主題色對應 */
+        .history-theme-context-1 { border-left-color: var(--m-color-1); }
+        .history-theme-context-1 .history-item-label { color: var(--m-color-1); }
+        .history-theme-context-1 .history-item-label::before { background-color: var(--m-color-1); }
+        .history-theme-context-1 .history-item-content { border-left: 4px solid var(--m-color-1); }
+
+        .history-theme-context-2 { border-left-color: var(--m-color-2); }
+        .history-theme-context-2 .history-item-label { color: var(--m-color-2); }
+        .history-theme-context-2 .history-item-label::before { background-color: var(--m-color-2); }
+        .history-theme-context-2 .history-item-content { border-left: 4px solid var(--m-color-2); }
+
+        .history-theme-context-3 { border-left-color: var(--m-color-3); }
+        .history-theme-context-3 .history-item-label { color: var(--m-color-3); }
+        .history-theme-context-3 .history-item-label::before { background-color: var(--m-color-3); }
+        .history-theme-context-3 .history-item-content { border-left: 4px solid var(--m-color-3); }
+
+        .history-theme-context-4 { border-left-color: var(--m-color-4); }
+        .history-theme-context-4 .history-item-label { color: var(--m-color-4); }
+        .history-theme-context-4 .history-item-label::before { background-color: var(--m-color-4); }
+        .history-theme-context-4 .history-item-content { border-left: 4px solid var(--m-color-4); }
+
+        .history-theme-context-5 { border-left-color: var(--m-color-5); }
+        .history-theme-context-5 .history-item-label { color: var(--m-color-5); }
+        .history-theme-context-5 .history-item-label::before { background-color: var(--m-color-5); }
+        .history-theme-context-5 .history-item-content { border-left: 4px solid var(--m-color-5); }
 
         /* 統計專用樣式 */
         .stat-card {
@@ -173,7 +205,7 @@
         .submission-detail-area { flex-grow: 1; padding: 30px; overflow-y: auto; background: #fff; }
         
         .teacher-feedback-section { background-color: #fffaf5; border: 2px solid #e6dace; border-radius: 12px; padding: 20px; margin-top: 30px; box-shadow: 0 4px 15px rgba(141, 110, 99, 0.08); }
-        /* 修復：統一 Input 和 Textarea 樣式 */
+        /* 修復：統一 Input 和 Textarea 樣式，使其一致且美觀 */
         .teacher-feedback-section input, .teacher-feedback-section textarea {
             width: 100%;
             padding: 10px;
@@ -214,22 +246,37 @@
         .report-separator { position: relative; height: 1px; border: 0; border-top: 3px dashed #b6a6ca; margin: 40px 0 50px 0; opacity: 0.6; }
         .report-separator::after { content: '▼'; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #fdfcf8; padding: 0 10px; color: #b6a6ca; font-size: 12px; }
         .report-radar-wrapper { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #eee; }
-        .grading-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .grading-scores, .grading-radar { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; }
-        .score-item { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-        .slider-container { display: flex; align-items: center; gap: 10px; width: 60%; }
-        .progress-bar-container { width: 100%; height: 10px; background: #e9ecef; border-radius: 5px; overflow: hidden; }
-        .progress-bar-fill { height: 100%; background: #007bff; border-radius: 5px; }
-        .score-display { font-weight: bold; width: 30px; text-align: right; }
-        .total-score-container { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd; }
-        .radar-chart-container { position: relative; height: 300px; width: 100%; }
+        
+        /* === 修復：雷達圖與評分表樣式 (移植自學生端) === */
+        .grading-container { margin-top: 25px; border-top: 2px dashed #aeb6bf; padding-top: 20px; max-width: 100%; overflow-x: hidden; }
+        .grading-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: flex-start; }
+        
+        .grading-scores, .grading-radar {
+            background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04); max-width: 100%; box-sizing: border-box; width: 90%; margin: 0 auto;
+        }
+        
+        .score-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; }
+        .score-item label { font-weight: bold; color: #495057; flex-shrink: 0; margin-right: 10px; }
+        .slider-container { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 160px; }
+        .progress-bar-container { width: 120px; height: 12px; background-color: #e9ecef; border-radius: 6px; overflow: hidden; border: 1px solid #ced4da; }
+        .progress-bar-fill { height: 100%; width: 0%; background-color: #007bff; border-radius: 6px; }
+        .score-display { font-weight: bold; width: 25px; text-align: center; color: #0056b3; }
+        .total-score-container { margin-top: 20px; padding-top: 15px; border-top: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
+        
+        .radar-chart-container { position: relative; aspect-ratio: 4 / 3; max-height: 350px; width: 100%; }
 
         @media (max-width: 768px) {
             .box { padding: 15px; } .nav-btn { width: 100%; } .filter-group { flex-direction: column; }
             .filter-group select, .filter-group input { width: 100%; } .transfer-grid { flex-direction: column; }
             .modal-content-container { flex-direction: column; } .submission-sidebar { width: 100%; height: 40%; }
+            
+            /* 針對雷達圖與評分表的修復 */
             .grading-grid { display: flex !important; flex-direction: column !important; gap: 20px !important; width: 100% !important; margin: 0 !important; }
             .grading-scores, .grading-radar, .report-radar-wrapper { width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; padding: 15px !important; margin: 0 !important; overflow: hidden !important; }
+            .radar-chart-container { width: 100% !important; height: auto !important; aspect-ratio: 1/1 !important; max-height: 350px !important; margin: 0 auto !important; }
+            .score-item { flex-wrap: wrap; } .score-item label { width: 100%; margin-bottom: 5px; } .score-item .slider-container { max-width: 100%; }
+            
             .badge-general { width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; border-radius: 8px !important; }
             .report-category-badge:not(.badge-general) { width: fit-content !important; max-width: 90% !important; margin: 0 auto !important; }
         }
@@ -923,6 +970,7 @@
         if (!userContent) return '<div style="padding:20px; color:#999; text-align:center;">無使用者輸入內容</div>';
         
         const lines = userContent.split('\n');
+        // 加入主題色類別以便 CSS 染色
         let html = `<div class="history-parsed-container history-theme-context-${themeIndex}">`;
         let currentLabel = '輸入內容'; 
         let currentContent = []; 
@@ -931,6 +979,7 @@
         lines.forEach((line) => {
             const match = line.match(labelRegex);
             if (match) {
+                // 如果遇到新標籤，先渲染舊的區塊
                 if (currentContent.length > 0) {
                     html += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${currentContent.join('\n')}</div></div>`;
                 }
@@ -941,8 +990,10 @@
                 currentContent.push(line);
             }
         });
-        if (currentContent.length > 0) {
-            html += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${currentContent.join('\n')}</div></div>`;
+        // 渲染最後一個區塊
+        if (currentContent.length > 0 || lines.length === 0) {
+             const finalContent = currentContent.length > 0 ? currentContent.join('\n') : userContent;
+             html += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${finalContent}</div></div>`;
         }
         html += `</div>`;
         // 返回包含外框樣式的完整 HTML
@@ -955,7 +1006,10 @@
         document.getElementById('historyDetail').style.display='block'; document.getElementById('teacherBreadcrumb').style.display='none';
         
         // 使用共用解析函式
-        let uContent = renderParsedUserContent(r.userContent, currentThemeIndex);
+        let uContent = '';
+        if (r.category !== "學習報告") {
+             uContent = renderParsedUserContent(r.userContent, currentThemeIndex);
+        }
 
         document.getElementById('historyDetail').innerHTML = `<div style="margin-bottom:15px;"><button class="nav-btn" onclick="renderLevel3('${currentSubFunction}',${currentThemeIndex})" style="padding:5px 15px;font-size:0.9em;"><i class="fas fa-arrow-left"></i> 返回</button></div><div class="detail-view"><div style="border-bottom:1px solid #eee;padding-bottom:15px;margin-bottom:20px;"><h2 style="margin:0;color:#333;">${r.title}</h2><p style="color:#888;margin-top:5px;">${r.dateStr}</p></div>${uContent}<div class="detail-ai-box" style="margin-top:20px;">${r.aiContent}</div></div>`;
     }
@@ -1004,7 +1058,7 @@
     function showSubDetail(sub) {
         const fb = sub.teacherFeedback || {};
         
-        // 使用共用解析函式，確保 100% 一致
+        // 使用共用解析函式，確保 100% 一致 (預設傳入主題色 1)
         let uContent = renderParsedUserContent(sub.userContent, 1);
 
         document.getElementById('submissionDetailArea').innerHTML = `

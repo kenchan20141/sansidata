@@ -200,14 +200,37 @@
         .report-separator::after { content: '▼'; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #fdfcf8; padding: 0 10px; color: #b6a6ca; font-size: 12px; }
         .report-radar-wrapper { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #eee; }
         
-        /* === 修復：雷達圖與評分表樣式 (移植自學生端 - 終極版) === */
-        .grading-container { margin-top: 25px; border-top: 2px dashed #aeb6bf; padding-top: 20px; max-width: 100%; overflow-x: hidden; }
-        /* 默認 Grid 佈局：左右各一半 */
-        .grading-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: flex-start; }
+      /* === 修復：雷達圖與評分表樣式 (移植自學生端 - 終極版) === */
+        .grading-container { 
+            margin-top: 25px; 
+            border-top: 2px dashed #aeb6bf; 
+            padding-top: 20px; 
+            width: 100%; /* 確保容器寬度 */
+            box-sizing: border-box;
+            overflow-x: hidden; 
+        }
         
+        /* 默認 Grid 佈局：改用 minmax 增強彈性 */
+        .grading-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); /* 自動斷行，比固定 1fr 1fr 更安全 */
+            gap: 20px; 
+            align-items: flex-start; 
+            width: 100%;
+        }
+        
+        /* ★★★ 核心修復：加入 min-width: 0 並修正寬度 ★★★ */
         .grading-scores, .grading-radar {
-            background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04); max-width: 100%; box-sizing: border-box; width: 90%; margin: 0 auto;
+            background-color: #f8f9fa; 
+            border: 1px solid #dee2e6; 
+            border-radius: 8px; 
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04); 
+            max-width: 100%; 
+            box-sizing: border-box; 
+            width: 100%;        /* 改為 100%，不再使用 90% */
+            min-width: 0;       /* 【關鍵】允許 Grid 子元素縮小，防止 Canvas 撐爆容器 */
+            margin: 0;          /* 取消 auto margin */
         }
         
         .score-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; }
@@ -221,11 +244,12 @@
         /* === 關鍵修復：雷達圖容器 === */
         .radar-chart-container { 
             position: relative; 
-            width: 100%; 
+            width: 100% !important; /* 強制 100% */
             height: auto; 
-            aspect-ratio: 1 / 1; /* 強制保持正方形比例 */
-            max-height: 400px;   /* 限制最大高度，避免在大螢幕過大 */
+            aspect-ratio: 1 / 1; 
+            max-height: 400px;
             margin: 0 auto;
+            overflow: hidden; /* 防止溢出 */
         }
 
         /* === 關鍵修復：手機版/窄螢幕強制垂直堆疊 === */

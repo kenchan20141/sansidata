@@ -312,8 +312,11 @@
         <!-- 導航列 -->
         <div class="nav-bar">
             <button class="nav-btn active" onclick="switchTab('students')"><i class="fas fa-user-graduate"></i> 學生管理</button>
-            <button class="nav-btn" onclick="switchTab('assignments')"><i class="fas fa-edit"></i> 課業管理</button>
+            
             <button class="nav-btn" onclick="switchTab('reports')"><i class="fas fa-chart-pie"></i> 學生報告</button>
+            <button class="nav-btn" onclick="switchTab('assignments')"><i class="fas fa-edit"></i> 課業管理</button>
+            <!-- 在 nav-bar 內加入這行 -->
+<button class="nav-btn" onclick="switchTab('analytics')"><i class="fas fa-chart-bar"></i> 數據統計</button>
             <button class="nav-btn" onclick="switchTab('management')"><i class="fas fa-calendar-alt"></i> 學年管理</button>
         </div>
 
@@ -466,6 +469,82 @@
         </div>
     </div>
 
+
+<!-- 5. 數據統計頁面 (全新) -->
+<div id="tab-analytics" class="box" style="display:none;">
+    <h2>神思大數據統計</h2>
+    
+    <div class="filter-group">
+        <!-- 統計對象選擇 -->
+        <label><i class="fas fa-cubes" style="color:var(--m-blue);"></i> 對象：</label>
+        <select id="statScope" onchange="updateStatInputs()">
+            <option value="global">所有用家 (含訪客)</option>
+            <option value="school">全校 (僅已登入)</option>
+            <option value="class">個別班級</option>
+            <option value="student">個別學生</option>
+        </select>
+
+        <!-- 動態顯示的輸入框 (班級/學生) -->
+        <span id="statClassInput" style="display:none;">
+            <select id="statGrade">
+                <option value="1">中一</option><option value="2">中二</option><option value="3">中三</option>
+                <option value="4">中四</option><option value="5">中五</option><option value="6">中六</option>
+            </select>
+            <select id="statClass">
+                <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+            </select>
+        </span>
+        <span id="statStudentInput" style="display:none;">
+            <input type="text" id="statStudentName" placeholder="學生姓名" style="width:120px;">
+        </span>
+
+        <!-- 時間維度選擇 -->
+        <label style="margin-left:15px;"><i class="far fa-clock" style="color:var(--m-brown);"></i> 時間：</label>
+        <select id="statTimeMode" onchange="updateTimeInputs()">
+            <option value="day">本日 (實時)</option>
+            <option value="month">本月 (趨勢)</option>
+            <option value="year">本年 (總覽)</option>
+        </select>
+        
+        <!-- 日期/月份/年份 選擇器 -->
+        <input type="date" id="statDate" style="display:inline-block;">
+        <select id="statMonth" style="display:none;">
+            <!-- JS 自動填充 1-12 月 -->
+        </select>
+        <select id="statYear" style="display:none;">
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+            <option value="2027">2027</option>
+        </select>
+
+        <button class="btn-action btn-view" onclick="fetchAndRenderStats()">
+            <i class="fas fa-search"></i> 查詢
+        </button>
+    </div>
+
+    <!-- 數據概覽卡片 -->
+    <div style="display:flex; gap:20px; justify-content:center; margin-bottom:30px; flex-wrap:wrap;">
+        <div style="background:#f0f7ff; padding:20px; border-radius:12px; text-align:center; flex:1; min-width:150px; border:1px solid #cce5ff;">
+            <div style="color:#007bff; font-size:2em; font-weight:bold;" id="dispVisits">0</div>
+            <div style="color:#666;">總進入次數</div>
+        </div>
+        <div style="background:#fff0f0; padding:20px; border-radius:12px; text-align:center; flex:1; min-width:150px; border:1px solid #ffcccc;">
+            <div style="color:#dc3545; font-size:2em; font-weight:bold;" id="dispDuration">0</div>
+            <div style="color:#666;">總使用時長 (分鐘)</div>
+        </div>
+        <div style="background:#f0fff4; padding:20px; border-radius:12px; text-align:center; flex:1; min-width:150px; border:1px solid #c3e6cb;">
+            <div style="color:#28a745; font-size:2em; font-weight:bold;" id="dispAvg">0</div>
+            <div style="color:#666;">平均每次時長 (分鐘)</div>
+        </div>
+    </div>
+
+    <!-- 圖表容器 -->
+    <div class="chart-container" style="position: relative; height:400px; width:100%;">
+        <canvas id="analyticsChart"></canvas>
+    </div>
+</div>
+    
+
     <!-- Modal: 學生歷史檢閱 (通用) -->
     <div id="historyViewerModal" class="modal-overlay">
         <div class="modal-body">
@@ -582,6 +661,207 @@
         }
         auth.onAuthStateChanged(user => { if (user && user.email.endsWith('@ccckyc.edu.hk')) showApp(user); });
 
+
+
+// ==============================================
+        // === 補全：課業管理邏輯 (修復 ReferenceError) ===
+        // ==============================================
+
+        // 1. 載入已派發課業列表
+        function loadAssignmentHistory() {
+            const g = document.getElementById('assignGrade').value;
+            const c = document.getElementById('assignClass').value;
+            const list = document.getElementById('assignmentHistoryList');
+            
+            list.innerHTML = '<p style="text-align:center; padding:20px; color:#999;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
+
+            db.ref(`assignments/${g}/${c}`).once('value', snapshot => {
+                const data = snapshot.val();
+                list.innerHTML = '';
+                
+                if (!data) {
+                    list.innerHTML = '<p style="text-align:center; width:100%; color:#aaa; padding:20px;">此班級暫無已派發的課業。</p>';
+                    return;
+                }
+
+                // 按時間倒序排列
+                Object.entries(data)
+                    .sort(([,a], [,b]) => b.timestamp - a.timestamp)
+                    .forEach(([id, item]) => {
+                        const div = document.createElement('div');
+                        div.className = 'assignment-item';
+                        div.innerHTML = `
+                            <div style="flex:1;">
+                                <div style="font-weight:bold; font-size:1.2em; color:#444;">${item.topic}</div>
+                                <div style="font-size:0.9em; color:#888; margin-top:5px;">
+                                    <span class="tag">${item.type}</span> 
+                                    <i class="far fa-clock"></i> ${item.dateStr || '未知日期'}
+                                </div>
+                            </div>
+                            <div style="display:flex; gap:10px; align-items:center;">
+                                <button class="btn-action btn-view" onclick="viewSubmissions('${id}', '${item.topic}')">
+                                    <i class="fas fa-eye"></i> 檢閱繳交
+                                </button>
+                                <button class="btn-action btn-delete" onclick="deleteAssignment('${id}')">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        `;
+                        list.appendChild(div);
+                    });
+            });
+        }
+
+        // 2. 發布新課業
+        function publishAssignment() {
+            const g = document.getElementById('assignGrade').value;
+            const c = document.getElementById('assignClass').value;
+            const topic = document.getElementById('assignTopic').value.trim();
+            const type = document.getElementById('assignType').value;
+            const btn = document.getElementById('btnPublish');
+
+            if (!topic) {
+                alert("請輸入課業題目！");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 發布中...';
+
+            const newAssignment = {
+                topic: topic,
+                type: type,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                dateStr: new Date().toLocaleDateString() + " " + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            };
+
+            db.ref(`assignments/${g}/${c}`).push(newAssignment)
+                .then(() => {
+                    alert("發布成功！");
+                    document.getElementById('assignTopic').value = ''; // 清空輸入框
+                    loadAssignmentHistory(); // 重新載入列表
+                })
+                .catch(err => alert("發布失敗：" + err.message))
+                .finally(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-paper-plane"></i> 立即派發';
+                });
+        }
+
+        // 3. 刪除課業
+        function deleteAssignment(id) {
+            if(!confirm("確定要刪除此課業嗎？\n(注意：這不會刪除學生已提交的內容，但會從列表中移除)")) return;
+            
+            const g = document.getElementById('assignGrade').value;
+            const c = document.getElementById('assignClass').value;
+
+            db.ref(`assignments/${g}/${c}/${id}`).remove()
+                .then(() => loadAssignmentHistory())
+                .catch(err => alert("刪除失敗：" + err.message));
+        }
+
+        // 4. 檢閱繳交狀況 (開啟 Modal)
+        async function viewSubmissions(assignmentId, topic) {
+            const g = document.getElementById('assignGrade').value;
+            const c = document.getElementById('assignClass').value;
+            
+            // 開啟 Modal 並設定標題
+            document.getElementById('submissionViewerModal').style.display = 'flex';
+            document.getElementById('submissionTitle').innerText = topic;
+            document.getElementById('submissionList').innerHTML = '<li style="padding:20px; text-align:center; color:#999;">載入名單中...</li>';
+            document.getElementById('submissionDetailArea').innerHTML = '<div style="text-align:center; color:#ccc; margin-top:100px;"><i class="far fa-file-alt" style="font-size:48px;"></i><p>請選擇學生以檢視內容</p></div>';
+
+            try {
+                // 4.1 獲取該班所有學生名單
+                const studentsSnap = await db.ref(`students/${g}/${c}`).once('value');
+                const students = studentsSnap.val() || {};
+
+                // 4.2 獲取該作業的所有繳交紀錄 (假設繳交紀錄存在 submissions 節點下，或者你需要根據你的數據結構調整)
+                // 這裡假設結構是: submissions/{assignmentId}/{studentName} 
+                // 或者如果你的繳交是直接寫入學生歷史紀錄，這裡需要遍歷學生的 history。
+                // *基於你的系統看起來是寫入學生個人 history，這裡我們採用遍歷學生 History 的方式*
+
+                const submissionListEl = document.getElementById('submissionList');
+                submissionListEl.innerHTML = '';
+
+                let submittedCount = 0;
+                let pendingCount = 0;
+
+                // 排序學生 (按學號)
+                const sortedStudentNames = Object.keys(students).sort((a,b) => 
+                    (parseInt(students[a].profile?.number)||99) - (parseInt(students[b].profile?.number)||99)
+                );
+
+                sortedStudentNames.forEach(name => {
+                    const studentData = students[name];
+                    const history = studentData.history ? Object.values(studentData.history) : [];
+                    
+                    // 尋找是否有匹配此 assignmentId 或 題目的紀錄
+                    // 注意：如果你的學生提交時沒有存 assignmentId，這裡可能需要用題目(title)來匹配
+                    const submission = history.find(h => h.assignmentId === assignmentId || h.title === topic);
+
+                    const li = document.createElement('li');
+                    li.className = `submission-item ${submission ? '' : ''}`;
+                    
+                    const statusHtml = submission 
+                        ? `<span class="status-badge status-done"><i class="fas fa-check"></i> 已交</span>`
+                        : `<span class="status-badge status-pending"><i class="fas fa-times"></i> 未交</span>`;
+                    
+                    if(submission) submittedCount++; else pendingCount++;
+
+                    li.innerHTML = `
+                        <div>
+                            <div style="font-weight:bold;">${name} <small style="color:#888;">(${studentData.profile?.number || '?'})</small></div>
+                            <div style="font-size:0.8em; color:#aaa;">${submission ? submission.dateStr.split(' ')[0] : '-'}</div>
+                        </div>
+                        ${statusHtml}
+                    `;
+
+                    // 點擊事件
+                    if (submission) {
+                        li.onclick = () => {
+                            // 移除其他 active
+                            document.querySelectorAll('.submission-item').forEach(i => i.classList.remove('active'));
+                            li.classList.add('active');
+                            showSubmissionDetail(submission, name);
+                        };
+                    } else {
+                        li.style.cursor = 'default';
+                        li.style.opacity = '0.6';
+                    }
+
+                    submissionListEl.appendChild(li);
+                });
+
+                // 更新計數
+                document.getElementById('submitCount').innerText = submittedCount;
+                document.getElementById('pendingCount').innerText = pendingCount;
+
+            } catch (e) {
+                console.error(e);
+                alert("載入名單失敗");
+            }
+        }
+
+        // 5. 顯示單一繳交內容 (在右側顯示)
+        function showSubmissionDetail(data, studentName) {
+            const container = document.getElementById('submissionDetailArea');
+            container.innerHTML = `
+                <h2 style="border-bottom:1px solid #eee; padding-bottom:10px;">${studentName} 的作業</h2>
+                <div style="margin-top:20px;">
+                    <h4 style="color:var(--m-blue);"><i class="fas fa-align-left"></i> 學生作答：</h4>
+                    <div style="background:#f9f9f9; padding:20px; border-radius:8px; line-height:1.6; white-space:pre-wrap; border:1px solid #eee;">${data.userContent || '(無文字內容)'}</div>
+                </div>
+                <div style="margin-top:30px;">
+                    <h4 style="color:var(--m-green);"><i class="fas fa-robot"></i> AI 評語：</h4>
+                    <div class="detail-ai-box">${data.aiContent || '評語生成中...'}</div>
+                </div>
+            `;
+        }
+
+
+
+        
         // === Tab 切換邏輯 ===
         function switchTab(tabId) {
             document.querySelectorAll('.box').forEach(b => b.style.display = 'none');
@@ -1255,6 +1535,317 @@ function deleteClassReport(reportKey) {
             if(all[6]) await db.ref(`graduates/${y}`).set(all[6]);
             db.ref('students').set(n, e=>alert(e?'失敗':'成功'));
         }
+
+
+// === [新增] 數據統計與圖表邏輯 ===
+
+// === [修正版] 初始化介面 (解決時區問題) ===
+function initStatUI() {
+    // 1. 獲取本地時間 (香港時間)
+    const now = new Date();
+    
+    // 2. 手動格式化為 YYYY-MM-DD (避免 UTC 誤差)
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    const dateStr = `${y}-${m}-${d}`;
+
+    // 3. 設定日期選擇器
+    const dateInput = document.getElementById('statDate');
+    if (dateInput) {
+        dateInput.value = dateStr; // 設定為今天 (例如 2026-01-11)
+    }
+    
+    // 4. 設定年份選單
+    const yearSel = document.getElementById('statYear');
+    if (yearSel) yearSel.value = y;
+
+    // 5. 設定月份選單
+    const monthSel = document.getElementById('statMonth');
+    if (monthSel) {
+        monthSel.innerHTML = '';
+        for(let i=1; i<=12; i++) {
+            const opt = document.createElement('option');
+            opt.value = String(i).padStart(2, '0'); // 確保是 "01", "02"
+            opt.text = i + '月';
+            if(String(i).padStart(2, '0') === m) opt.selected = true; // 選中本月
+            monthSel.add(opt);
+        }
+    }
+
+    // 6. 初始化顯示狀態
+    updateStatInputs();
+    updateTimeInputs();
+}
+
+// 2. 更新輸入框顯示狀態
+function updateStatInputs() {
+    const scope = document.getElementById('statScope').value;
+    document.getElementById('statClassInput').style.display = (scope === 'class' || scope === 'student') ? 'inline-block' : 'none';
+    document.getElementById('statStudentInput').style.display = (scope === 'student') ? 'inline-block' : 'none';
+}
+
+function updateTimeInputs() {
+    const mode = document.getElementById('statTimeMode').value;
+    document.getElementById('statDate').style.display = (mode === 'day') ? 'inline-block' : 'none';
+    document.getElementById('statMonth').style.display = (mode === 'month') ? 'inline-block' : 'none';
+    document.getElementById('statYear').style.display = (mode === 'month' || mode === 'year') ? 'inline-block' : 'none';
+}
+
+// 3. 抓取數據並繪圖 (核心邏輯)
+let analyticsChartInstance = null;
+
+// === [修復版] 抓取數據並繪圖 (核心邏輯) ===
+async function fetchAndRenderStats() {
+    const scope = document.getElementById('statScope').value;
+    const mode = document.getElementById('statTimeMode').value;
+    const btn = event.target;
+    
+    // 鎖定按鈕
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    btn.disabled = true;
+
+    // A. 構建路徑參數 (關鍵修復：直接處理字串，避免時區誤差)
+    let year, month, day;
+    
+    if (mode === 'day') {
+        const rawDate = document.getElementById('statDate').value; // 格式: "2026-01-11"
+        if (!rawDate) {
+            alert("請選擇日期");
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            return;
+        }
+        const parts = rawDate.split('-'); // ["2026", "01", "11"]
+        year = parts[0];
+        month = parts[1];
+        day = parts[2];
+    } else {
+        year = document.getElementById('statYear').value;
+        if (mode === 'month') {
+            month = document.getElementById('statMonth').value; // 確保這裡的值是 "01", "02" (有補零)
+        }
+    }
+
+    // B. 決定要讀取的資料庫路徑
+    let fetchPath = `analytics/${year}`;
+    if (mode === 'day') fetchPath += `/${month}/${day}`;
+    else if (mode === 'month') fetchPath += `/${month}`;
+
+    // ★★★ 除錯訊息 (按 F12 看 Console) ★★★
+    console.log(`正在讀取路徑: ${fetchPath}`);
+    console.log(`篩選對象: ${scope}`);
+
+    try {
+        const snapshot = await db.ref(fetchPath).once('value');
+        const data = snapshot.val();
+        
+        // ★★★ 除錯訊息 ★★★
+        console.log("Firebase 回傳資料:", data);
+
+        if (!data) {
+            console.warn("⚠️ 此路徑無資料回傳");
+            alert(`找不到數據！\n正在讀取路徑：${fetchPath}\n\n請確認 Firebase Console 中該日期是否真的有數據。`);
+            resetCharts();
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            return;
+        }
+
+        // C. 數據聚合 (Aggregation)
+        let aggregatedData = {}; // { '01日': {visits:10, duration:500}, ... }
+        let totalStats = { visits: 0, duration: 0 };
+
+        // 遞迴函式：找出目標數據節點並累加
+        function processNode(nodeData, dateLabel) {
+            if (!nodeData) return; // 防呆
+
+            let targetNode = null;
+
+            // 根據選擇的對象 (Scope) 深入挖掘
+            if (scope === 'global') {
+                targetNode = nodeData.global;
+            } 
+            else if (scope === 'school') {
+                targetNode = nodeData.school;
+            } 
+            else if (scope === 'class') {
+                const g = document.getElementById('statGrade').value;
+                const c = document.getElementById('statClass').value;
+                // 檢查路徑: classes -> 6A
+                if (nodeData.classes && nodeData.classes[g+c]) {
+                    targetNode = nodeData.classes[g+c];
+                }
+            }
+            else if (scope === 'student') {
+                const g = document.getElementById('statGrade').value;
+                const c = document.getElementById('statClass').value;
+                const n = document.getElementById('statStudentName').value.trim();
+                // 檢查路徑
+                if (nodeData.students && nodeData.students[g] && nodeData.students[g][c] && nodeData.students[g][c][n]) {
+                    targetNode = nodeData.students[g][c][n];
+                }
+            }
+
+            // 如果找到了數據，進行累加
+            if (targetNode) {
+                // 數據清洗：確保是數字
+                const v = parseInt(targetNode.visits || 0);
+                const d = parseInt(targetNode.duration || 0);
+
+                if (!aggregatedData[dateLabel]) aggregatedData[dateLabel] = { visits: 0, duration: 0 };
+                
+                aggregatedData[dateLabel].visits += v;
+                aggregatedData[dateLabel].duration += d;
+                
+                totalStats.visits += v;
+                totalStats.duration += d;
+            }
+        }
+
+        // 根據時間模式遍歷數據
+        if (mode === 'day') {
+            // 本日：直接處理當前節點
+            processNode(data, '本日');
+        } 
+        else if (mode === 'month') {
+            // 本月：data 裡面是 {'01':{...}, '02':{...}}
+            Object.keys(data).sort().forEach(dKey => {
+                processNode(data[dKey], `${parseInt(dKey)}日`);
+            });
+        } 
+        else if (mode === 'year') {
+            // 本年：data 裡面是 {'01':{...}, '02':{...}} (月份)
+            Object.keys(data).sort().forEach(mKey => {
+                const monthData = data[mKey];
+                // 該月內還有很多天，需要再遍歷每一天
+                Object.keys(monthData).forEach(dKey => {
+                    processNode(monthData[dKey], `${parseInt(mKey)}月`);
+                });
+            });
+        }
+
+        // D. 更新上方大字報
+        document.getElementById('dispVisits').innerText = totalStats.visits;
+        document.getElementById('dispDuration').innerText = Math.round(totalStats.duration / 60); // 秒轉分
+        const avg = totalStats.visits > 0 ? Math.round((totalStats.duration / 60) / totalStats.visits) : 0;
+        document.getElementById('dispAvg').innerText = avg;
+
+        // E. 繪製圖表
+        renderAnalyticsChart(aggregatedData);
+
+    } catch (e) {
+        console.error("讀取過程發生錯誤:", e);
+        alert("讀取數據失敗：" + e.message);
+    } finally {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    }
+}
+
+// 4. 重置圖表
+function resetCharts() {
+    document.getElementById('dispVisits').innerText = 0;
+    document.getElementById('dispDuration').innerText = 0;
+    document.getElementById('dispAvg').innerText = 0;
+    if (analyticsChartInstance) {
+        analyticsChartInstance.destroy();
+        analyticsChartInstance = null;
+    }
+}
+
+// 5. 渲染混合圖表 (Chart.js)
+function renderAnalyticsChart(aggData) {
+    const ctx = document.getElementById('analyticsChart').getContext('2d');
+    if (analyticsChartInstance) analyticsChartInstance.destroy();
+
+    const labels = Object.keys(aggData); // X軸 (日期/月份)
+    const visitData = labels.map(l => aggData[l].visits); // 長條圖數據
+    const durationData = labels.map(l => Math.round(aggData[l].duration / 60)); // 折線圖數據 (分鐘)
+
+    analyticsChartInstance = new Chart(ctx, {
+        type: 'bar', // 預設類型
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: '進入次數 (次)',
+                    data: visitData,
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1,
+                    order: 2, // 層級 (在折線圖下面)
+                    yAxisID: 'y'
+                },
+                {
+                    label: '使用時長 (分鐘)',
+                    data: durationData,
+                    type: 'line', // 混合折線圖
+                    borderColor: 'rgba(255, 99, 132, 1)',
+                    backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    tension: 0.3, // 曲線平滑度
+                    order: 1, // 層級 (最上層)
+                    yAxisID: 'y1'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) label += ': ';
+                            if (context.parsed.y !== null) label += context.parsed.y;
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    type: 'linear',
+                    display: true,
+                    position: 'left',
+                    title: { display: true, text: '次數' },
+                    beginAtZero: true
+                },
+                y1: {
+                    type: 'linear',
+                    display: true,
+                    position: 'right',
+                    grid: { drawOnChartArea: false }, // 不顯示右軸網格，保持乾淨
+                    title: { display: true, text: '分鐘' },
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+// 6. 修改 tab 切換函式 (確保初始化)
+const originalSwitchTab = window.switchTab;
+window.switchTab = function(tabId) {
+    originalSwitchTab(tabId); // 執行原本的切換邏輯
+    if(tabId === 'analytics') {
+        // 第一次進入時初始化 UI
+        if(document.getElementById('statMonth').options.length === 0) {
+            initStatUI();
+        }
+    }
+};
+
+
+        
     </script>
 
 <footer class="copyright-footer">

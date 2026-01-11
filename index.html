@@ -1342,9 +1342,15 @@ function openHistoryModal(name, h) {
     const title = document.getElementById('viewerTitle');
 
     if (!modal || !title) {
-        alert("錯誤：找不到視窗元件 (ID: historyViewerModal 或 viewerTitle)，請檢查 HTML。");
+        alert("錯誤：找不到視窗元件，請檢查 HTML ID。");
         return;
     }
+
+    // ★★★ 關鍵修復 1：將視窗搬運到 body 最外層，防止被其他 div 困住或遮擋 ★★★
+    document.body.appendChild(modal);
+
+    // ★★★ 關鍵修復 2：強制設定超高層級 (Z-Index)，確保在最上層 ★★★
+    modal.style.zIndex = "99999";
 
     // 設定標題
     title.innerHTML = `<i class="fas fa-user-graduate"></i> ${name}`;
@@ -1352,7 +1358,7 @@ function openHistoryModal(name, h) {
     // 更新全域變數
     currentStudentHistory = h; 
     
-    // 強制顯示視窗
+    // 顯示視窗
     modal.style.display = 'flex'; 
     
     // 渲染內容
@@ -1360,7 +1366,6 @@ function openHistoryModal(name, h) {
         renderLevel1();
     } catch (e) {
         console.error("渲染內容失敗:", e);
-        alert("渲染內容失敗，請檢查 renderLevel1 函式。");
     }
 }
     

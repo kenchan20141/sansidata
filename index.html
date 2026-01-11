@@ -229,8 +229,11 @@
     
     /* 3. 右側雷達圖區塊 (縮圖) */
     .grading-radar-thumbnail {
-        flex: 0 0 260px; /* 固定寬度 */
-        width: 260px;
+        flex: 1;             /* 讓它有彈性 */
+       width: auto;         /* 寬度自動 */
+        /* 建議補上最小寬度，避免縮太小 */
+        min-width: 220px;
+         max-width: 300px;
         text-align: center;
         cursor: pointer; /* 手型游標 */
         position: relative;

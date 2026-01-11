@@ -1133,19 +1133,23 @@ function generateClassChartHTML(type, avg, count) {
     const totalScore = Math.min(100, scoreContent + scoreExpr + scoreStruct + scorePunc + scoreTypo);
     
     return `
-    <!-- 1. 外層容器：確保是區塊元素，並在底部留出 60px 的安全距離 -->
-    <div class="report-section" style="display: block; width: 100%; margin-bottom: 60px; clear: both;">
+    <!-- 
+       ★ 策略改變：強制拉高容器 ★
+       1. margin-bottom: 100px; -> 在這個區塊結束後，強制空出 100px 的距離，不管上面發生什麼事。
+       2. padding-bottom: 20px; -> 內部留白。
+    -->
+    <div class="report-section" style="display: block; width: 100%; margin-bottom: 100px; padding-bottom: 20px;">
         
         <!-- 標題 Badge -->
-        <div class="report-category-badge ${cls}" style="margin-bottom: 20px;">
+        <div class="report-category-badge ${cls}" style="margin-bottom: 25px;">
             <i class="fas fa-book"></i> ${title}
         </div>
         
-        <!-- 內容容器 Flexbox -->
-        <div class="grading-side-by-side" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
+        <!-- 內容容器 -->
+        <div class="grading-side-by-side" style="display: flex; flex-wrap: wrap; gap: 30px; align-items: flex-start;">
             
-            <!-- 左側：評分條 (保持原樣，讓它自動適應寬度) -->
-            <div class="grading-scores" style="flex: 1; min-width: 300px; background: #fdfcf8; border: 1px solid #eee; border-radius: 12px; padding: 20px;">
+            <!-- 左側：評分條 (高度隨內容自動) -->
+            <div class="grading-scores" style="flex: 1; min-width: 300px; background: #fdfcf8; border: 1px solid #eee; border-radius: 12px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
                 <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555;">
                     班級平均表現 <small style="font-weight:normal; color:#999;">(${count}份)</small>
                 </h3>
@@ -1163,24 +1167,24 @@ function generateClassChartHTML(type, avg, count) {
             </div>
             
             <!-- 右側：雷達圖容器 -->
-            <div style="flex: 1; min-width: 280px; background:#fff; border:1px solid #eee; border-radius:12px; padding:15px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
-                <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555; margin-bottom: 10px;">能力分佈</h3>
+            <!-- 
+               ★ 關鍵修改：給予巨大的固定高度 ★
+               height: 500px !important; -> 強制這個白盒子高度為 500px。
+               即使圖表只畫了 300px，剩下的 200px 空白也會佔據空間，把下方的字推下去。
+            -->
+            <div style="flex: 1; min-width: 300px; background:#fff; border:1px solid #eee; border-radius:12px; padding:20px; height: 500px !important; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555;">能力分佈</h3>
                 
-                <!-- 
-                   ★ 關鍵修改：縮小尺寸 ★
-                   1. height: 250px (原本 350px) -> 變矮
-                   2. max-width: 280px -> 變窄
-                   3. margin: 0 auto -> 居中
-                -->
-                <div style="position: relative; height: 250px !important; width: 100%; max-width: 280px; margin: 0 auto;">
+                <!-- Chart 容器：也給予充足的高度 -->
+                <div style="position: relative; height: 400px; width: 100%; max-width: 400px;">
                     <canvas id="${id}"></canvas>
                 </div>
             </div>
 
         </div>
         
-        <!-- 隱形牆：再次確保下方文字不會滑上來 -->
-        <div style="clear: both; display: block; height: 1px; width: 100%;"></div>
+        <!-- 額外的墊片：再加 50px 的實體高度 -->
+        <div style="height: 50px; width: 100%; display: block; clear: both;"></div>
         
     </div>`;
 }

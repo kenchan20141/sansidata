@@ -7,9 +7,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
     
-    <!-- 引入 Chart.js 以繪製雷達圖 -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -31,7 +28,7 @@
             background: url('背景.png') center/cover fixed;
             background-color: #f4f4f4;
             color: var(--text-main);
-            overflow-y: scroll;
+            overflow-y: scroll; /* 保持滾動 */
         }
 
         /* === 登入遮罩 (安全閘門) === */
@@ -82,7 +79,8 @@
         .student-name { font-size: 1.2em; font-weight: bold; color: #444; margin-bottom: 5px; }
         .last-sync { font-size: 0.85em; color: #999; display: flex; align-items: center; gap: 6px; }
 
-        /* === 歷史檢閱 UI === */
+        /* === 歷史檢閱 UI (還原你的設計) === */
+        /* 第一層：動漫卡片 */
         .category-cards-container { display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; padding: 20px; }
         .anime-card {
             position: relative; width: 140px; height: 200px; border-radius: 15px;
@@ -106,18 +104,20 @@
         .history-folder-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); background-color: #fff; }
         .history-folder-btn i { font-size: 2em; margin-bottom: 10px; color: #ccc; transition: color 0.3s; }
         
+        /* 子功能按鈕顏色主題 */
         .history-theme-1 { border-color: #8fa398; color: #8fa398; } .history-theme-1:hover i { color: #8fa398; }
         .history-theme-2 { border-color: #94a7b5; color: #94a7b5; } .history-theme-2:hover i { color: #94a7b5; }
         .history-theme-3 { border-color: #b6a6ca; color: #b6a6ca; } .history-theme-3:hover i { color: #b6a6ca; }
         .history-theme-4 { border-color: #d69a92; color: #d69a92; } .history-theme-4:hover i { color: #d69a92; }
         .history-theme-5 { border-color: #c7b299; color: #c7b299; } .history-theme-5:hover i { color: #c7b299; }
 
-        /* 第三層：紀錄列表卡片 */
+        /* 第三層：紀錄列表卡片 (Note Card 風格) */
         .history-list-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; padding-top: 10px; }
         .history-card {
             background-color: #fdfcf8; border: 1px solid #e0ddd7; border-radius: 8px; 
             padding: 20px 20px 20px 55px; position: relative; box-shadow: 4px 4px 0px rgba(0,0,0,0.03); 
             cursor: pointer; transition: all 0.3s; overflow: hidden;
+            /* 打洞效果 */
             background-image: linear-gradient(to right, transparent 39px, #e0ddd7 40px, transparent 41px), radial-gradient(circle at 20px 50%, #d1cdc5 6px, transparent 7px);
             background-size: 100% 100%, 100% 35px; background-repeat: no-repeat, repeat-y; background-position: 0 0, 0 12px;
         }
@@ -130,6 +130,7 @@
         .history-meta { display: flex; justify-content: space-between; font-size: 0.85em; color: #999; margin-bottom: 10px; border-bottom: 1px dashed #e0ddd7; padding-bottom: 5px; }
         .history-title { margin: 0; font-size: 1.1em; color: #444; font-weight: bold; line-height: 1.4; }
 
+        /* 麵包屑 */
         .history-breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 1rem; color: #999; margin-bottom: 20px; padding: 10px 5px; border-bottom: 1px dashed #ccc; }
         .breadcrumb-item { cursor: pointer; font-weight: bold; color: var(--m-blue); transition: color 0.2s; }
         .breadcrumb-item:hover { color: #5e5e5e; text-decoration: underline; }
@@ -179,65 +180,7 @@
         .student-select-item input[type="radio"] { transform: scale(1.3); accent-color: var(--m-green); cursor: pointer; }
         .year-transition-card { background-color: #fdfcf8; border: 2px solid var(--m-brown); border-radius: 15px; padding: 30px; text-align: center; max-width: 600px; margin: 0 auto; }
 
-        /* ============================================== */
-        /* === 學習報告專用樣式 (支援後台檢視) === */
-        /* ============================================== */
-        .report-section { margin-bottom: 50px; }
-        
-        /* 1. 範疇標題 (膠囊型標籤) */
-        .report-category-badge { display: inline-flex; align-items: center; gap: 10px; padding: 10px 25px; border-radius: 50px; color: white; font-weight: bold; font-size: 1.3rem; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); letter-spacing: 1px; }
-        .badge-narrative { background-color: #7da3c0; }
-        .badge-argument { background-color: #a692c2; }
-        .badge-reading { background-color: #8da399; }
-        .badge-expand { background-color: #d69a92; }
-        
-        /* 2. 整體概況標題容器 (增強版) */
-        .badge-general {
-            width: 100%; max-width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 20px 10px; margin-bottom: 10px; background: linear-gradient(135deg, #5e7067 0%, #4b5e56 100%);
-            color: white; border-radius: 12px; box-shadow: 0 8px 20px rgba(94, 112, 103, 0.3); position: relative; overflow: hidden;
-        }
-        .badge-general-title { font-size: 1.6rem; font-weight: bold; letter-spacing: 2px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-        
-        /* 3. 綜合評級 */
-        .overall-grade-tag { background-color: #fff; color: #d9534f; padding: 5px 25px; border-radius: 50px; font-size: 1.4rem; font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 2px solid #d69a92; display: flex; align-items: center; gap: 8px; }
-        .overall-grade-label { font-size: 0.8rem; color: #888; font-weight: normal; text-transform: uppercase; letter-spacing: 1px; }
-
-        /* 4. 文字分析卡片 */
-        .report-text-card { background-color: #fdfcf8; border: 1px solid #e0ddd7; border-radius: 12px; padding: 25px; line-height: 1.9; color: #4a4a4a; font-size: 1.05rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); text-align: justify; margin-top: 10px; }
-
-        /* 5. 金句容器 (打洞 Note Card) */
-        .report-quote-card { position: relative; background-color: #fffefb; border: 1px solid #e0ddd7; border-radius: 8px; padding: 30px 30px 30px 65px; margin-top: 40px; box-shadow: 4px 4px 0px rgba(0,0,0,0.05); text-align: left; background-image: linear-gradient(to right, transparent 49px, #eebdbd 50px, transparent 51px), radial-gradient(circle at 25px 50%, #d1cdc5 8px, transparent 9px); background-size: 100% 100%, 100% 40px; background-repeat: no-repeat, repeat-y; background-position: 0 0, 0 15px; }
-        .report-quote-content { font-family: 'Noto Serif TC', serif; font-size: 1.2rem; font-weight: bold; color: #5d4037; font-style: italic; line-height: 1.6; }
-        .report-quote-author { margin-top: 10px; font-size: 0.9rem; color: #888; text-align: right; font-style: normal; }
-
-        /* 6. 分隔線 */
-        .report-separator { position: relative; height: 1px; border: 0; border-top: 3px dashed #b6a6ca; margin: 40px 0 50px 0; opacity: 0.6; }
-        .report-separator::after { content: '▼'; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #fdfcf8; padding: 0 10px; color: #b6a6ca; font-size: 12px; }
-
-        /* 7. 評分儀表板 (雷達圖、進度條) */
-        .report-radar-wrapper { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #eee; }
-        .grading-container { margin-top: 0; border-top: none; }
-        .grading-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .grading-scores, .grading-radar { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; }
-        .score-item { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-        .slider-container { display: flex; align-items: center; gap: 10px; width: 60%; }
-        .progress-bar-container { width: 100%; height: 10px; background: #e9ecef; border-radius: 5px; overflow: hidden; }
-        .progress-bar-fill { height: 100%; background: #007bff; border-radius: 5px; }
-        .score-display { font-weight: bold; width: 30px; text-align: right; }
-        .total-score-container { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding-top: 15px; border-top: 1px solid #ddd; }
-        .radar-chart-container { position: relative; height: 300px; width: 100%; }
-        .radar-chart-history-img { width: 100%; height: auto; max-width: 100%; display: block; margin: 0 auto; }
-
         @media (max-width: 768px) {
-            .grading-grid { display: flex !important; flex-direction: column !important; gap: 20px !important; width: 100% !important; margin: 0 !important; }
-            .grading-scores, .grading-radar, .report-radar-wrapper { width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; padding: 15px !important; margin: 0 !important; overflow: hidden !important; }
-            .radar-chart-container { width: 100% !important; height: auto !important; aspect-ratio: 1 / 1 !important; max-height: 350px !important; margin: 0 auto !important; }
-            
-            /* 手機版：整體概況拉寬，其他範疇縮小置中 */
-            .badge-general { width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; border-radius: 8px !important; }
-            .report-category-badge:not(.badge-general) { width: -moz-fit-content !important; width: fit-content !important; max-width: 90% !important; display: flex !important; justify-content: center !important; margin-left: auto !important; margin-right: auto !important; border-radius: 50px !important; }
-            
             .box { padding: 15px; } .nav-btn { width: 100%; } .filter-group { flex-direction: column; }
             .filter-group select, .filter-group input { width: 100%; } .transfer-grid { flex-direction: column; }
             .modal-content-container { flex-direction: column; } .submission-sidebar { width: 100%; height: 40%; }
@@ -272,7 +215,6 @@
         <div class="nav-bar">
             <button class="nav-btn active" onclick="switchTab('students')"><i class="fas fa-user-graduate"></i> 學生管理</button>
             <button class="nav-btn" onclick="switchTab('assignments')"><i class="fas fa-edit"></i> 課業管理</button>
-            <button class="nav-btn" onclick="switchTab('reports')"><i class="fas fa-chart-pie"></i> 學生報告</button>
             <button class="nav-btn" onclick="switchTab('management')"><i class="fas fa-calendar-alt"></i> 學年管理</button>
         </div>
 
@@ -315,7 +257,7 @@
                 <div class="publish-inputs">
                     <input type="text" id="assignTopic" placeholder="課業題目">
                     <select id="assignType">
-                        <option value="閱讀">閱讀</option>
+                        <option value="閱讀">閱讀</option> <!-- 新增：閱讀選項 -->
                         <option value="敘事抒情">敘事抒情</option>
                         <option value="議論">議論</option>
                         <option value="整合拓展">整合拓展</option>
@@ -329,33 +271,7 @@
             <div id="assignmentHistoryList"></div>
         </div>
 
-        <!-- 3. 學生報告頁面 (新增) -->
-        <div id="tab-reports" class="box" style="display:none;">
-            <h2>學生學習報告管理</h2>
-            <div class="filter-group">
-                <label><i class="fas fa-filter" style="color:var(--m-blue);"></i> 篩選：</label>
-                <select id="reportGrade" onchange="loadReportStudentList()">
-                    <option value="1">中一</option><option value="2">中二</option><option value="3">中三</option>
-                    <option value="4">中四</option><option value="5">中五</option><option value="6" selected>中六</option>
-                </select>
-                <select id="reportClass" onchange="loadReportStudentList()">
-                    <option value="A">A 班</option><option value="B">B 班</option><option value="C">C 班</option><option value="D">D 班</option>
-                </select>
-                
-                <!-- 生成全班綜合報告按鈕 -->
-                <button id="btnClassReport" class="btn-action btn-manage" 
-                        style="background: linear-gradient(135deg, #7da3c0 0%, #5e7067 100%); margin-left: auto; box-shadow: 0 4px 10px rgba(94, 112, 103, 0.4);" 
-                        onclick="generateClassReport()">
-                    <i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)
-                </button>
-            </div>
-            
-            <div id="reportStudentListContainer" class="student-grid">
-                <p style="text-align:center; width:100%; color:#aaa; padding:30px;">請選擇年級和班別以載入報告列表</p>
-            </div>
-        </div>
-
-        <!-- 4. 學年管理頁面 -->
+        <!-- 3. 學年管理頁面 -->
         <div id="tab-management" class="box" style="display:none;">
             <h2>學年過渡管理</h2>
             <div style="text-align:center; margin-bottom:30px;">
@@ -406,7 +322,7 @@
         </div>
     </div>
 
-    <!-- Modal: 學生歷史檢閱 (通用) -->
+    <!-- Modal: 學生歷史檢閱 (修復版) -->
     <div id="historyViewerModal" class="modal-overlay">
         <div class="modal-body">
             <div class="modal-header">
@@ -457,19 +373,6 @@
         </div>
     </div>
 
-    <!-- Modal: 全班綜合報告顯示視窗 (新增) -->
-    <div id="classReportModal" class="modal-overlay">
-        <div class="modal-body" style="max-width: 900px;">
-            <div class="modal-header">
-                <h3 style="margin:0; color:var(--m-blue);"><i class="fas fa-chart-pie"></i> 全班綜合學習報告</h3>
-                <button onclick="document.getElementById('classReportModal').style.display='none'" style="font-size:28px; border:none; background:none; cursor:pointer; color:#999;">&times;</button>
-            </div>
-            <div id="classReportContent" class="modal-content-scroll" style="background:#f9f9f9; padding: 0;">
-                <!-- AI 生成內容將注入此處 -->
-            </div>
-        </div>
-    </div>
-
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyBgwrgn2m343mRJb0WjzUhteiospegXhvI",
@@ -484,45 +387,74 @@
         const db = firebase.database();
         const auth = firebase.auth();
 
-        // API Key (用於生成全班報告，請替換為您自己的有效 Key)
-        const READING_API_KEYS = [
-            "pk_D77NeM4n6GnNCYbo", "pk_c17y17tQ3BY71cpd", "pk_Ax3rRTHkrdTQVIGD", "pk_dGVqEggn4T4dwQI3", "pk_YIFWnDFts0quviE0"
-        ];
-        const READING_API_URL = "https://gen.pollinations.ai/v1/chat/completions";
-        const READING_MODEL = "deepseek";
-
-        // 輔助函式：DSE等級計算
-        function determineGrade(score) {
-            if (score >= 72) return "5**";
-            if (score >= 69) return "5*";
-            if (score >= 64) return "5";
-            if (score >= 57) return "4";
-            if (score >= 50) return "3";
-            if (score >= 45) return "2";
-            return "1";
-        }
-
-        // === 登入與基礎邏輯 ===
+        // === 登入邏輯 ===
         function teacherLogin() {
             const provider = new firebase.auth.GoogleAuthProvider();
             provider.setCustomParameters({ prompt: 'select_account' });
+            
             document.getElementById('loginMsg').innerText = "驗證中...";
+            
             auth.signInWithPopup(provider).then((result) => {
                 const user = result.user;
-                if (user.email.endsWith('@ccckyc.edu.hk')) { showApp(user); }
-                else { auth.signOut(); document.getElementById('loginMsg').innerText = "非授權帳號"; }
-            }).catch((error) => { document.getElementById('loginMsg').innerText = "登入失敗：" + error.message; });
+                if (user.email.endsWith('@ccckyc.edu.hk')) { 
+                    showApp(user);
+                } else {
+                    auth.signOut();
+                    document.getElementById('loginMsg').innerText = "非授權帳號，請使用學校教師 Email 登入。";
+                }
+            }).catch((error) => {
+                document.getElementById('loginMsg').innerText = "登入失敗：" + error.message;
+            });
         }
-        function logout() { auth.signOut().then(() => location.reload()); }
+
+        function logout() {
+            auth.signOut().then(() => {
+                location.reload();
+            });
+        }
+
         function showApp(user) {
             document.getElementById('loginOverlay').style.display = 'none';
             document.getElementById('mainApp').style.display = 'block';
             document.getElementById('teacherNameDisplay').innerText = user.displayName || user.email;
-            db.ref('config/currentYear').once('value', s => { if(s.exists()) document.getElementById('currentYearInput').value = s.val(); });
+            
+            // 初始化
+            db.ref('config/currentYear').once('value', s => {
+                if(s.exists()) document.getElementById('currentYearInput').value = s.val();
+            });
+            populateTransferStudentList();
         }
-        auth.onAuthStateChanged(user => { if (user && user.email.endsWith('@ccckyc.edu.hk')) showApp(user); });
 
-        // === Tab 切換邏輯 ===
+        auth.onAuthStateChanged(user => {
+            if (user && user.email.endsWith('@ccckyc.edu.hk')) {
+                showApp(user);
+            }
+        });
+
+        // === 歷史檢閱修復邏輯 ===
+        let currentStudentHistory = [], currentCategory = '', currentSubFunction = '', currentThemeIndex = 1, currentViewingAssignmentId = ''; 
+        
+        const HISTORY_STRUCTURE = { 
+            "閱讀": ["點評", "指引"], 
+            "敘事抒情": ["文章點評", "大綱點評", "解題指引", "敘事物象"], 
+            "議論": ["文章點評", "大綱點評", "指引"], 
+            "整合拓展": ["點評", "指引"],
+            "課外書籍": ["討論紀錄"] 
+        };
+        
+        const CATEGORY_ASSETS = { 
+            "閱讀": { img: '郵筒.png', en: 'READING' }, 
+            "敘事抒情": { img: '相機.png', en: 'NARRATIVE' }, 
+            "議論": { img: '筆.png', en: 'ARGUMENT' }, 
+            "整合拓展": { img: '火車.png', en: 'EXPAND' }, 
+            "課外書籍": { img: '書.png', en: 'LIBRARY' } 
+        };
+        
+        const SUB_ICONS = { 
+            "文章點評": "fa-file-alt", "大綱點評": "fa-list-ol", "敘事物象": "fa-tree", 
+            "解題指引": "fa-compass", "指引": "fa-lightbulb", "點評": "fa-comment-dots", "討論紀錄": "fa-comments"
+        };
+
         function switchTab(tabId) {
             document.querySelectorAll('.box').forEach(b => b.style.display = 'none');
             document.getElementById('tab-' + tabId).style.display = 'block';
@@ -530,415 +462,419 @@
             event.currentTarget.classList.add('active');
             if(tabId === 'students') loadStudentList();
             if(tabId === 'assignments') loadAssignmentHistory();
-            if(tabId === 'reports') loadReportStudentList();
         }
-
-        // === 歷史檢閱邏輯 (共用) ===
-        let currentStudentHistory = [], currentCategory = '', currentSubFunction = '', currentThemeIndex = 1; 
-        const HISTORY_STRUCTURE = { 
-            "閱讀": ["點評", "指引"], "敘事抒情": ["文章點評", "大綱點評", "解題指引", "敘事物象"], 
-            "議論": ["文章點評", "大綱點評", "指引"], "整合拓展": ["點評", "指引"],
-            "課外書籍": ["討論紀錄"], "學習報告": ["綜合分析"] 
-        };
-        const CATEGORY_ASSETS = { 
-            "閱讀": { img: '郵筒.png', en: 'READING' }, "敘事抒情": { img: '相機.png', en: 'NARRATIVE' }, 
-            "議論": { img: '筆.png', en: 'ARGUMENT' }, "整合拓展": { img: '火車.png', en: 'EXPAND' }, 
-            "課外書籍": { img: '書.png', en: 'LIBRARY' }, "學習報告": { img: '書.png', en: 'REPORT' }
-        };
-        const SUB_ICONS = { "文章點評": "fa-file-alt", "大綱點評": "fa-list-ol", "綜合分析": "fa-chart-pie", "敘事物象": "fa-tree", "解題指引": "fa-compass", "指引": "fa-lightbulb", "點評": "fa-comment-dots", "討論紀錄": "fa-comments" };
 
         function loadStudentList() {
             const g = document.getElementById('viewGrade').value;
             const c = document.getElementById('viewClass').value;
             const container = document.getElementById('studentListContainer');
             container.innerHTML = '<p style="text-align:center; padding:20px; width:100%; color:#888;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
+            
             db.ref(`students/${g}/${c}`).once('value', snapshot => {
                 const data = snapshot.val();
-                if (!data) { container.innerHTML = '<p style="text-align:center; width:100%; color:#aaa;">暫無資料。</p>'; return; }
+                if (!data) { container.innerHTML = '<p style="text-align:center; width:100%; color:#aaa;">此班級暫無資料。</p>'; return; }
                 container.innerHTML = '';
+                
                 Object.entries(data).sort(([,a], [,b]) => (parseInt(a.profile?.number)||99) - (parseInt(b.profile?.number)||99))
                 .forEach(([name, d]) => {
                     const h = d.history ? (Array.isArray(d.history) ? d.history : Object.values(d.history)) : [];
-                    const div = document.createElement('div'); div.className = 'student-card';
-                    div.innerHTML = `<div class="student-name">${name} <small>(${d.profile?.number||''})</small></div><div class="last-sync"><i class="fas fa-history"></i> 紀錄: ${h.length} 筆</div>`;
+                    const num = d.profile?.number ? `(${d.profile.number})` : '';
+                    
+                    const div = document.createElement('div'); 
+                    div.className = 'student-card';
+                    div.innerHTML = `<div class="student-name">${name} <small>${num}</small></div><div class="last-sync"><i class="fas fa-history"></i> 紀錄: ${h.length} 筆</div>`;
+                    
+                    // 點擊後打開歷史檢閱 Modal
                     div.onclick = () => openHistoryModal(name, h);
                     container.appendChild(div);
                 });
             });
         }
 
-        // === 新增：載入學生報告列表 ===
-        function loadReportStudentList() {
-            const g = document.getElementById('reportGrade').value;
-            const c = document.getElementById('reportClass').value;
-            const container = document.getElementById('reportStudentListContainer');
-            container.innerHTML = '<p style="text-align:center; padding:20px; width:100%; color:#888;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
-            
-            db.ref(`students/${g}/${c}`).once('value', snapshot => {
-                const data = snapshot.val();
-                if (!data) { container.innerHTML = '<p style="text-align:center; width:100%; color:#aaa;">暫無資料。</p>'; return; }
-                container.innerHTML = '';
-                
-                Object.entries(data).sort(([,a], [,b]) => (parseInt(a.profile?.number)||99) - (parseInt(b.profile?.number)||99))
-                .forEach(([name, d]) => {
-                    const h = d.history ? (Array.isArray(d.history) ? d.history : Object.values(d.history)) : [];
-                    const reports = h.filter(r => r.category === "學習報告");
-                    
-                    const div = document.createElement('div'); 
-                    div.className = 'student-card';
-                    const style = reports.length > 0 ? '' : 'opacity: 0.6; filter: grayscale(100%);';
-                    const iconColor = reports.length > 0 ? 'var(--m-red)' : '#ccc';
-                    
-                    div.style.cssText = style;
-                    div.innerHTML = `
-                        <div class="student-name">${name} <small>(${d.profile?.number||''})</small></div>
-                        <div class="last-sync" style="color:${iconColor}; font-weight:bold;">
-                            <i class="fas fa-chart-pie"></i> 已生成報告: ${reports.length} 份
-                        </div>`;
-                    
-                    if (reports.length > 0) {
-                        div.onclick = () => {
-                            openHistoryModal(name, h);
-                            setTimeout(() => {
-                                renderLevel2('學習報告');
-                                setTimeout(() => renderLevel3('綜合分析', 5), 100);
-                            }, 300);
-                        };
-                    }
-                    container.appendChild(div);
-                });
-            });
-        }
-
-        // === 新增：生成全班綜合報告邏輯 ===
-        async function generateClassReport() {
-            const btn = document.getElementById('btnClassReport');
-            const g = document.getElementById('reportGrade').value;
-            const c = document.getElementById('reportClass').value;
-            
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 分析全班數據中...';
-
-            try {
-                // 1. 抓取全班資料
-                const snapshot = await db.ref(`students/${g}/${c}`).once('value');
-                const data = snapshot.val();
-                
-                if (!data) { alert("此班級無學生資料！"); btn.disabled=false; btn.innerHTML = '<i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)'; return; }
-
-                // 2. 聚合數據 (計算平均分 & 收集摘要)
-                let classSummary = "";
-                let studentCount = 0;
-                let narrativeTotal = { content:0, expr:0, struct:0, count:0 };
-                let argumentTotal = { content:0, expr:0, struct:0, count:0 };
-
-                // 遍歷每位學生
-                Object.entries(data).forEach(([name, d]) => {
-                    const h = d.history ? (Array.isArray(d.history) ? d.history : Object.values(d.history)) : [];
-                    const reports = h.filter(r => r.category === "學習報告").sort((a,b) => b.timestamp - a.timestamp);
-                    
-                    // 收集摘要 (只取最新一份報告的摘要)
-                    if (reports.length > 0) {
-                        studentCount++;
-                        const latestReport = reports[0].aiContent.replace(/<[^>]*>?/gm, ' ').substring(0, 300);
-                        classSummary += `學生[${name}]: ${latestReport}...\n`;
-                    }
-
-                    // 收集分數 (遍歷所有寫作紀錄)
-                    h.forEach(r => {
-                        // 嘗試解析分數 (這裡簡化處理，直接從 aiContent 抓取隱藏欄位太複雜，改用正則抓取顯示分數)
-                        const scoreMatch = r.aiContent.match(/總分:\s*(\d+)/);
-                        if (scoreMatch) {
-                            const score = parseInt(scoreMatch[1]);
-                            // 這裡反推單項分數有點難，我們假設分數分佈平均
-                            // 為了生成雷達圖，我們需要 Content/Expr/Struct 分數
-                            // 如果無法精確抓取，我們用總分估算：Content=總分*0.4, Expr=總分*0.3, Struct=總分*0.2
-                            if (r.category === "敘事抒情") {
-                                narrativeTotal.content += score * 0.4;
-                                narrativeTotal.expr += score * 0.3;
-                                narrativeTotal.struct += score * 0.2;
-                                narrativeTotal.count++;
-                            } else if (r.category === "議論") {
-                                argumentTotal.content += score * 0.4;
-                                argumentTotal.expr += score * 0.3;
-                                argumentTotal.struct += score * 0.2;
-                                argumentTotal.count++;
-                            }
-                        }
-                    });
-                });
-
-                if (studentCount === 0 && narrativeTotal.count === 0 && argumentTotal.count === 0) {
-                    alert("此班級數據不足，無法生成報告。");
-                    btn.disabled=false; 
-                    btn.innerHTML = '<i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)';
-                    return;
-                }
-
-                // 計算平均分 (0-100 scale -> 轉回 0-10 scale for charts if needed, or keeping total)
-                // 為了顯示雷達圖，我們將分數標準化為 0-10
-                const narrAvg = {
-                    content: narrativeTotal.count ? Math.round((narrativeTotal.content / narrativeTotal.count) / 4) : 0, // /40 * 10
-                    expr: narrativeTotal.count ? Math.round((narrativeTotal.expr / narrativeTotal.count) / 3) : 0,    // /30 * 10
-                    struct: narrativeTotal.count ? Math.round((narrativeTotal.struct / narrativeTotal.count) / 2) : 0 // /20 * 10
-                };
-                const argAvg = {
-                    content: argumentTotal.count ? Math.round((argumentTotal.content / argumentTotal.count) / 4) : 0,
-                    expr: argumentTotal.count ? Math.round((argumentTotal.expr / argumentTotal.count) / 3) : 0,
-                    struct: argumentTotal.count ? Math.round((argumentTotal.struct / argumentTotal.count) / 2) : 0
-                };
-
-                // 3. 呼叫 AI 生成
-                const prompt = `你是一位資深的中文科科主任。以下是 ${g}年級${c}班 的學習數據摘要。
-                
-                ### 班級數據概覽：
-                - 敘事抒情文 (平均分 0-10)：內容${narrAvg.content}, 表達${narrAvg.expr}, 結構${narrAvg.struct}
-                - 議論文 (平均分 0-10)：內容${argAvg.content}, 表達${argAvg.expr}, 結構${argAvg.struct}
-
-                ### 學生個別報告摘要：
-                ${classSummary}
-
-                ### 你的任務：
-                請根據以上資料，生成一份「全班綜合學習評估報告」。
-                
-                ### 輸出格式要求 (嚴格遵守 HTML，樣式需與學生報告一致)：
-                請直接輸出 HTML 代碼，不要使用 Markdown。
-
-                1. **班級整體概況**：
-                   <div class="report-section">
-                       <div class="report-category-badge badge-general">
-                           <div class="badge-general-title"><i class="fas fa-users"></i> ${g}${c}班 綜合評估</div>
-                       </div>
-                       <div class="report-text-card">
-                           <p>(約150字，分析班級整體強弱項，例如整體敘事能力較強但議論邏輯薄弱等。)</p>
-                       </div>
-                   </div>
-                   <div class="report-separator"></div>
-
-                2. **範疇深入分析**：(針對敘事、議論)
-                   請為每個範疇生成一段分析，**不要**包含圖表代碼，圖表會由系統自動插入。
-                   格式：
-                   <div class="report-section">
-                       <div class="report-category-badge badge-[narrative/argument]"><i class="fas fa-book"></i> [範疇名稱]</div>
-                       <div class="report-text-card">
-                           <p>(分析該範疇的班級普遍問題與亮點。)</p>
-                       </div>
-                   </div>
-
-                3. **教學建議**：
-                   <div class="report-quote-card">
-                       <div class="report-quote-content">「(給任教老師的具體教學建議)」</div>
-                       <div class="report-quote-author">—— AI 科主任</div>
-                   </div>`;
-
-                const response = await callAPI(prompt);
-
-                // 4. 顯示結果 & 插入圖表
-                const modal = document.getElementById('classReportModal');
-                const content = document.getElementById('classReportContent');
-                
-                // 構建包含圖表的 HTML
-                // 我們需要在 AI 回傳的 HTML 中插入圖表容器，然後用 JS 渲染
-                const tempDiv = document.createElement('div');
-                tempDiv.innerHTML = response;
-
-                // 插入敘事圖表
-                const narrBadge = tempDiv.querySelector('.badge-narrative');
-                if (narrBadge && narrativeTotal.count > 0) {
-                    const chartHTML = generateClassChartHTML('narrative', narrAvg, Math.round((narrativeTotal.content+narrativeTotal.expr+narrativeTotal.struct)/narrativeTotal.count));
-                    narrBadge.outerHTML = chartHTML; // 替換標題為包含圖表的完整區塊
-                    // 注意：AI 生成的 badge 下方會有 text-card，我們需要調整結構
-                    // 這裡簡化處理：直接把 AI 的 text-card 內容搬進去
-                }
-
-                // 插入議論圖表
-                const argBadge = tempDiv.querySelector('.badge-argument');
-                if (argBadge && argumentTotal.count > 0) {
-                    const chartHTML = generateClassChartHTML('argument', argAvg, Math.round((argumentTotal.content+argumentTotal.expr+argumentTotal.struct)/argumentTotal.count));
-                    argBadge.outerHTML = chartHTML;
-                }
-
-                content.innerHTML = `<div style="text-align:right; color:#999; padding:20px 20px 0 0;">生成日期：${new Date().toLocaleDateString()}</div><div style="padding:20px;">` + tempDiv.innerHTML + `</div>`;
-                modal.style.display = 'flex';
-
-                // 5. 渲染圖表 (延遲執行)
-                setTimeout(() => {
-                    renderClassChart('narrativeClassChart', narrAvg);
-                    renderClassChart('argumentClassChart', argAvg);
-                }, 200);
-
-            } catch (e) {
-                console.error(e);
-                alert("生成失敗，請稍後再試。");
-            } finally {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)';
-            }
-        }
-
-        // 生成圖表 HTML 結構 (與學生端一致)
-        function generateClassChartHTML(type, avg, total) {
-            const uniqueId = type === 'narrative' ? 'narrativeClassChart' : 'argumentClassChart';
-            const title = type === 'narrative' ? '敘事抒情' : '議論';
-            const badgeClass = type === 'narrative' ? 'badge-narrative' : 'badge-argument';
-            const level = determineGrade(total);
-
-            return `
-            <div class="report-section">
-                <div class="report-category-badge ${badgeClass}"><i class="fas fa-book"></i> ${title}</div>
-                <div class="report-radar-wrapper">
-                    <div class="grading-container" style="margin:0; border:none; padding:0;">
-                        <div class="grading-grid">
-                            <div class="grading-scores" style="padding:15px;">
-                                <h3>班級平均表現</h3>
-                                <div class="score-item"><label>內容</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.content * 10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.content * 4}</span></div></div>
-                                <div class="score-item"><label>表達</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.expr * 10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.expr * 3}</span></div></div>
-                                <div class="score-item"><label>結構</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.struct * 10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.struct * 2}</span></div></div>
-                                <div class="total-score-container">
-                                    <span style="font-size:1.1em; color:#555;">平均總分: ${total} / 100</span>
-                                    <span style="font-size:2em; font-weight:bold; color:#d9534f; margin-left:auto;">${level}</span>
-                                </div>
-                            </div>
-                            <div class="grading-radar" style="padding:15px;">
-                                <h3>能力分佈</h3>
-                                <div class="radar-chart-container" style="height:250px;">
-                                    <canvas id="${uniqueId}"></canvas>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-        }
-
-        // 渲染圖表 JS
-        function renderClassChart(canvasId, avg) {
-            const ctxEl = document.getElementById(canvasId);
-            if (!ctxEl) return;
-            
-            // 估算細項 (因為資料庫只存了總分，這裡做合理推算)
-            const radarData = [
-                (avg.content * 0.6 + avg.struct * 0.4).toFixed(1), // 立意
-                (avg.content * 0.8 + avg.expr * 0.2).toFixed(1),   // 取材
-                (avg.content * 0.7 + avg.struct * 0.3).toFixed(1), // 扣題
-                (avg.struct * 0.7 + avg.content * 0.3).toFixed(1), // 詳略
-                avg.expr, // 詞彙
-                avg.expr  // 文學性
-            ];
-
-            new Chart(ctxEl.getContext('2d'), {
-                type: 'radar',
-                data: {
-                    labels: ['立意', '取材', '扣題', '詳略', '詞彙', '文學性'],
-                    datasets: [{
-                        label: '班級平均',
-                        data: radarData,
-                        backgroundColor: 'rgba(94, 112, 103, 0.4)', // 莫蘭迪深綠半透明
-                        borderColor: '#5e7067',
-                        borderWidth: 2,
-                        pointBackgroundColor: '#5e7067',
-                        pointBorderColor: '#fff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        r: {
-                            angleLines: { display: true },
-                            suggestedMin: 0, suggestedMax: 10,
-                            pointLabels: { font: { size: 12, family: "'Noto Serif TC', serif" } },
-                            ticks: { stepSize: 2, display: false }
-                        }
-                    },
-                    plugins: { legend: { display: false } }
-                }
-            });
-        }
-
-        async function callAPI(prompt) {
-            let currentKeyIndex = Math.floor(Math.random() * READING_API_KEYS.length);
-            try {
-                const response = await fetch(READING_API_URL, {
-                    method: "POST",
-                    headers: { "Authorization": `Bearer ${READING_API_KEYS[currentKeyIndex]}`, "Content-Type": "application/json" },
-                    body: JSON.stringify({ model: READING_MODEL, messages: [{ role: "user", content: prompt }], max_tokens: 4000 })
-                });
-                const data = await response.json();
-                let content = data.choices[0].message.content.trim();
-                return content.replace(/<think\s*>.*?<\/think\s*>|<think\s*\/>/gis, '').trim();
-            } catch (e) { throw new Error("API Error"); }
-        }
-
-        // === 歷史檢閱共用邏輯 ===
         function openHistoryModal(name, h) {
             document.getElementById('viewerTitle').innerHTML = `<i class="fas fa-user-graduate"></i> ${name}`;
             currentStudentHistory = h;
             document.getElementById('historyViewerModal').style.display = 'flex';
+            // 預設顯示第一層
             renderLevel1();
         }
+
+        // Level 1: 渲染主範疇卡片 (修復：使用 anime-card)
         function renderLevel1() {
             ['historyLevel2','historyLevel3','historyDetail'].forEach(id=>document.getElementById(id).style.display='none');
             document.getElementById('historyLevel1').style.display='flex';
             document.getElementById('teacherBreadcrumb').style.display='none';
-            const c = document.getElementById('historyLevel1'); c.innerHTML='';
+            
+            const container = document.getElementById('historyLevel1'); 
+            container.innerHTML='';
+            
             Object.keys(HISTORY_STRUCTURE).forEach(cat => {
+                // 計算該範疇下的紀錄數量
                 const count = currentStudentHistory.filter(r => r.category === cat).length;
                 const asset = CATEGORY_ASSETS[cat] || { img: '背景.png', en: 'RECORD' };
-                const style = count===0 ? 'filter: grayscale(100%); opacity: 0.6;' : '';
-                c.innerHTML += `<div class="anime-card" style="--bg-img: url('${asset.img}'); ${style}" onclick="renderLevel2('${cat}')"><div class="card-overlay"></div><div class="card-content"><span class="card-zh">${cat}</span><span class="card-en">${count} 筆</span></div></div>`;
+                
+                // 如果數量為0，變灰
+                const style = count === 0 ? 'filter: grayscale(100%); opacity: 0.6;' : '';
+                
+                container.innerHTML += `
+                    <div class="anime-card" style="--bg-img: url('${asset.img}'); ${style}" onclick="renderLevel2('${cat}')">
+                        <div class="card-overlay"></div>
+                        <div class="card-content">
+                            <span class="card-zh">${cat}</span>
+                            <span class="card-en">${count} 筆</span>
+                        </div>
+                    </div>`;
             });
         }
+
+        // Level 2: 渲染子功能按鈕 (修復：使用 history-folder-btn)
         function renderLevel2(cat) {
-            currentCategory=cat; 
+            currentCategory = cat; 
             ['historyLevel1','historyLevel3','historyDetail'].forEach(id=>document.getElementById(id).style.display='none');
             document.getElementById('historyLevel2').style.display='grid';
             updateBreadcrumb(cat);
-            const c = document.getElementById('historyLevel2'); c.innerHTML='';
+            
+            const container = document.getElementById('historyLevel2'); 
+            container.innerHTML='';
+            
             const subs = HISTORY_STRUCTURE[cat] || [];
-            subs.forEach((sub,i)=>{
-                const count=currentStudentHistory.filter(r=>r.category===cat&&r.subFunction===sub).length;
-                const theme=(i%5)+1;
-                c.innerHTML+=`<div class="history-folder-btn history-theme-${theme}" style="${count===0?'opacity:0.6':''}" onclick="renderLevel3('${sub}',${theme})"><i class="fas ${SUB_ICONS[sub]||'fa-file'}"></i><span style="font-weight:bold;font-size:1.1em;">${sub}</span><span style="font-size:0.8em;margin-top:5px;color:#999;">(${count})</span></div>`;
+            
+            if (subs.length === 0) {
+                container.innerHTML = '<p style="text-align:center; grid-column:1/-1;">此範疇無子功能定義。</p>';
+                return;
+            }
+
+            subs.forEach((sub, i) => {
+                const count = currentStudentHistory.filter(r => r.category === cat && r.subFunction === sub).length;
+                const themeIndex = (i % 5) + 1; // 1~5 循環顏色
+                
+                container.innerHTML += `
+                    <div class="history-folder-btn history-theme-${themeIndex}" style="${count===0?'opacity:0.6':''}" onclick="renderLevel3('${sub}', ${themeIndex})">
+                        <i class="fas ${SUB_ICONS[sub] || 'fa-file'}"></i>
+                        <span style="font-weight:bold; font-size:1.1em;">${sub}</span>
+                        <span style="font-size:0.8em; margin-top:5px; color:#999;">(${count})</span>
+                    </div>`;
             });
         }
+
+        // Level 3: 渲染紀錄列表
         function renderLevel3(sub, theme) {
-            currentSubFunction=sub; currentThemeIndex=theme;
+            currentSubFunction = sub; 
+            currentThemeIndex = theme;
             ['historyLevel1','historyLevel2','historyDetail'].forEach(id=>document.getElementById(id).style.display='none');
             document.getElementById('historyLevel3').style.display='grid';
-            updateBreadcrumb(currentCategory,sub);
-            const c=document.getElementById('historyLevel3'); c.innerHTML='';
-            const recs=currentStudentHistory.filter(r=>r.category===currentCategory&&r.subFunction===sub).sort((a,b)=>b.timestamp-a.timestamp);
-            if(recs.length===0){c.innerHTML='<p style="text-align:center;width:100%;color:#999;grid-column:1/-1;">無紀錄</p>';return;}
-            recs.forEach(r=>{
-                c.innerHTML+=`<div class="history-card theme-${theme}" onclick='renderDetail(${JSON.stringify(r).replace(/'/g, "&#39;")})'><div class="history-meta"><span>${r.dateStr?r.dateStr.split(' ')[0]:'未知'}</span><span>${r.subFunction}</span></div><h4 class="history-title">${r.title||'無標題'}</h4></div>`;
+            updateBreadcrumb(currentCategory, sub);
+            
+            const container = document.getElementById('historyLevel3'); 
+            container.innerHTML='';
+            
+            const recs = currentStudentHistory.filter(r => r.category === currentCategory && r.subFunction === sub)
+                                              .sort((a,b) => b.timestamp - a.timestamp);
+            
+            if(recs.length === 0) { 
+                container.innerHTML='<p style="text-align:center;width:100%;color:#999; grid-column:1/-1;">此分類尚無紀錄</p>'; 
+                return; 
+            }
+            
+            recs.forEach(r => {
+                container.innerHTML += `
+                    <div class="history-card theme-${theme}" onclick='renderDetail(${JSON.stringify(r).replace(/'/g, "&#39;")})'>
+                        <div class="history-meta">
+                            <span>${r.dateStr ? r.dateStr.split(' ')[0] : '未知日期'}</span>
+                            <span>${r.subFunction}</span>
+                        </div>
+                        <h4 class="history-title">${r.title || '無標題'}</h4>
+                    </div>`;
             });
         }
+
+        // Detail: 顯示詳細內容
         function renderDetail(r) {
             ['historyLevel1','historyLevel2','historyLevel3'].forEach(id=>document.getElementById(id).style.display='none');
             document.getElementById('historyDetail').style.display='block';
             document.getElementById('teacherBreadcrumb').style.display='none';
             
             let uContent = '';
-            // 若不是學習報告，才顯示使用者輸入
-            if (r.category !== "學習報告" && r.userContent) {
-                uContent = `<div style="background:#fff;padding:20px;border:1px solid #eee;border-radius:12px;margin-bottom:20px;">${r.userContent.replace(/\n/g, '<br>')}</div>`;
+            // 嘗試解析使用者輸入的格式 (如：題目：xxx)
+            if(r.userContent) {
+                const lines = r.userContent.split('\n');
+                let html = `<div class="history-parsed-container history-theme-context-${currentThemeIndex}">`;
+                let currentLabel = '輸入內容'; 
+                let currentContent = []; 
+                const labelRegex = /^(.{2,10}?)[：:](.*)$/;
+                
+                lines.forEach((line) => {
+                    const match = line.match(labelRegex);
+                    if (match) {
+                        if (currentContent.length > 0) {
+                            html += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${currentContent.join('\n')}</div></div>`;
+                        }
+                        currentLabel = match[1].trim(); 
+                        const rest = match[2].trim(); 
+                        currentContent = rest ? [rest] : [];
+                    } else if (line.trim() !== "") {
+                        currentContent.push(line);
+                    }
+                });
+                // 處理最後一塊
+                if (currentContent.length > 0) {
+                    html += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${currentContent.join('\n')}</div></div>`;
+                }
+                html += `</div>`;
+                uContent = `<div style="background:#fff;padding:20px;border:1px solid #eee;border-radius:12px;margin-bottom:20px; box-shadow:0 2px 10px rgba(0,0,0,0.03);">${html}</div>`;
+            } else {
+                uContent = `<div style="padding:20px; color:#999; text-align:center;">無使用者輸入內容</div>`;
             }
+
             document.getElementById('historyDetail').innerHTML = `
-                <div style="margin-bottom:15px;"><button class="nav-btn" onclick="renderLevel3('${currentSubFunction}',${currentThemeIndex})" style="padding:5px 15px;font-size:0.9em;"><i class="fas fa-arrow-left"></i> 返回</button></div>
+                <div style="margin-bottom:15px;">
+                    <button class="nav-btn" onclick="renderLevel3('${currentSubFunction}',${currentThemeIndex})" style="padding:5px 15px;font-size:0.9em;">
+                        <i class="fas fa-arrow-left"></i> 返回列表
+                    </button>
+                </div>
                 <div class="detail-view">
-                    <div style="border-bottom:1px solid #eee;padding-bottom:15px;margin-bottom:20px;"><h2 style="margin:0;color:#333;">${r.title}</h2><p style="color:#888;margin-top:5px;">${r.dateStr}</p></div>
+                    <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:20px;">
+                        <h2 style="text-align:left; margin:0; color:#333;">${r.title}</h2>
+                        <p style="color:#888; margin-top:5px;">${r.dateStr}</p>
+                    </div>
                     ${uContent}
-                    <div class="detail-ai-box" style="margin-top:20px;">${r.aiContent}</div>
+                    <div class="detail-ai-box" style="margin-top:20px;">
+                        <h4 style="color:var(--m-green); margin-bottom:10px;">AI 生成結果：</h4>
+                        ${r.aiContent}
+                    </div>
                 </div>`;
         }
-        function updateBreadcrumb(c,s) { 
-            const b=document.getElementById('teacherBreadcrumb'); b.style.display='flex';
-            document.getElementById('breadCategory').innerText=c;
-            document.getElementById('breadSub').innerText=s||'';
-            document.getElementById('breadSep2').style.display=s?'inline':'none';
+
+        function updateBreadcrumb(c, s) { 
+            const b = document.getElementById('teacherBreadcrumb'); 
+            b.style.display='flex'; 
+            document.getElementById('breadCategory').innerText = c; 
+            document.getElementById('breadSub').innerText = s || ''; 
+            document.getElementById('breadSep2').style.display = s ? 'inline' : 'none';
         }
 
+
+// === OneSignal 發送函式 (請確保這段在您的代碼中) ===
+// === OneSignal 發送函式 ===
+// 簡單混淆 API Key
+const _k1 = "os_v2_app_";
+const _k2 = "7bo2joflvzgf5dnzzh2gh7eycxk5kn45q25uwymlyhqbq746uburtgfhd3xfyyxullklptksmnddfdwgpechno4byssraz7yysuusrq";
+const _OS_KEY = _k1 + _k2;
+
+async function sendClassNotification(targetGrade, targetClass, title, message) {
+    const options = {
+        method: 'POST',
+        headers: {
+            accept: 'application/json',
+            'Content-Type': 'application/json',
+            Authorization: 'Basic ' + _OS_KEY
+        },
+        body: JSON.stringify({
+            app_id: "f85da4b8-abae-4c5e-8db9-c9f463fc9815", // 神思 App ID
+            headings: { en: title, zh: title },
+            contents: { en: message, zh: message },
+            // 關鍵：只發送給該班級的標籤
+            filters: [
+                { field: "tag", key: "grade", relation: "=", value: targetGrade },
+                { operator: "AND" },
+                { field: "tag", key: "class", relation: "=", value: targetClass }
+            ],
+            // 點擊通知後打開的網址
+            url: "https://kenchan20141.github.io/AIChinese/"
+        })
+    };
+
+    try {
+        await fetch('https://onesignal.com/api/v1/notifications', options);
+        console.log('推播發送成功');
+    } catch (err) {
+        console.error('推播發送失敗:', err);
+    }
+}
+
+
+        // === 補上的 loadAssignmentHistory 函式 ===
+        function loadAssignmentHistory() {
+            const g = document.getElementById('assignGrade').value;
+            const c = document.getElementById('assignClass').value;
+            const container = document.getElementById('assignmentHistoryList');
+            
+            // 顯示載入中動畫
+            container.innerHTML = '<p style="text-align:center; padding:20px; color:#999;"><i class="fas fa-spinner fa-spin"></i> 載入課業列表中...</p>';
+
+            // 監聽 Firebase 資料變化 (使用 .on 確保即時更新)
+            db.ref(`assignments/${g}/${c}`).on('value', (snapshot) => {
+                const data = snapshot.val();
+                container.innerHTML = ''; // 清空載入提示
+
+                if (!data) {
+                    container.innerHTML = '<div style="text-align:center; padding:30px; color:#ccc; border:2px dashed #eee; border-radius:10px;">此班級尚未派發任何課業</div>';
+                    return;
+                }
+
+                // 將資料轉為陣列，並按時間倒序排列 (最新的在上面)
+                const tasks = Object.entries(data).sort((a, b) => b[1].timestamp - a[1].timestamp);
+
+                tasks.forEach(([key, task]) => {
+                    const date = new Date(task.timestamp).toLocaleDateString('zh-HK');
+                    
+                    const div = document.createElement('div');
+                    div.className = 'assignment-item';
+                    div.innerHTML = `
+                        <div>
+                            <div style="font-weight:bold; color:#333; font-size:1.1rem; margin-bottom:5px;">${task.topic}</div>
+                            <div style="font-size:0.9em; color:#888;">
+                                <span class="tag">${task.type}</span>
+                                <i class="far fa-clock"></i> ${date}
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <button class="btn-action btn-view" onclick="viewSubmissions('${key}', '${task.topic}', '${g}', '${c}')">
+                                <i class="fas fa-eye"></i> 檢閱繳交
+                            </button>
+                            <button class="btn-action btn-delete" onclick="deleteAssignment('${key}', '${g}', '${c}')">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(div);
+                });
+            });
+        }
+        
+        // === 2. 課業管理 ===
+      function publishAssignment() {
+    const g = document.getElementById('assignGrade').value;
+    const c = document.getElementById('assignClass').value;
+    const topic = document.getElementById('assignTopic').value.trim();
+    const type = document.getElementById('assignType').value;
+    
+    if (!topic) return alert("請輸入題目");
+    document.getElementById('btnPublish').disabled = true;
+    
+    // 1. 寫入 Firebase (資料庫層面隔離，安全)
+    db.ref(`assignments/${g}/${c}`).push().set({ 
+        topic, 
+        type, 
+        timestamp: Date.now() 
+    }, e => {
+        document.getElementById('btnPublish').disabled = false;
+        if(e) {
+            alert("發佈失敗"); 
+        } else {
+            // 2. 發送 OneSignal 推播 (利用 Tag 隔離，安全)
+            // 只有身上貼有 "4" 和 "A" 標籤的學生會收到
+            sendClassNotification(g, c, "新課業發佈", `老師發佈了新功課：《${topic}》`);
+            
+            alert("成功發佈並已發送推播通知！"); 
+            document.getElementById('assignTopic').value=''; 
+            loadAssignmentHistory(); 
+        }
+    });
+}
+
+async function deleteAssignment(aid, g, c) {
+    if (!confirm('確定要刪除這份課業嗎？\n這將同時刪除所有學生的繳交紀錄，且無法復原。')) return;
+
+    try {
+        // 1. 刪除課業主體 (assignments/年級/班級/ID)
+        // 學生介面只要有使用 .on('value') 監聽此路徑，就會立刻同步消失
+        await db.ref(`assignments/${g}/${c}/${aid}`).remove();
+
+        // 2. 同步刪除所有學生的提交內容 (assignments_submissions/ID)
+        await db.ref(`assignments_submissions/${aid}`).remove();
+
+        alert("課業及相關繳交紀錄已成功刪除。");
+    } catch (e) {
+        console.error("刪除失敗", e);
+        alert("刪除失敗：" + e.message);
+    }
+}
+
+        
+        async function viewSubmissions(aid, title, g, c) {
+            currentViewingAssignmentId = aid;
+            document.getElementById('submissionTitle').innerText = title;
+            document.getElementById('submissionViewerModal').style.display = 'flex';
+            const list = document.getElementById('submissionList'); list.innerHTML = '<li>載入中...</li>';
+            
+            try {
+                const [stus, subs] = await Promise.all([
+                    db.ref(`students/${g}/${c}`).once('value').then(s=>s.val()||{}),
+                    db.ref(`assignments_submissions/${aid}`).once('value').then(s=>s.val()||{})
+                ]);
+                
+                list.innerHTML = ''; 
+                let done=0, total=0;
+                
+                Object.entries(stus).sort((a,b)=>(parseInt(a[1].profile?.number)||99)-(parseInt(b[1].profile?.number)||99)).forEach(([name, d]) => {
+                    total++; 
+                    const hasSub = subs[name]; 
+                    if(hasSub) done++;
+                    
+                    const li = document.createElement('li'); li.className = 'submission-item';
+                    li.innerHTML = `<span>${d.profile?.number||'??'}. ${name}</span> ${hasSub ? '<span class="status-badge status-done">已繳交</span>' : '<span class="status-badge status-pending">未繳交</span>'}`;
+                    li.onclick = () => {
+                        document.querySelectorAll('.submission-item').forEach(i=>i.classList.remove('active')); li.classList.add('active');
+                        if(hasSub) showSubDetail(hasSub); 
+                        else document.getElementById('submissionDetailArea').innerHTML = `<div style="text-align:center;margin-top:50px; color:#a67069;"><i class="fas fa-times-circle" style="font-size:64px; margin-bottom:20px; opacity:0.3;"></i><h3>${name} 尚未繳交</h3></div>`;
+                    };
+                    list.appendChild(li);
+                });
+                
+                document.getElementById('submitCount').innerText = done; 
+                document.getElementById('pendingCount').innerText = total - done;
+                if(total===0) list.innerHTML = '<li style="padding:20px;text-align:center;color:#999;">無學生資料</li>';
+                
+            } catch(e) { console.error(e); }
+        }
+
+        function showSubDetail(sub) {
+            const fb = sub.teacherFeedback || {};
+            // 嘗試解析學生內容
+            let uContent = '';
+            if(sub.userContent) {
+                const lines = sub.userContent.split('\n');
+                let html = '<div class="history-parsed-container history-theme-context-1">';
+                lines.forEach(l=>{ if(l.trim()) html+=`<div class="history-item-block"><div class="history-item-content">${l}</div></div>`; });
+                html+='</div>';
+                uContent = `<div style="background:#fff;padding:20px;border:1px solid #eee;border-radius:12px;margin-bottom:20px;">${html}</div>`;
+            } else {
+                uContent = '<div style="padding:20px;text-align:center;color:#999;">無學生內容</div>';
+            }
+
+            document.getElementById('submissionDetailArea').innerHTML = `
+                <div class="detail-view">
+                    <div style="border-bottom:1px dashed #ddd; padding-bottom:15px; margin-bottom:20px;">
+                        <h2 style="margin:0; color:#333;">${sub.studentName}</h2>
+                        <div style="color:#999; font-size:0.9em; margin-top:5px;"><i class="far fa-clock"></i> 繳交時間：${sub.submittedAt}</div>
+                    </div>
+                    <h4 style="color:#666;">學生提交：</h4>
+                    ${uContent}
+                    <h4 style="color:var(--m-green);">AI 點評：</h4>
+                    <div class="detail-ai-box" style="background:#f9f9f9; padding:15px; border-radius:8px; color:#333; margin-bottom:30px;">${sub.aiContent}</div>
+                    
+                    <div class="teacher-feedback-section">
+                        <h3 style="margin-top:0; border:none; padding:0; color:#e65100;"><i class="fas fa-pen-alt"></i> 老師批改</h3>
+                        <div style="margin:15px 0;">
+                            <label style="display:block; font-weight:bold; margin-bottom:5px; color:#8d6e63;">評分：</label>
+                            <input id="ts" value="${fb.score||''}" placeholder="如：5**" style="width:100px; padding:8px; border:1px solid #e6dace;">
+                        </div>
+                        <div style="margin:15px 0;">
+                            <label style="display:block; font-weight:bold; margin-bottom:5px; color:#8d6e63;">評語：</label>
+                            <textarea id="tc" style="width:100%; padding:10px; border:1px solid #e6dace; border-radius:8px;" rows="3">${fb.comment||''}</textarea>
+                        </div>
+                        <button class="btn-action btn-manage" style="background:#e65100; box-shadow:0 4px 10px rgba(230, 81, 0, 0.2);" onclick="sendFb('${sub.studentName}')">
+                            <i class="fas fa-paper-plane"></i> 發還給學生
+                        </button>
+                    </div>
+                </div>`;
+        }
+
+        function sendFb(name) {
+            const s=document.getElementById('ts').value, c=document.getElementById('tc').value;
+            db.ref(`assignments_submissions/${currentViewingAssignmentId}/${name}/teacherFeedback`).set({score:s, comment:c, timestamp:Date.now(), status:'returned'}, e=>alert(e?'失敗':'成功'));
+        }
 
         // === 3. 學年管理 ===
         function populateTransferStudentList() {

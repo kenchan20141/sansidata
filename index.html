@@ -308,8 +308,9 @@ canvas {
 /* 確保報告文字卡片是 block 且有間距 */
 .report-text-card {
     display: block; 
-    clear: both; /* 這行很重要，確保它不會擠到浮動元素旁邊 */
-    margin-top: 20px;
+    clear: both; 
+    margin-top: 40px !important; /* 增加上邊距 */
+    position: relative; /* 確保正常佈局流 */
 }
     .report-quote-card { position: relative; background-color: #fffefb; border: 1px solid #e0ddd7; border-radius: 8px; padding: 30px 30px 30px 65px; margin-top: 40px; box-shadow: 4px 4px 0px rgba(0,0,0,0.05); text-align: left; background-image: linear-gradient(to right, transparent 49px, #eebdbd 50px, transparent 51px), radial-gradient(circle at 25px 50%, #d1cdc5 8px, transparent 9px); background-size: 100% 100%, 100% 40px; background-repeat: no-repeat, repeat-y; background-position: 0 0, 0 15px; }
     .report-quote-content { font-family: 'Noto Serif TC', serif; font-size: 1.2rem; font-weight: bold; color: #5d4037; font-style: italic; line-height: 1.6; }
@@ -321,12 +322,20 @@ canvas {
 
 /* === 報告雷達圖專用修復樣式 === */
 
-/* 確保雷達圖容器有固定高度，不會無限延伸或縮小 */
+/* 報告雷達圖專用修復樣式 */
+
+/* 確保雷達圖容器有固定高度,不會無限延伸或縮小 */
 .report-radar-wrapper .radar-chart-container {
     position: relative;
-    height: 320px !important; /* 強制高度，防止重疊 */
+    height: 320px !important; /* 強制高度,防止重疊 */
     width: 100%;
-    margin-bottom: 15px;
+    margin-bottom: 30px !important; /* 增加底部間距 */
+}
+
+/* ★ 新增：確保雷達圖所在的外層區塊也有足夠間距 */
+.report-section {
+    margin-bottom: 60px !important; /* 強制推開下方內容 */
+    clear: both; /* 清除浮動 */
 }
 
 /* 手機版適配 */
@@ -392,6 +401,19 @@ canvas {
         .radar-chart-mini-container { width: 100% !important; max-width: 280px; height: 280px !important; }
         .modal-body { width: 100%; border-radius: 0; margin: 0; }
         .modal-overlay { padding: 40px 0 100px 0; }
+
+
+  /* 新增：手機版雷達圖間距加大 */
+    .report-radar-wrapper .radar-chart-container {
+        height: 300px !important;
+        margin-bottom: 40px !important;
+    }
+    
+    .report-section {
+        margin-bottom: 70px !important;
+    }
+
+        
     }
 </style>
 </head>
@@ -1193,15 +1215,15 @@ function generateClassChartHTML(type, avg, count) {
                    這樣就算 Chart 還沒畫出來，這個 div 也會佔據 320px 的高度，
                    下方的文字絕對不可能跑上來重疊。
                 -->
-                <div style="position: relative; width: 100%; max-width: 350px; height: 320px !important; overflow: hidden;">
-                    <canvas id="${id}"></canvas>
-                </div>
+             <div style="position: relative; width: 100%; max-width: 350px; height: 350px !important; overflow: hidden; margin-bottom: 30px;">
+    <canvas id="${id}"></canvas>
+</div>
             </div>
 
         </div>
         
-        <!-- 墊片：確保下方內容被推開 -->
-        <div style="height: 20px; width: 100%; clear: both;"></div>
+   <!-- 墊片:確保下方內容被推開 -->
+<div style="height: 80px; width: 100%; clear: both;"></div>
         
     </div>`;
 }

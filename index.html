@@ -824,23 +824,52 @@
     const CATEGORY_ASSETS = { "閱讀": { img: '郵筒.png', en: 'READING' }, "敘事抒情": { img: '相機.png', en: 'NARRATIVE' }, "議論": { img: '筆.png', en: 'ARGUMENT' }, "整合拓展": { img: '火車.png', en: 'EXPAND' }, "課外書籍": { img: '書.png', en: 'LIBRARY' }, "學習報告": { img: '書.png', en: 'REPORT' } };
     const SUB_ICONS = { "文章點評": "fa-file-alt", "大綱點評": "fa-list-ol", "綜合分析": "fa-chart-pie", "敘事物象": "fa-tree", "解題指引": "fa-compass", "指引": "fa-lightbulb", "點評": "fa-comment-dots", "討論紀錄": "fa-comments" };
 
-    function loadStudentList() {
-        const g = document.getElementById('viewGrade').value, c = document.getElementById('viewClass').value;
-        const container = document.getElementById('studentListContainer');
-        container.innerHTML = '<p style="text-align:center; padding:20px; width:100%; color:#888;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
-        db.ref(`students/${g}/${c}`).once('value', snapshot => {
-            const data = snapshot.val();
-            if (!data) { container.innerHTML = '<p style="text-align:center; width:100%; color:#aaa;">暫無資料。</p>'; return; }
-            container.innerHTML = '';
-            Object.entries(data).sort(([,a], [,b]) => (parseInt(a.profile?.number)||99) - (parseInt(b.profile?.number)||99)).forEach(([name, d]) => {
+    // === 1. 修訂：學生列表載入 (加入點擊偵測除錯) ===
+function loadStudentList() {
+    const g = document.getElementById('viewGrade').value;
+    const c = document.getElementById('viewClass').value;
+    const container = document.getElementById('studentListContainer');
+    
+    container.innerHTML = '<p style="text-align:center; padding:20px; width:100%; color:#888;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
+    
+    db.ref(`students/${g}/${c}`).once('value', snapshot => {
+        const data = snapshot.val();
+        if (!data) { 
+            container.innerHTML = '<p style="text-align:center; width:100%; color:#aaa;">暫無資料。</p>'; 
+            return; 
+        }
+        
+        container.innerHTML = ''; // 清空載入圖示
+        
+        // 排序並產生卡片
+        Object.entries(data)
+            .sort(([,a], [,b]) => (parseInt(a.profile?.number)||99) - (parseInt(b.profile?.number)||99))
+            .forEach(([name, d]) => {
+                // 確保歷史紀錄是陣列
                 const h = d.history ? (Array.isArray(d.history) ? d.history : Object.values(d.history)) : [];
-                const div = document.createElement('div'); div.className = 'student-card';
-                div.innerHTML = `<div class="student-name">${name} <small>(${d.profile?.number||''})</small></div><div class="last-sync"><i class="fas fa-history"></i> 紀錄: ${h.length} 筆</div>`;
-                div.onclick = () => openHistoryModal(name, h);
+                
+                const div = document.createElement('div'); 
+                div.className = 'student-card';
+                div.innerHTML = `
+                    <div class="student-name">${name} <small>(${d.profile?.number||''})</small></div>
+                    <div class="last-sync"><i class="fas fa-history"></i> 紀錄: ${h.length} 筆</div>
+                `;
+                
+                // ★★★ 關鍵修改：明確的點擊監聽器與除錯訊息 ★★★
+                div.addEventListener('click', function() {
+                    console.log(`[點擊測試] 點擊了學生: ${name}`); // F12 應該要看到這行
+                    try {
+                        openHistoryModal(name, h);
+                    } catch (err) {
+                        console.error("開啟視窗失敗:", err);
+                        alert("開啟視窗失敗，請查看 F12 Console 錯誤訊息。\n" + err.message);
+                    }
+                });
+                
                 container.appendChild(div);
             });
-        });
-    }
+    });
+}
 
     // === 報告管理 ===
     function loadReportStudentList() {
@@ -1305,10 +1334,35 @@ let analyticsChartInstance = null;
         }
     }
     // === 共用功能與共用 HTML 解析函式 ===
-    function openHistoryModal(name, h) {
-        document.getElementById('viewerTitle').innerHTML = `<i class="fas fa-user-graduate"></i> ${name}`;
-        currentStudentHistory = h; document.getElementById('historyViewerModal').style.display = 'flex'; renderLevel1();
+   // === 2. 修訂：開啟歷史視窗 (加入強制作動) ===
+function openHistoryModal(name, h) {
+    console.log(`[系統] 準備開啟 ${name} 的歷史紀錄，共 ${h.length} 筆`);
+
+    const modal = document.getElementById('historyViewerModal');
+    const title = document.getElementById('viewerTitle');
+
+    if (!modal || !title) {
+        alert("錯誤：找不到視窗元件 (ID: historyViewerModal 或 viewerTitle)，請檢查 HTML。");
+        return;
     }
+
+    // 設定標題
+    title.innerHTML = `<i class="fas fa-user-graduate"></i> ${name}`;
+    
+    // 更新全域變數
+    currentStudentHistory = h; 
+    
+    // 強制顯示視窗
+    modal.style.display = 'flex'; 
+    
+    // 渲染內容
+    try {
+        renderLevel1();
+    } catch (e) {
+        console.error("渲染內容失敗:", e);
+        alert("渲染內容失敗，請檢查 renderLevel1 函式。");
+    }
+}
     
     // 渲染主範疇 (已修訂：隱藏學習報告)
     function renderLevel1() {

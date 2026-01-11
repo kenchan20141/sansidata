@@ -986,7 +986,31 @@ function loadStudentList() {
         【格式要求 (必須嚴格遵守 HTML)】：
         1. <div class="report-section"><div class="report-category-badge badge-general"><div class="badge-general-title">${g}${c}班 綜合評估</div></div><div class="report-text-card"><p>總結</p></div></div><div class="report-separator"></div>
         
-        2. 分別為閱讀(.badge-reading)、敘事(.badge-narrative)、議論(.badge-argument)、整合拓展(.badge-expand)提供 .report-text-card 分析。
+        2. 請針對以下四個範疇撰寫分析，並【必須】使用以下指定的 HTML 標題格式：
+           
+           (敘事)：
+           <div class="report-section">
+               <div class="report-category-badge badge-narrative"><i class="fas fa-feather-alt"></i> 敘事抒情</div>
+               <div class="report-text-card"><p>(分析內容)</p></div>
+           </div>
+
+           (議論)：
+           <div class="report-section">
+               <div class="report-category-badge badge-argument"><i class="fas fa-gavel"></i> 議論</div>
+               <div class="report-text-card"><p>(分析內容)</p></div>
+           </div>
+
+           (閱讀)：
+           <div class="report-section">
+               <div class="report-category-badge badge-reading"><i class="fas fa-book-open"></i> 閱讀</div>
+               <div class="report-text-card"><p>(分析內容)</p></div>
+           </div>
+
+           (整合)：
+           <div class="report-section">
+               <div class="report-category-badge badge-expand"><i class="fas fa-project-diagram"></i> 整合拓展</div>
+               <div class="report-text-card"><p>(分析內容)</p></div>
+           </div>
         
         3. 【教學建議部分 - 必須使用此格式，否則會亂掉】：
            <div class="rewrite-explanation-container">
@@ -999,6 +1023,7 @@ function loadStudentList() {
            </div>
         `;
 
+        
         const response = await callAPI(prompt);
         
         const reportData = { 

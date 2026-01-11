@@ -221,25 +221,21 @@
         /* === 關鍵修復：雷達圖容器 === */
         /* === 關鍵修復：雷達圖容器 === */
 /* === 關鍵修復：雷達圖容器 === */
+/* === 確保容器是小的 === */
 .radar-chart-container { 
     position: relative; 
-    width: 100%;           /* 寬度跟隨父層 */
-    max-width: 200px;      /* 建議不要設太小(如150px)，否則文字會重疊。250-280px 是手機最佳閱讀大小 */
-    margin: 0 auto;        /* 居中 */
-    aspect-ratio: 1 / 1;   /* 由容器控制正方形比例 */
+    width: 100%; 
+    max-width: 200px;     /* 限制最大寬度，強制它變小 */
+    aspect-ratio: 1 / 1;  /* 保持正方形 */
+    margin: 0 auto;       /* 居中 */
     display: flex;
     justify-content: center;
     align-items: center;
-    overflow: hidden;      /* 確保萬一超出也不會破壞版面 */
 }
 
-/* 強制 Canvas 絕對服從容器大小 */
 .radar-chart-container canvas {
     width: 100% !important;
     height: 100% !important;
-    max-width: 100% !important;
-    max-height: 100% !important;
-    display: block;
 }
         /* === 關鍵修復：手機版/窄螢幕強制垂直堆疊 === */
         @media (max-width: 768px) {
@@ -764,38 +760,55 @@
                 ], 
                 backgroundColor: 'rgba(94, 112, 103, 0.4)', 
                 borderColor: '#5e7067', 
-                borderWidth: 1.5,     // 線條改細，適應小圖
+                
+                // 【微縮調整 1】線條變細，適應小尺寸
+                borderWidth: 1,
                 pointBackgroundColor: '#5e7067',
-                pointRadius: 1.5      // 圓點改小，適應小圖
+                
+                // 【微縮調整 2】圓點變小
+                pointRadius: 1.5,
+                
+                // 增加點擊範圍，方便在手機上點到小圓點
+                pointHitRadius: 5
             }] 
         },
         options: { 
             responsive: true,
-            maintainAspectRatio: false, // 關鍵：讓它乖乖填滿我們設定的 200px 框框
+            maintainAspectRatio: false, // 讓圖表填滿容器
             layout: {
-                padding: 5  // 在小圖中，padding 不宜過大，設為 5 即可
+                // 【微縮調整 3】減少內邊距，把空間留給圖表
+                padding: 2
             },
             scales: { 
                 r: { 
                     suggestedMin: 0, 
                     suggestedMax: 10, 
                     ticks: { 
-                        display: false, // 隱藏刻度數字，空間太小放不下
+                        display: false, // 隱藏刻度數字，節省大量空間
                         stepSize: 2 
                     },
                     pointLabels: {
                         font: { 
-                            size: 9  // 【關鍵】字體縮小到 9px，防止文字超出
+                            // 【微縮調整 4】最關鍵：字體縮小至 8px-9px
+                            size: 9, 
+                            family: "'Noto Serif TC', serif"
                         },
-                        color: '#555' 
+                        color: '#444',
+                        // 讓文字稍微貼近圖表
+                        padding: 5 
                     },
-                    grid: { color: '#e0e0e0', lineWidth: 0.5 }, // 網格線變細
-                    angleLines: { color: '#e0e0e0', lineWidth: 0.5 }
+                    grid: { 
+                        color: '#e0e0e0', 
+                        lineWidth: 0.5 //網格線也變細
+                    },
+                    angleLines: { 
+                        color: '#e0e0e0', 
+                        lineWidth: 0.5 
+                    }
                 } 
             }, 
             plugins: { 
-                legend: { display: false },
-                tooltip: { bodyFont: { size: 10 }, titleFont: { size: 10 } } // Tooltip 字體也改小
+                legend: { display: false } // 隱藏圖例
             } 
         }
     });

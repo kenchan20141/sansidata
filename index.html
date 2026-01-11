@@ -1037,6 +1037,7 @@ let analyticsChartInstance = null;
             const snap = await db.ref(path).once('value');
             const data = snap.val();
             
+            // 無數據處理
             if (!data) { 
                 alert("此時段無數據紀錄"); 
                 ['dispUnique','dispVisits','dispDuration','dispAvg'].forEach(id=>document.getElementById(id).innerText=0);
@@ -1044,16 +1045,20 @@ let analyticsChartInstance = null;
                 return; 
             }
 
-            // 初始化統計
+            // 初始化統計容器
+            // agg[時間標籤] = { uniqueSet: Set(), totalVisits: 0, totalDuration: 0 }
             let agg = {};
+            
+            // 全域統計 (用於上方卡片顯示)
             let globalUniqueSet = new Set();
-            let totalVisits = 0;
-            let totalDuration = 0;
+            let grandTotalVisits = 0;
+            let grandTotalDuration = 0;
 
             function proc(node, label) {
                 if(!node) return;
                 
-                if(!agg[label]) agg[label] = { students: 0, guests: 0, duration: 0 };
+                // 初始化該時間點的數據結構
+                if(!agg[label]) agg[label] = { uniqueSet: new Set(), visits: 0, duration: 0 };
 
                 // 1. 處理學生數據
                 if (node.students) {
@@ -1064,19 +1069,19 @@ let analyticsChartInstance = null;
                                     const sData = node.students[gKey][cKey][sName];
                                     const uid = `${gKey}${cKey}_${sName}`;
                                     
-                                    globalUniqueSet.add(uid);
-                                    
+                                    // 統計邏輯
                                     const v = parseInt(sData.visits || 0);
                                     const t = parseInt(sData.duration || 0);
-                                    totalVisits += v;
-                                    totalDuration += t;
                                     
-                                    // 這裡統計的是「不重複學生數」還是「總訪問次數」視您的需求而定
-                                    // 根據您的描述，我們將其視為「學生總訪問次數」以與訪客邏輯一致
-                                    // 若要顯示人數，則不可累加 visits，需用 Set
-                                    // 這裡假設圖表要顯示的是「訪問人次 (Visits)」
-                                    agg[label].students += v; 
+                                    // 加入該時間點的統計
+                                    agg[label].uniqueSet.add(uid);
+                                    agg[label].visits += v;
                                     agg[label].duration += t;
+
+                                    // 加入全域統計
+                                    globalUniqueSet.add(uid);
+                                    grandTotalVisits += v;
+                                    grandTotalDuration += t;
                                 });
                             });
                         });
@@ -1087,47 +1092,69 @@ let analyticsChartInstance = null;
                              Object.keys(node.students[g][c]).forEach(sName => {
                                 if (selectedAnalyticsStudent && sName !== selectedAnalyticsStudent) return;
                                 const sData = node.students[g][c][sName];
-                                globalUniqueSet.add(sName);
                                 const v = parseInt(sData.visits||0);
                                 const t = parseInt(sData.duration||0);
-                                totalVisits += v;
-                                totalDuration += t;
-                                agg[label].students += v; // 修正：累加 Visits
+                                
+                                agg[label].uniqueSet.add(sName);
+                                agg[label].visits += v;
                                 agg[label].duration += t;
+
+                                globalUniqueSet.add(sName);
+                                grandTotalVisits += v;
+                                grandTotalDuration += t;
                             });
                         }
                     }
                 }
 
-                // 2. 處理訪客數據
+                // 2. 處理訪客數據 (僅 Global 模式)
                 if (scope === 'global' && node.guests) {
                     Object.keys(node.guests).forEach(guestID => {
                         const gData = node.guests[guestID];
-                        globalUniqueSet.add(guestID);
-                        
                         const v = parseInt(gData.visits || 0);
                         const t = parseInt(gData.duration || 0);
                         
-                        totalVisits += v;
-                        totalDuration += t;
-                        
-                        agg[label].guests += v; // 修正：累加 Visits
+                        agg[label].uniqueSet.add(guestID);
+                        agg[label].visits += v;
                         agg[label].duration += t;
+
+                        globalUniqueSet.add(guestID);
+                        grandTotalVisits += v;
+                        grandTotalDuration += t;
                     });
                 }
             }
 
+            // 執行遍歷
             if(mode==='day') proc(data, '本日');
             else if(mode==='month') Object.keys(data).sort().forEach(k=>proc(data[k], parseInt(k)+'日'));
             else if(mode==='year') Object.keys(data).sort().forEach(mk=>{ Object.keys(data[mk]).forEach(dk=>proc(data[mk][dk], parseInt(mk)+'月')); });
 
-            const uniqueUserCount = globalUniqueSet.size;
-            const safeDivisor = uniqueUserCount === 0 ? 1 : uniqueUserCount;
+            // 更新上方卡片數據
+            const totalPeople = globalUniqueSet.size;
+            const safeDivisor = totalPeople === 0 ? 1 : totalPeople;
 
-            document.getElementById('dispUnique').innerText = uniqueUserCount;
-            document.getElementById('dispVisits').innerText = totalVisits;
-            document.getElementById('dispDuration').innerText = Math.round(totalDuration/60);
-            document.getElementById('dispAvg').innerText = Math.round((totalDuration/60) / safeDivisor);
+            document.getElementById('dispUnique').innerText = totalPeople;
+            document.getElementById('dispVisits').innerText = grandTotalVisits;
+            document.getElementById('dispDuration').innerText = Math.round(grandTotalDuration/60);
+            document.getElementById('dispAvg').innerText = Math.round((grandTotalDuration/60) / safeDivisor);
+
+            // === 準備圖表數據 ===
+            const labels = Object.keys(agg);
+            
+            // 數據集 1 (底層): 使用人數 (不重複)
+            const uniqueData = Object.values(agg).map(a => a.uniqueSet.size);
+            
+            // 數據集 2 (上層): 重複進入次數 = (總次數 - 不重複人數)
+            // 這樣堆疊起來的總高度就會等於「總次數」
+            const repeatData = Object.values(agg).map(a => {
+                const unique = a.uniqueSet.size;
+                const total = a.visits;
+                // 防止數據異常導致負數 (理論上 total >= unique)
+                return Math.max(0, total - unique);
+            });
+
+            const durationData = Object.values(agg).map(a => Math.round(a.duration/60));
 
             // 繪圖
             const ctx = document.getElementById('analyticsChart').getContext('2d');
@@ -1136,33 +1163,32 @@ let analyticsChartInstance = null;
             analyticsChartInstance = new Chart(ctx, {
                 type: 'bar',
                 data: { 
-                    labels: Object.keys(agg), 
+                    labels: labels, 
                     datasets: [
                         { 
-                            label: '學生人次', 
-                            data: Object.values(agg).map(a=>a.students), 
-                            backgroundColor: '#94a7b5', 
+                            label: '使用人數 (不重複)', 
+                            data: uniqueData, 
+                            backgroundColor: '#b6a6ca', // 紫色 (底層)
                             stack: 'Stack 0',
-                            // 1. 設定最大與最小寬度
                             maxBarThickness: 50,
                             minBarLength: 2 
                         },
                         { 
-                            label: '訪客人次', 
-                            data: Object.values(agg).map(a=>a.guests), 
-                            backgroundColor: '#b6a6ca', 
+                            label: '重複進入次數', 
+                            data: repeatData, 
+                            backgroundColor: '#94a7b5', // 藍色 (上層)
                             stack: 'Stack 0',
                             maxBarThickness: 50,
                             minBarLength: 2
                         },
                         { 
                             label: '總時長(分)', 
-                            data: Object.values(agg).map(a=>Math.round(a.duration/60)), 
+                            data: durationData, 
                             type: 'line', 
                             borderColor: '#d69a92', 
                             borderWidth: 2, 
                             yAxisID: 'y1',
-                            tension: 0.1 // 讓線條稍微平滑一點
+                            tension: 0.1
                         }
                     ] 
                 },
@@ -1172,12 +1198,11 @@ let analyticsChartInstance = null;
                         y: { 
                             beginAtZero: true, 
                             position: 'left', 
-                            title: {display:true, text:'人次'}, 
-                            stacked: true, // 保持堆疊，讓學生+訪客顯示總高
+                            title: {display:true, text:'人次 (總高度=總次數)'}, 
+                            stacked: true, // 啟用堆疊
                             ticks: {
-                                // 3. 強制顯示整數，去除小數點
-                                stepSize: 1,
-                                callback: function(value) { if (value % 1 === 0) { return value; } }
+                                stepSize: 1, // 強制整數
+                                callback: function(value) { if (value % 1 === 0) return value; }
                             }
                         }, 
                         y1: { 
@@ -1186,12 +1211,31 @@ let analyticsChartInstance = null;
                             grid: { drawOnChartArea: false }, 
                             title: {display:true, text:'分鐘'},
                             ticks: {
-                                // 3. 強制顯示整數
-                                stepSize: 1,
-                                callback: function(value) { if (value % 1 === 0) { return value; } }
+                                stepSize: 1, // 強制整數
+                                callback: function(value) { if (value % 1 === 0) return value; }
                             }
                         } 
-                    } 
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                // 優化 Tooltip 顯示，讓使用者知道總數
+                                footer: function(tooltipItems) {
+                                    let total = 0;
+                                    tooltipItems.forEach(function(tooltipItem) {
+                                        if(tooltipItem.dataset.type !== 'line') {
+                                            total += tooltipItem.raw;
+                                        }
+                                    });
+                                    // 只有當有堆疊數據時才顯示總和
+                                    if(total > 0 && tooltipItems[0].dataset.type !== 'line') {
+                                        return '總進入次數: ' + total;
+                                    }
+                                    return '';
+                                }
+                            }
+                        }
+                    }
                 }
             });
 

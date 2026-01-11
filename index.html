@@ -1097,36 +1097,75 @@ function loadStudentList() {
         });
     }
     function deleteClassReport(key) { if(confirm("確定刪除此報告？")) { const g=document.getElementById('reportGrade').value, c=document.getElementById('reportClass').value; db.ref(`class_reports/${g}/${c}/${key}`).remove().then(()=>loadClassReportHistory()); }}
-    function openClassReportModal(data) {
-    const m = document.getElementById('classReportModal');
-    const c = document.getElementById('classReportContent');
+   function openClassReportModal(data) {
+    const modal = document.getElementById('classReportModal');
+    const contentContainer = document.getElementById('classReportContent');
 
-    if (!m || !c) return alert("系統錯誤：找不到報告視窗元件");
-
-    document.body.appendChild(m);
-    m.style.zIndex = "99999";
-
-    const d = document.createElement('div'); 
-    d.innerHTML = data.aiHtml;
-
-    // 這裡使用 data.stats.narrativeCount (我們在第一步修改了變數名)
-    if(data.stats.narrativeCount > 0) { 
-        const b = d.querySelector('.badge-narrative'); 
-        if(b) b.outerHTML = generateClassChartHTML('narrative', data.stats.narrAvg, data.stats.narrativeCount); 
-    }
-    if(data.stats.argumentCount > 0) { 
-        const b = d.querySelector('.badge-argument'); 
-        if(b) b.outerHTML = generateClassChartHTML('argument', data.stats.argAvg, data.stats.argumentCount); 
+    if (!modal || !contentContainer) {
+        console.error("找不到 classReportModal 或 classReportContent 元件");
+        return alert("系統錯誤：找不到報告視窗元件");
     }
 
-    c.innerHTML = `<div style="text-align:right;color:#999;padding:20px 20px 0 0;">報告日期：${data.dateStr}</div><div style="padding:20px;">${d.innerHTML}</div>`;
-    
-    m.style.display = 'flex';
+    // 確保 modal 被正確附加到 body（防被其他元素遮罩）
+    document.body.appendChild(modal);
+    modal.style.zIndex = "99999";
 
-    setTimeout(() => { 
-        if(data.stats.narrativeCount > 0) renderClassChart('narrativeClassChart', data.stats.narrAvg); 
-        if(data.stats.argumentCount > 0) renderClassChart('argumentClassChart', data.stats.argAvg); 
-    }, 200);
+    // 建立臨時容器來解析 AI 生成的 HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = data.aiHtml;
+
+    // 替換敘事與議論的徽章為帶圖表的版本
+    if (data.stats.narrativeCount > 0) {
+        const badge = tempDiv.querySelector('.badge-narrative');
+        if (badge) {
+            badge.outerHTML = generateClassChartHTML('narrative', data.stats.narrAvg, data.stats.narrativeCount);
+        }
+    }
+
+    if (data.stats.argumentCount > 0) {
+        const badge = tempDiv.querySelector('.badge-argument');
+        if (badge) {
+            badge.outerHTML = generateClassChartHTML('argument', data.stats.argAvg, data.stats.argumentCount);
+        }
+    }
+
+    // 組合最終內容
+    contentContainer.innerHTML = `
+        <div style="text-align:right; color:#999; padding:20px 20px 0 0; font-size:0.95em;">
+            報告日期：${data.dateStr}
+        </div>
+        <div style="padding:20px;">
+            ${tempDiv.innerHTML}
+        </div>
+    `;
+
+    // 顯示 Modal
+    modal.style.display = 'flex';
+
+    // 延遲渲染圖表 + 強制重新計算佈局（防止重疊）
+    setTimeout(() => {
+        // 1. 渲染雷達圖
+        if (data.stats.narrativeCount > 0) {
+            renderClassChart('narrativeClassChart', data.stats.narrAvg);
+        }
+        if (data.stats.argumentCount > 0) {
+            renderClassChart('argumentClassChart', data.stats.argAvg);
+        }
+
+        // 2. 再延遲一點時間，強制調整下方黃色文字區塊的 margin-top
+        //    （這是最後一道防線，確保文字不會被雷達圖壓到）
+        setTimeout(() => {
+            document.querySelectorAll('.report-text-card').forEach(el => {
+                el.style.marginTop = '40px';  // 可依實際情況調整為 50px 或 60px
+                // 可選：強制清除任何可能的 float 影響
+                el.style.clear = 'both';
+            });
+
+            // 可選：強制觸發瀏覽器重新排版（reflow）
+            document.body.offsetHeight;
+        }, 800);  // 800ms 後再調整文字位置
+
+    }, 300);  // 300ms 後開始畫圖表（給 DOM 渲染時間）
 }
     
    // === 關鍵修訂：生成左右並置的 HTML ===

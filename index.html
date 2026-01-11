@@ -393,6 +393,59 @@ canvas {
         .modal-body { width: 100%; border-radius: 0; margin: 0; }
         .modal-overlay { padding: 40px 0 100px 0; }
     }
+
+/* 確保報告雷達圖容器在移動設備上有足夠間距 */
+@media (max-width: 992px) {
+    .report-section .grading-side-by-side {
+        flex-direction: column !important;
+        gap: 40px !important;
+    }
+    
+    .report-section .grading-scores,
+    .report-section .grading-radar-thumbnail {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-bottom: 20px !important;
+    }
+    
+    .report-section .report-text-card {
+        margin-top: 40px !important;
+        clear: both !important;
+    }
+}
+
+/* 確保所有報告文字卡片不會與上方元素重疊 */
+.report-text-card {
+    position: relative;
+    z-index: 1;
+    margin-top: 30px !important;
+    padding-top: 20px !important;
+    clear: both;
+}
+
+/* 為報告雷達圖容器添加底部邊距，防止重疊 */
+.report-radar-wrapper,
+.grading-side-by-side {
+    margin-bottom: 40px !important;
+    position: relative;
+    z-index: 2;
+}
+
+/* 班級報告中的圖表容器特別處理 */
+.report-section > div:has(canvas) {
+    margin-bottom: 50px !important;
+}
+
+/* 確保敘事抒情區（黃色背景）有足夠間距 */
+.badge-narrative + .report-text-card,
+.badge-argument + .report-text-card {
+    margin-top: 50px !important;
+    background: #fffaf0; /* 淺黃色背景 */
+    border-left: 4px solid #ffd700; /* 金色邊框 */
+    padding: 25px !important;
+}
+
+    
 </style>
 </head>
 <body>
@@ -1246,43 +1299,46 @@ function generateClassChartHTML(type, avg, count) {
                 </div>
             </div>
 
-            <!-- 右側：雷達圖區塊（加強防塌陷與重疊） -->
-            <div style="
-                flex: 1;
-                min-width: 320px;
-                background:#fff;
-                border:1px solid #eee;
-                border-radius:12px;
-                padding:25px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-            ">
-                <h3 style="
-                    margin:0 0 20px 0;
-                    text-align:center;
-                    color:#555;
-                ">能力分佈</h3>
-
-                <!-- 關鍵防重疊容器：強制固定高度 + 底部間距 -->
-                <div style="
-                    position: relative;
-                    width: 100%;
-                    max-width: 380px;
-                    height: 380px !important;
-                    min-height: 380px !important;
-                    margin-bottom: 35px !important;
-                    overflow: hidden;
-                ">
-                    <canvas id="${id}"></canvas>
-                </div>
-
-                <!-- 可選小提示，增加視覺區隔 -->
-                <small style="color:#999; text-align:center; font-size:0.9em;">
-                    （數值越高，該面向表現越強）
-                </small>
-            </div>
+            `<!-- 右側：雷達圖區塊（改為縮圖） -->
+<div style="
+    flex: 1;
+    min-width: 280px;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+" onclick="openEnlargedChart('${title}', ${JSON.stringify(avg).replace(/"/g, "'")})"
+onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.1)';"
+onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 10px rgba(0,0,0,0.05)';">
+    
+    <h3 style="
+        margin:0 0 15px 0;
+        text-align:center;
+        color:#555;
+        font-size: 1em;
+    "><i class="fas fa-search-plus"></i> 點擊放大圖表</h3>
+    
+    <!-- 縮圖容器 -->
+    <div style="
+        position: relative;
+        width: 200px;
+        height: 200px;
+        margin: 0 auto 15px;
+    ">
+        <canvas id="${id}"></canvas>
+    </div>
+    
+    <small style="color:#999; text-align:center; font-size:0.85em; max-width: 90%;">
+        點擊圖表可查看詳細分析
+    </small>
+</div>`
         </div>
 
         <!-- 最後一道保險墊片 -->

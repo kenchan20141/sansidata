@@ -159,24 +159,24 @@
     .publish-inputs { display: flex; gap: 15px; width: 100%; flex-wrap: wrap; }
     .publish-inputs input { flex: 1 1 auto; min-width: 200px; padding: 15px; font-size: 1.1em; border: 1px solid #ddd; }
     
-    /* === 核心修正：模態視窗與滾動設定 (Fix) === */
+    /* === 模態視窗與單一滾動條設定 (關鍵修正) === */
     .modal-overlay { 
         position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
         background: rgba(0,0,0,0.6); 
         display: none; 
         justify-content: center; 
-        align-items: flex-start; /* 內容過長時從頂部開始，不垂直置中 */
+        align-items: flex-start; /* 內容過長時從頂部開始 */
         z-index: 1000; 
         backdrop-filter: blur(4px); 
-        overflow-y: auto; /* 滾動條在最外層，方便手機操作 */
-        padding: 50px 0; /* 增加上下緩衝，避免貼邊 */
+        overflow-y: auto; /* 核心：滾動條移動到這裡，允許整個視窗滾動 */
+        padding: 40px 0; /* 增加上下緩衝區，確保上下不貼邊 */
     }
     
     .modal-body { 
         background: #fff; 
         width: 95%; 
         max-width: 1100px; 
-        /* 移除固定高度限制，隨內容長大 */
+        /* 移除固定高度和內部滾動限制 */
         height: auto !important;
         max-height: none !important;
         overflow: visible !important;
@@ -186,16 +186,16 @@
         flex-direction: column; 
         box-shadow: 0 20px 50px rgba(0,0,0,0.3); 
         animation: fadeIn 0.3s; 
-        margin: 0 auto; 
+        margin: 0 auto; /* 水平置中 */
         position: relative;
-        margin-bottom: 50px; /* 確保底部有空間 */
     }
     
     .modal-header { padding: 20px 30px; background: #fdfcf8; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; border-radius: 15px 15px 0 0; }
     
+    /* 移除內部滾動 */
     .modal-content-scroll { 
         flex: 1; 
-        overflow: visible !important; 
+        overflow: visible !important; /* 顯示所有內容 */
         height: auto !important;
         padding: 20px 30px; 
     }
@@ -212,82 +212,83 @@
         background-image: linear-gradient(transparent 39px, rgba(42, 150, 137, 0.2) 39px, rgba(42, 150, 137, 0.2) 40px, transparent 40px), linear-gradient(90deg, transparent 39px, rgba(0,0,0,0.02) 39px, rgba(0,0,0,0.02) 40px, transparent 40px);
         background-size: 40px 40px; background-attachment: local;
     }
+    .detail-ai-box th:nth-child(2), .detail-ai-box td:nth-child(2) { min-width: 150px; }
+    .detail-ai-box th:nth-child(3), .detail-ai-box td:nth-child(3) { min-width: 180px; }
 
-    /* === 核心修正：評等圖與雷達圖樣式 (Vertical Layout) === */
+    /* === 評分與圖表區塊樣式修正 (去除滾動軸與邊框) === */
     .grading-container { 
         margin-top: 25px; 
-        /* border-top: 2px dashed #aeb6bf;  */
-        padding-top: 20px; 
         width: 100%; 
         box-sizing: border-box;
-        overflow-x: hidden; /* 禁止橫向滾動 */
+        overflow: visible; /* 允許內容溢出，不產生滾動軸 */
     }
     
-    /* 強制垂直排列，並置中對齊 */
+    /* 垂直排列，確保與下方內容一體化 */
     .grading-grid { 
-        display: flex !important; 
-        flex-direction: column !important; /* 垂直排列 */
-        align-items: center !important; 
-        gap: 30px; 
+        display: flex; 
+        flex-direction: column; 
+        align-items: center; 
+        gap: 25px; 
         width: 100%;
     }
     
-    /* 設定卡片樣式 */
+    /* 評分列表樣式：高度自動，無滾動 */
     .grading-scores {
-        background-color: #f8f9fa; 
-        border: 1px solid #dee2e6; 
-        border-radius: 8px; 
-        padding: 20px 25px; 
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
-        box-sizing: border-box; 
+        background-color: transparent; /* 去除背景色，融入整體 */
+        border: none; 
+        border-radius: 0; 
+        padding: 0 0 20px 0; /* 底部留白 */
+        box-shadow: none; 
         width: 100% !important;       
         max-width: 600px !important;  
+        height: auto !important; /* 自動高度 */
+        overflow: visible !important; /* 確保無滾動軸 */
         margin: 0 !important;
+        border-bottom: 1px dashed #ddd; /* 僅保留底部分隔線 */
     }
     
-    /* 雷達圖樣式：去除灰色框，讓其融入背景 */
+    .score-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; gap: 15px; }
+    .score-item label { font-weight: bold; color: #495057; flex-shrink: 0; width: 80px; }
+    .slider-container { flex-grow: 1; display: flex; align-items: center; gap: 10px; max-width: none; }
+    .progress-bar-container { flex-grow: 1; height: 12px; background-color: #e9ecef; border-radius: 6px; overflow: hidden; border: 1px solid #ced4da; }
+    .progress-bar-fill { height: 100%; width: 0%; background-color: #007bff; border-radius: 6px; }
+    .score-display { font-weight: bold; width: 30px; text-align: right; color: #0056b3; font-size: 1.1rem; }
+    .total-score-container { margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; }
+    
+    /* === 雷達圖容器修正：無邊框，增加底部距離 === */
     .grading-radar {
-        background-color: transparent !important; 
-        border: none !important;                  
-        box-shadow: none !important;              
-        padding: 10px 0 !important;               
+        background-color: transparent !important; /* 透明背景 */
+        border: none !important;                  /* 無邊框 */
+        box-shadow: none !important;              /* 無陰影 */
+        padding: 10px 0 !important;
         width: 100% !important;
-        max-width: 100% !important;               
-        margin: 0 !important;
-        margin-bottom: 40px !important; /* 與下方文字保持距離 */
+        max-width: 100% !important;
+        margin: 0 0 40px 0 !important;            /* 增加底部邊距，與下方點評區隔 */
         display: flex;
         flex-direction: column;
         align-items: center;
+        height: auto !important;
+        overflow: visible;
     }
 
     .grading-radar h3 {
         color: var(--m-blue);
-        border-bottom: 2px solid #eee;
+        border-bottom: none; /* 移除標題底線 */
         padding-bottom: 10px;
         width: 100%;
-        max-width: 600px;
         text-align: center;
-        margin-bottom: 20px;
+        margin-bottom: 10px;
     }
 
-    /* 雷達圖 Canvas 容器：確保有足夠高度顯示 */
     .radar-chart-container { 
         position: relative; 
         width: 100% !important; 
-        max-width: 500px !important; 
-        height: 450px !important;    /* 增加高度 */
+        max-width: 450px !important; /* 適當寬度 */
+        height: 400px !important;    /* 固定高度確保圖形完整 */
         margin: 0 auto;
-        overflow: visible !important; /* 顯示所有標籤 */
+        overflow: visible !important;
     }
 
-    .score-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 15px; }
-    .score-item label { font-weight: bold; color: #495057; flex-shrink: 0; width: 80px; }
-    .slider-container { flex-grow: 1; display: flex; align-items: center; gap: 10px; max-width: none; }
-    .progress-bar-container { flex-grow: 1; height: 10px; background-color: #e9ecef; border-radius: 6px; overflow: hidden; border: 1px solid #ced4da; }
-    .progress-bar-fill { height: 100%; width: 0%; background-color: #007bff; border-radius: 6px; }
-    .score-display { font-weight: bold; width: 30px; text-align: right; color: #0056b3; font-size: 1rem; }
-    .total-score-container { margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; }
-    
     /* 報告樣式 */
     .report-section { margin-bottom: 50px; }
     .report-category-badge { display: inline-flex; align-items: center; gap: 10px; padding: 10px 25px; border-radius: 50px; color: white; font-weight: bold; font-size: 1.3rem; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); letter-spacing: 1px; }
@@ -296,21 +297,33 @@
     .badge-general-title { font-size: 1.6rem; font-weight: bold; letter-spacing: 2px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
     .overall-grade-tag { background-color: #fff; color: #d9534f; padding: 5px 25px; border-radius: 50px; font-size: 1.4rem; font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 2px solid #d69a92; display: flex; align-items: center; gap: 8px; }
     .overall-grade-label { font-size: 0.8rem; color: #888; font-weight: normal; text-transform: uppercase; letter-spacing: 1px; }
-    
-    /* 報告文字卡片 */
+    .report-category-badge:not(.badge-general) { display: inline-flex; align-items: center; gap: 10px; padding: 10px 25px; border-radius: 50px; color: white; font-weight: bold; font-size: 1.3rem; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); letter-spacing: 1px; }
     .report-text-card { background-color: #fdfcf8; border: 1px solid #e0ddd7; border-radius: 12px; padding: 25px; line-height: 1.9; color: #4a4a4a; font-size: 1.05rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); text-align: justify; margin-top: 10px; }
     .report-quote-card { position: relative; background-color: #fffefb; border: 1px solid #e0ddd7; border-radius: 8px; padding: 30px 30px 30px 65px; margin-top: 40px; box-shadow: 4px 4px 0px rgba(0,0,0,0.05); text-align: left; background-image: linear-gradient(to right, transparent 49px, #eebdbd 50px, transparent 51px), radial-gradient(circle at 25px 50%, #d1cdc5 8px, transparent 9px); background-size: 100% 100%, 100% 40px; background-repeat: no-repeat, repeat-y; background-position: 0 0, 0 15px; }
     .report-quote-content { font-family: 'Noto Serif TC', serif; font-size: 1.2rem; font-weight: bold; color: #5d4037; font-style: italic; line-height: 1.6; }
     .report-quote-author { margin-top: 10px; font-size: 0.9rem; color: #888; text-align: right; font-style: normal; }
     .report-separator { position: relative; height: 1px; border: 0; border-top: 3px dashed #b6a6ca; margin: 40px 0 50px 0; opacity: 0.6; }
     .report-separator::after { content: '▼'; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #fdfcf8; padding: 0 10px; color: #b6a6ca; font-size: 12px; }
-    .report-radar-wrapper { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #eee; }
+    
+    /* 雷達圖外層容器，確保無邊框 */
+    .report-radar-wrapper { margin-bottom: 30px; background: #fff; padding: 0 20px; border-radius: 0; border: none; }
 
-    /* 統一字體樣式 */
+    /* === 點評與建議列表視覺區分 === */
     .rewrite-explanation-container { margin-top: 20px; }
     .explanation-point { display: flex; align-items: flex-start; margin-bottom: 20px; padding: 18px; background-color: #fff; border: 1px solid #e9ecef; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+    .explanation-point:last-child { margin-bottom: 0; }
+    .explanation-number { flex-shrink: 0; width: 28px; height: 28px; background-color: #0288d1; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; border-radius: 50%; margin-right: 15px; font-size: 1em; margin-top: 2px; }
     .explanation-text { font-size: 1em; line-height: 1.8; color: #444; text-align: left; font-family: 'Noto Serif TC', serif; }
-    .rewrite-explanation-card p { font-size: 1em; line-height: 1.8; color: #444; text-align: left; margin: 0; font-family: 'Noto Serif TC', serif; }
+    
+    /* 統一改寫範例卡片內的字體 */
+    .rewrite-explanation-card p {
+        font-size: 1em;
+        line-height: 1.8;
+        color: #444;
+        text-align: left;
+        margin: 0;
+        font-family: 'Noto Serif TC', serif;
+    }
 
     .modal-content-container { display: flex; height: 100%; overflow: hidden; }
     .submission-sidebar { width: 320px; border-right: 1px solid var(--border-color); overflow-y: auto; background: #fafafa; flex-shrink: 0; }
@@ -321,12 +334,12 @@
     .status-done { background: #e8edea; color: #5e7067; }
     .status-pending { background: #f7ebea; color: #a67069; }
     
-    /* 課業詳細區域 */
+    /* 課業詳細區域：增加底部留白 */
     .submission-detail-area { 
         flex-grow: 1; 
         padding: 30px; 
-        padding-bottom: 150px !important; /* 核心修改：大幅增加底部留白，避免貼底 */
-        overflow-y: visible; 
+        padding-bottom: 100px !important; 
+        overflow-y: auto; 
         background: #fff; 
     }
     
@@ -345,14 +358,15 @@
 
     .copyright-footer { position: fixed; bottom: 0; right: 0; padding: 5px 10px; background-color: #f1f1f1; z-index: 999; }
     .copyright-footer p { margin: 0; font-size: 14px; }
+    
     @media (max-width: 600px) { 
         .copyright-footer p { font-size: 12px; } 
-        .grading-scores, .grading-radar { max-width: 100% !important; padding: 15px; }
+        .grading-scores, .grading-radar { max-width: 100% !important; padding: 0 0 15px 0; }
         .score-item label { width: auto; min-width: 60px; font-size: 0.9em; }
-        .radar-chart-container { max-width: 300px !important; height: 350px !important; }
-        .modal-body { width: 100%; border-radius: 0; margin-top: 20px; }
+        .radar-chart-container { max-width: 300px !important; height: 300px !important; }
+        .modal-body { width: 100%; border-radius: 0; margin: 0; }
+        .modal-overlay { padding: 0; }
     }
-    
 </style>
 </head>
 <body>
@@ -826,7 +840,7 @@
                     <div class="grading-grid">
                         
                         <!-- 1. 評分表 -->
-                        <div class="grading-scores" style="margin-bottom: 40px !important;">
+                        <div class="grading-scores" style="margin-bottom: 30px !important;">
                             <h3>班級平均表現</h3>
                             <div class="score-item"><label>內容 (40)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.content*4}</span></div></div>
                             <div class="score-item"><label>表達 (30)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.expr*3}</span></div></div>

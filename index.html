@@ -298,22 +298,7 @@
     .overall-grade-tag { background-color: #fff; color: #d9534f; padding: 5px 25px; border-radius: 50px; font-size: 1.4rem; font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 2px solid #d69a92; display: flex; align-items: center; gap: 8px; }
     .overall-grade-label { font-size: 0.8rem; color: #888; font-weight: normal; text-transform: uppercase; letter-spacing: 1px; }
     .report-category-badge:not(.badge-general) { display: inline-flex; align-items: center; gap: 10px; padding: 10px 25px; border-radius: 50px; color: white; font-weight: bold; font-size: 1.3rem; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); letter-spacing: 1px; }
-   .report-text-card { 
-    background-color: #fdfcf8; 
-    border: 1px solid #e0ddd7; 
-    border-radius: 12px; 
-    padding: 25px; 
-    line-height: 1.9; 
-    color: #4a4a4a; 
-    font-size: 1.05rem; 
-    box-shadow: 0 4px 15px rgba(0,0,0,0.03); 
-    text-align: justify; 
-    margin-top: 40px !important; /* 增加上邊距 */
-    display: block; 
-    clear: both; /* 清除浮動 */
-    position: relative; /* 確保正常文檔流 */
-    z-index: 1; /* 確保在正常層級 */
-}
+    .report-text-card { background-color: #fdfcf8; border: 1px solid #e0ddd7; border-radius: 12px; padding: 25px; line-height: 1.9; color: #4a4a4a; font-size: 1.05rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); text-align: justify; margin-top: 10px; display: block; }
     /* 請確保您的 CSS 中，canvas 沒有被強制設為 absolute */
 canvas {
     max-width: 100%;
@@ -323,9 +308,8 @@ canvas {
 /* 確保報告文字卡片是 block 且有間距 */
 .report-text-card {
     display: block; 
-    clear: both; 
-    margin-top: 40px !important; /* 增加上邊距 */
-    position: relative; /* 確保正常佈局流 */
+    clear: both; /* 這行很重要，確保它不會擠到浮動元素旁邊 */
+    margin-top: 20px;
 }
     .report-quote-card { position: relative; background-color: #fffefb; border: 1px solid #e0ddd7; border-radius: 8px; padding: 30px 30px 30px 65px; margin-top: 40px; box-shadow: 4px 4px 0px rgba(0,0,0,0.05); text-align: left; background-image: linear-gradient(to right, transparent 49px, #eebdbd 50px, transparent 51px), radial-gradient(circle at 25px 50%, #d1cdc5 8px, transparent 9px); background-size: 100% 100%, 100% 40px; background-repeat: no-repeat, repeat-y; background-position: 0 0, 0 15px; }
     .report-quote-content { font-family: 'Noto Serif TC', serif; font-size: 1.2rem; font-weight: bold; color: #5d4037; font-style: italic; line-height: 1.6; }
@@ -337,20 +321,12 @@ canvas {
 
 /* === 報告雷達圖專用修復樣式 === */
 
-/* 報告雷達圖專用修復樣式 */
-
-/* 確保雷達圖容器有固定高度,不會無限延伸或縮小 */
+/* 確保雷達圖容器有固定高度，不會無限延伸或縮小 */
 .report-radar-wrapper .radar-chart-container {
     position: relative;
-    height: 320px !important; /* 強制高度,防止重疊 */
+    height: 320px !important; /* 強制高度，防止重疊 */
     width: 100%;
-    margin-bottom: 30px !important; /* 增加底部間距 */
-}
-
-/* ★ 新增：確保雷達圖所在的外層區塊也有足夠間距 */
-.report-section {
-    margin-bottom: 60px !important; /* 強制推開下方內容 */
-    clear: both; /* 清除浮動 */
+    margin-bottom: 15px;
 }
 
 /* 手機版適配 */
@@ -404,6 +380,99 @@ canvas {
 
     .copyright-footer { position: fixed; bottom: 0; right: 0; padding: 5px 10px; background-color: #f1f1f1; z-index: 999; }
     .copyright-footer p { margin: 0; font-size: 14px; }
+
+
+    /* === 解決雷達圖與文字重疊的修復樣式 === */
+/* 1. 確保報告部分有明確的結構化佈局 */
+.report-section {
+    display: block;
+    width: 100%;
+    margin-bottom: 60px;
+    position: relative;
+    overflow: visible;
+    clear: both;
+}
+
+/* 2. 圖表區域容器 - 確保有足夠底部邊距 */
+.report-chart-area {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px;
+    align-items: flex-start;
+    width: 100%;
+    margin-bottom: 50px !important;
+    padding-bottom: 30px;
+    border-bottom: 1px solid #eee;
+}
+
+/* 3. 雷達圖容器確保固定高度 */
+.report-radar-container {
+    flex: 1;
+    min-width: 300px;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    height: 420px; /* 固定高度 */
+    justify-content: center;
+}
+
+/* 4. 評分條容器 */
+.report-scores-container {
+    flex: 1;
+    min-width: 300px;
+    background: #fdfcf8;
+    border: 1px solid #eee;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+/* 5. 強制文字區域換行並有足夠上邊距 */
+.report-text-content {
+    display: block;
+    width: 100%;
+    clear: both;
+    margin-top: 40px !important;
+    position: relative;
+    z-index: 1;
+}
+
+/* 6. 分隔線樣式 */
+.report-separator-line {
+    height: 1px;
+    width: 100%;
+    border: none;
+    border-top: 2px dashed #e0ddd7;
+    margin: 30px 0;
+    opacity: 0.6;
+}
+
+/* 手機版調整 */
+@media (max-width: 768px) {
+    .report-chart-area {
+        flex-direction: column;
+        margin-bottom: 40px !important;
+    }
+    
+    .report-radar-container,
+    .report-scores-container {
+        width: 100%;
+        min-width: auto;
+    }
+    
+    .report-text-content {
+        margin-top: 30px !important;
+    }
+}
+
+
+
+
     
     @media (max-width: 600px) { 
         .copyright-footer p { font-size: 12px; } 
@@ -416,57 +485,7 @@ canvas {
         .radar-chart-mini-container { width: 100% !important; max-width: 280px; height: 280px !important; }
         .modal-body { width: 100%; border-radius: 0; margin: 0; }
         .modal-overlay { padding: 40px 0 100px 0; }
-
-
-  /* 新增：手機版雷達圖間距加大 */
-    .report-radar-wrapper .radar-chart-container {
-        height: 300px !important;
-        margin-bottom: 40px !important;
     }
-    
-    .report-section {
-        margin-bottom: 70px !important;
-    }
-
-            /* 手機版改為垂直堆疊 */
-    .report-section {
-        min-height: 800px !important;
-    }
-    
-    .report-section > div > div[style*="inline-block"] {
-        display: block !important;
-        width: 100% !important;
-        margin-bottom: 30px;
-    }
-
-        
-    }
-
-
-/* ★★★ 防止雷達圖與文字重疊的終極防禦 ★★★ */
-.report-section {
-    position: relative;
-    display: block !important;
-    min-height: 500px; /* 強制最小高度 */
-    margin-bottom: 80px !important;
-    overflow: visible;
-}
-
-/* 確保所有報告區塊內的元素按順序排列 */
-.report-section > * {
-    position: relative;
-    z-index: auto;
-}
-
-/* 雷達圖容器絕對不能超出範圍 */
-canvas {
-    max-width: 100%;
-    max-height: 380px;
-    display: block;
-}
-
-
-    
 </style>
 </head>
 <body>
@@ -1204,7 +1223,6 @@ function loadStudentList() {
 }
     
    // === 關鍵修訂：生成左右並置的 HTML ===
-// === 修訂：生成左右並置的 HTML (改用 Flexbox 防止重疊) ===
 function generateClassChartHTML(type, avg, count) {
     const id = type === 'narrative' ? 'narrativeClassChart' : 'argumentClassChart';
     const title = type === 'narrative' ? '敘事抒情' : '議論'; 
@@ -1219,21 +1237,17 @@ function generateClassChartHTML(type, avg, count) {
     const totalScore = Math.min(100, scoreContent + scoreExpr + scoreStruct + scorePunc + scoreTypo);
     
     return `
-    <!-- ★★★ 修正：最外層使用 block 並強制最小高度 ★★★ -->
-    <div class="report-section" style="display: block; width: 100%; margin-bottom: 80px; border-bottom: 1px dashed #e0ddd7; padding-bottom: 40px; min-height: 500px;">
+    <div class="report-section">
         
         <!-- 標題 -->
-        <div class="report-category-badge ${cls}" style="margin-bottom: 25px; display: inline-flex;">
+        <div class="report-category-badge ${cls}" style="margin-bottom: 25px;">
             <i class="fas fa-book"></i> ${title}
         </div>
         
-        <!-- 
-           ★★★ 關鍵修改：不使用 Flex，改用傳統的 inline-block 並排 ★★★
-        -->
-        <div style="width: 100%; display: block; overflow: hidden;">
-            
-            <!-- 左側：評分條 -->
-            <div style="display: inline-block; width: 48%; vertical-align: top; min-width: 300px; background: #fdfcf8; border: 1px solid #eee; border-radius: 12px; padding: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-right: 2%;">
+        <!-- 圖表區域 -->
+        <div class="report-chart-area">
+            <!-- 左側評分條 -->
+            <div class="report-scores-container">
                 <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555; margin-bottom: 20px;">
                     班級平均表現 <small style="font-weight:normal; color:#999;">(${count}份)</small>
                 </h3>
@@ -1250,20 +1264,24 @@ function generateClassChartHTML(type, avg, count) {
                 </div>
             </div>
             
-            <!-- 右側：雷達圖容器 -->
-            <div style="display: inline-block; width: 48%; vertical-align: top; min-width: 300px; background:#fff; border:1px solid #eee; border-radius:12px; padding:20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+            <!-- 右側雷達圖 -->
+            <div class="report-radar-container">
                 <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555; margin-bottom: 15px;">能力分佈</h3>
                 
-                <!-- ★★★ 絕對固定高度容器 ★★★ -->
-                <div style="position: relative; width: 100%; max-width: 350px; height: 380px; margin: 0 auto; overflow: visible;">
-                    <canvas id="${id}" style="display: block;"></canvas>
+                <!-- 雷達圖 Canvas 容器 -->
+                <div style="position: relative; width: 100%; max-width: 350px; height: 320px; overflow: hidden; margin: auto;">
+                    <canvas id="${id}"></canvas>
                 </div>
             </div>
-
         </div>
         
-        <!-- ★★★ 超大墊片：強制推開下方內容 ★★★ -->
-        <div style="height: 100px; width: 100%; clear: both; display: block;"></div>
+        <!-- 分隔線 -->
+        <div class="report-separator-line"></div>
+        
+        <!-- 文字描述區域 -->
+        <div class="report-text-content">
+            <!-- AI 生成的文字內容會出現在這裡 -->
+        </div>
         
     </div>`;
 }
@@ -1306,9 +1324,8 @@ function renderClassChart(id, avg) {
         },
         options: { 
             responsive: true, 
-            maintainAspectRatio: true, // ★ 改為 true
-            aspectRatio: 1, // ★ 新增：強制 1:1 比例
-            scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } },
+            maintainAspectRatio: false, 
+            scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } }, // 縮圖不顯示刻度
             plugins: { legend: { display: false } } 
         }
     });

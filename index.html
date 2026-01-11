@@ -1443,96 +1443,112 @@ let analyticsChartInstance = null;
 
 
 // === 核心：新學年過渡邏輯 (徹底清理版) ===
+
+// ============================================================
+// === 新增/修訂：學年過渡與分班核心邏輯 (請複製整段貼上) ===
+// ============================================================
+
+// 1. 核心：一鍵新學年過渡 (清洗舊資料 + 分流學生)
 async function runYearTransition() {
-    // 1. 安全驗證
+    // 安全驗證
     if (prompt("請輸入密碼以確認清除舊紀錄並升班：") !== "23262036") return;
-    if (!confirm("⚠️ 高危操作警告 ⚠️\n\n1. 所有「課業」和「繳交紀錄」將被永久刪除。\n2. 中六學生將被「永久刪除」 (不再保留)。\n3. 中一、二、四、五將自動原班升級。\n4. 中三學生將進入「待分班名單」。\n\n確定要開始新學年嗎？")) return;
+    
+    const confirmMsg = "⚠️ 高危操作警告 ⚠️\n\n" +
+                       "1. 所有「課業」及「繳交紀錄」將被永久清除。\n" +
+                       "2. 中六學生將被「永久刪除」 (畢業)。\n" +
+                       "3. 中三學生將進入「待分班區」等待人手分配。\n" +
+                       "4. 其他年級 (中一、二、四、五) 將自動升班。\n\n" +
+                       "確定要開始新學年嗎？";
+                       
+    if (!confirm(confirmMsg)) return;
 
     const btn = event.target;
-    const oldBtnText = btn.innerHTML;
+    const oldText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
 
     try {
+        // A. 讀取全校學生資料
         const snapshot = await db.ref('students').once('value');
         const allStudents = snapshot.val() || {};
 
-        let newStudentsMap = {}; // 存放升班後的學生 (1,2,4,5)
-        let pendingS3Map = {};   // 存放等待分班的原中三學生
+        let newStudentsMap = {}; // 存放 1,2,4,5 年級 (升班後的名單)
+        let pendingS3Map = {};   // 存放 3 年級 (待分班名單)
 
-        // 2. 遍歷並分類學生
+        // B. 遍歷並分類學生
         for (const grade in allStudents) {
-            const classes = allStudents[grade];
-            for (const cls in classes) {
-                const studentsInClass = classes[cls];
+            for (const cls in allStudents[grade]) {
+                const studentsInClass = allStudents[grade][cls];
+                
                 for (const studentName in studentsInClass) {
                     const studentData = studentsInClass[studentName];
-                    const currentGrade = parseInt(grade);
+                    const g = parseInt(grade);
 
-                    // A. 中六：什麼都不做 -> 等同於刪除 (不會被寫入新 map)
-                    if (currentGrade === 6) {
+                    if (g === 6) {
+                        // 中六：跳過 (不寫入新名單 = 刪除)
                         continue; 
                     } 
-                    // B. 中三：移入待分班區
-                    else if (currentGrade === 3) {
-                        pendingS3Map[studentName] = studentData;
+                    else if (g === 3) {
+                        // 中三：整包資料 (含History) 放入暫存區
+                        pendingS3Map[studentName] = studentData; 
                     } 
-                    // C. 其他年級：自動升班
                     else {
-                        const newGrade = (currentGrade + 1).toString();
-                        if (studentData.profile) studentData.profile.grade = newGrade; // 更新資料內的年級
+                        // 其他年級：自動升班 (例如 1->2)
+                        const newG = (g + 1).toString();
                         
-                        if (!newStudentsMap[newGrade]) newStudentsMap[newGrade] = {};
-                        if (!newStudentsMap[newGrade][cls]) newStudentsMap[newGrade][cls] = {};
+                        // 更新資料內的年級欄位
+                        if (studentData.profile) {
+                            studentData.profile.grade = newG;
+                        }
                         
-                        newStudentsMap[newGrade][cls][studentName] = studentData;
+                        // 建立路徑結構
+                        if (!newStudentsMap[newG]) newStudentsMap[newG] = {};
+                        if (!newStudentsMap[newG][cls]) newStudentsMap[newG][cls] = {};
+                        
+                        // 寫入新位置
+                        newStudentsMap[newG][cls][studentName] = studentData;
                     }
                 }
             }
         }
 
-        // 3. 執行資料庫重置 (破壞性操作)
-        
-        // A. 清空舊功課
-        await db.ref('assignments').remove();
-        await db.ref('assignments_submissions').remove();
-        
-        // B. 寫入新的學生名單 (覆蓋舊的) - 這樣中六就消失了，中三也不見了
-        await db.ref('students').set(newStudentsMap);
+        // C. 執行資料庫重置 (原子操作，覆蓋舊資料)
+        await db.ref('students').set(newStudentsMap);     // 覆蓋學生名單
+        await db.ref('assignments').remove();             // 清除所有功課
+        await db.ref('assignments_submissions').remove(); // 清除所有繳交紀錄
+        await db.ref('class_reports').remove();           // 清除所有班級報告
 
-        // C. 寫入待分班學生
+        // D. 處理中三暫存區
         if (Object.keys(pendingS3Map).length > 0) {
             await db.ref('pending_allocation').set(pendingS3Map);
         } else {
             await db.ref('pending_allocation').remove();
         }
 
-        // D. (可選) 如果您想連 class_reports (全班報告) 也刪除，可加這行：
-        // await db.ref('class_reports').remove();
-
-        alert("✅ 新學年過渡成功！\n\n- 舊功課已清除\n- 中六學生已刪除\n- 中三學生請在下方分班");
+        alert("✅ 新學年過渡成功！\n\n- 舊功課已清除\n- 中六已畢業刪除\n- 其他年級已升班\n- 請在下方為原中三學生分班");
         
-        // 4. 顯示分班介面
+        // 刷新分班面板
         checkAndRenderS3AllocationPanel();
 
-    } catch (error) {
-        console.error(error);
-        alert("❌ 失敗：" + error.message);
+    } catch (e) {
+        console.error(e);
+        alert("失敗：" + e.message);
     } finally {
         btn.disabled = false;
-        btn.innerHTML = oldBtnText;
+        btn.innerHTML = oldText;
     }
 }
 
-// === S3 分班面板邏輯 ===
-// === S3 分班面板邏輯 (修訂版：按班別及班號分組排序) ===
+// 2. 介面渲染：檢查並顯示待分班名單 (按班別及學號排序)
 function checkAndRenderS3AllocationPanel() {
     const panel = document.getElementById('s3AllocationPanel');
     const listDiv = document.getElementById('s3PendingList');
     
+    // 從 pending_allocation 讀取資料
     db.ref('pending_allocation').once('value', snapshot => {
         const data = snapshot.val();
         
+        // 如果沒有待分班學生，隱藏面板
         if (!data) {
             panel.style.display = 'none';
             return;
@@ -1541,18 +1557,13 @@ function checkAndRenderS3AllocationPanel() {
         panel.style.display = 'block';
         listDiv.innerHTML = '';
 
-        // 1. 準備容器：按班別分類
-        const groups = {
-            'A': [],
-            'B': [],
-            'C': [],
-            'D': [],
-            'Other': [] // 防呆：處理異常資料
-        };
-
-        // 2. 將學生分配到對應班級容器
+        // 準備分組容器
+        const groups = { 'A': [], 'B': [], 'C': [], 'D': [], 'Other': [] };
+        
+        // 將學生分類
         Object.entries(data).forEach(([name, studentData]) => {
             const cls = studentData.profile?.class || 'Other';
+            // 將資料整理成物件推入陣列
             if (groups[cls]) {
                 groups[cls].push({ name, ...studentData });
             } else {
@@ -1560,75 +1571,40 @@ function checkAndRenderS3AllocationPanel() {
             }
         });
 
-        // 3. 定義班號排序邏輯 (確保 2 排在 10 前面)
-        const sortByNumber = (a, b) => {
-            const numA = parseInt(a.profile?.number) || 0;
-            const numB = parseInt(b.profile?.number) || 0;
-            return numA - numB;
-        };
-
-        // 4. 依序渲染 A, B, C, D 班
-        const classOrder = ['A', 'B', 'C', 'D', 'Other'];
-        
-        classOrder.forEach(cls => {
+        // 依序渲染 A, B, C, D 班
+        ['A', 'B', 'C', 'D', 'Other'].forEach(cls => {
             const students = groups[cls];
             
             if (students.length > 0) {
-                // A. 對該班學生進行班號排序
-                students.sort(sortByNumber);
+                // 按班號排序 (由小到大)
+                students.sort((a, b) => {
+                    const numA = parseInt(a.profile?.number) || 0;
+                    const numB = parseInt(b.profile?.number) || 0;
+                    return numA - numB;
+                });
 
-                // B. 加入班級標題分隔線 (使用 grid-column 跨滿整行)
+                // 加入班級標題
                 const header = document.createElement('div');
-                header.style.cssText = "grid-column: 1 / -1; margin-top: 15px; margin-bottom: 5px; border-bottom: 2px solid #e65100; color: #e65100; font-weight: bold; padding-bottom: 5px; font-size: 1.1em;";
-                
-                // 顯示標題文字 (例如：中三 A 班)
-                const displayTitle = cls === 'Other' ? '未分類 / 其他' : `原中三 ${cls} 班`;
-                header.innerHTML = `<i class="fas fa-users"></i> ${displayTitle} <span style="font-size:0.8em; color:#888; font-weight:normal;">(尚餘 ${students.length} 人)</span>`;
+                header.style.cssText = "grid-column: 1 / -1; margin: 15px 0 5px 0; border-bottom: 2px solid #e65100; color: #e65100; font-weight: bold; padding-bottom: 2px;";
+                const titleText = cls === 'Other' ? '未分類' : `原中三 ${cls} 班`;
+                header.innerHTML = `${titleText} <small style="color:#888;">(${students.length}人)</small>`;
                 listDiv.appendChild(header);
 
-                // C. 渲染該班的學生卡片
-                students.forEach(student => {
-                    const oldNum = student.profile?.number || "?";
-                    const name = student.name;
-                    
+                // 加入學生卡片
+                students.forEach(s => {
+                    const oldNum = s.profile?.number || "?";
                     const item = document.createElement('label');
-                    // 為了方便閱讀，這裡可以稍微加深一點邊框顏色
-                    item.style.cssText = "display: flex; align-items: center; background: #fff; padding: 10px; border: 1px solid #ddd; border-left: 4px solid #ffcc80; border-radius: 5px; cursor: pointer; transition: all 0.2s;";
+                    item.style.cssText = "display: flex; align-items: center; background: #fff; padding: 8px; border: 1px solid #ddd; border-left: 4px solid #ffcc80; border-radius: 4px; cursor: pointer; transition: all 0.2s;";
                     
-                    // 滑鼠懸停效果
-                    item.onmouseover = () => { 
-                        item.style.background = "#fff3e0"; 
-                        item.style.transform = "translateY(-2px)";
-                        item.style.boxShadow = "0 2px 5px rgba(0,0,0,0.1)";
-                    };
-                    item.onmouseout = () => { 
-                        item.style.background = "#fff"; 
-                        item.style.transform = "translateY(0)";
-                        item.style.boxShadow = "none";
-                    };
-                    
-                    // 點擊後變色 (選中效果) 由 CSS checkbox 控制，這裡亦可加強視覺回饋
-                    item.onclick = (e) => {
-                        // 稍微延遲以獲取 checkbox 最新狀態
-                        setTimeout(() => {
-                            const cb = item.querySelector('input');
-                            if(cb.checked) {
-                                item.style.borderLeftColor = "#e65100"; // 選中變深橙色
-                                item.style.backgroundColor = "#ffe0b2";
-                            } else {
-                                item.style.borderLeftColor = "#ffcc80"; // 取消變回淺橙色
-                                item.style.backgroundColor = "#fff";
-                            }
-                        }, 50);
-                    };
+                    // 互動效果
+                    item.onmouseover = () => item.style.backgroundColor = "#fff3e0";
+                    item.onmouseout = () => item.style.backgroundColor = "#fff";
 
                     item.innerHTML = `
-                        <input type="checkbox" class="s3-student-checkbox" value="${name}" style="transform: scale(1.3); margin-right: 12px; accent-color: #e65100;">
+                        <input type="checkbox" class="s3-checkbox" value="${s.name}" style="transform: scale(1.3); margin-right: 10px; accent-color: #e65100;">
                         <div>
-                            <div style="font-weight:bold; color: #333; font-size: 1.05em;">
-                                <span style="display:inline-block; width:25px; text-align:center; background:#eee; border-radius:3px; margin-right:5px; font-size:0.9em; color:#666;">${oldNum}</span>
-                                ${name}
-                            </div>
+                            <div style="font-weight:bold; font-size:1em;">${s.name}</div>
+                            <div style="font-size: 0.8em; color: #888;">班號: ${oldNum}</div>
                         </div>
                     `;
                     listDiv.appendChild(item);
@@ -1638,43 +1614,47 @@ function checkAndRenderS3AllocationPanel() {
     });
 }
 
-// 執行分班
+// 3. 執行動作：將選中的學生編入中四
 async function allocateSelectedS3() {
-    const targetClass = document.getElementById('targetS4Class').value;
-    const checkboxes = document.querySelectorAll('.s3-student-checkbox:checked');
+    const targetClass = document.getElementById('targetS4Class').value; // A, B, C, D
+    const checkboxes = document.querySelectorAll('.s3-checkbox:checked');
     
     if (checkboxes.length === 0) return alert("請至少選擇一名學生！");
     if (!confirm(`確定將選取的 ${checkboxes.length} 名學生編入【中四 ${targetClass} 班】嗎？`)) return;
 
     try {
+        // 先讀取 pending 資料以確保完整性
+        const pendingSnap = await db.ref('pending_allocation').once('value');
+        const pendingData = pendingSnap.val() || {};
+        
         const updates = {};
         const removeKeys = {};
-        
-        // 讀取目前的 pending 資料
-        const snapshot = await db.ref('pending_allocation').once('value');
-        const pendingData = snapshot.val() || {};
 
         checkboxes.forEach(cb => {
             const name = cb.value;
             const studentData = pendingData[name];
             
             if (studentData) {
-                // 更新資料
+                // 更新資料：升為中四 + 新班別
                 if (!studentData.profile) studentData.profile = {};
                 studentData.profile.grade = "4";
                 studentData.profile.class = targetClass;
-                // studentData.profile.number = ""; // 如果想清空班號可解開這行
-
-                // 準備移動
+                
+                // 準備移動 (寫入 students 節點)
                 updates[`students/4/${targetClass}/${name}`] = studentData;
+                
+                // 準備刪除 (從 pending 移除)
                 removeKeys[`pending_allocation/${name}`] = null;
             }
         });
 
+        // 執行更新
         await db.ref().update(updates);
         await db.ref().update(removeKeys);
 
         alert("✅ 分班成功！");
+        
+        // 重新渲染列表 (顯示剩下的學生)
         checkAndRenderS3AllocationPanel();
 
     } catch (error) {
@@ -1683,7 +1663,7 @@ async function allocateSelectedS3() {
     }
 }
 
-// 頁面載入時自動檢查是否有未完成的分班工作
+// 4. 頁面載入時自動檢查 (確保重新整理後面板還在)
 document.addEventListener('DOMContentLoaded', checkAndRenderS3AllocationPanel);
 
     

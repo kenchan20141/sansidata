@@ -21,6 +21,7 @@
         --m-green: #8fa398;   --m-blue: #94a7b5;    --m-purple: #b6a6ca;
         --m-red: #d69a92;     --m-brown: #c7b299;   --bg-color: #fdfcf8;
         --text-main: #5e5e5e; --border-color: #e0ddd7;
+        
         /* 定義主題色變數供 JS 動態調用 */
         --m-color-1: #8fa398; 
         --m-color-2: #94a7b5; 
@@ -30,7 +31,7 @@
     }
 
     body {
-        font-family: 'Noto Serif TC', serif;
+        font-family: 'Noto Serif TC', 'Songti TC', serif;
         max-width: 1200px;
         margin: 0 auto;
         padding: 20px;
@@ -38,7 +39,7 @@
         background: url('背景.png') center/cover fixed;
         background-color: #f4f4f4;
         color: var(--text-main);
-        overflow-y: scroll;
+        overflow-y: scroll; /* 主頁面的滾動 */
     }
 
     /* === 登入遮罩 === */
@@ -126,7 +127,7 @@
     .history-item-block { margin-bottom: 15px; }
     .history-item-label { font-weight: bold; font-size: 1em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
     .history-item-label::before { content: ''; display: block; width: 8px; height: 8px; border-radius: 50%; opacity: 0.8; }
-    /* ★★★ 核心修改：強制內容靠左，解決置中難讀問題 ★★★ */
+    /* 強制內容靠左 */
     .history-item-content { background: #fcfcfc; border: 1px solid #e1e4e8; border-radius: 4px; padding: 12px 16px; color: #444; line-height: 1.8; white-space: pre-wrap; word-break: break-word; text-align: left !important; }
     
     /* 定義主題色對應 */
@@ -158,12 +159,147 @@
     .publish-inputs { display: flex; gap: 15px; width: 100%; flex-wrap: wrap; }
     .publish-inputs input { flex: 1 1 auto; min-width: 200px; padding: 15px; font-size: 1.1em; border: 1px solid #ddd; }
     
-    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(4px); }
-    .modal-body { background: #fff; width: 95%; max-width: 1100px; height: 90vh; border-radius: 15px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.3); animation: fadeIn 0.3s; }
-    .modal-header { padding: 20px 30px; background: #fdfcf8; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
-    .modal-content-scroll { flex: 1; overflow-y: auto; padding: 20px 30px; -webkit-overflow-scrolling: touch; }
+    /* === 模態視窗與單一滾動條設定 (Fix 2) === */
+    .modal-overlay { 
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+        background: rgba(0,0,0,0.6); 
+        display: none; 
+        justify-content: center; 
+        align-items: flex-start; /* 內容過長時從頂部開始 */
+        z-index: 1000; 
+        backdrop-filter: blur(4px); 
+        overflow-y: auto; /* 核心：滾動條移動到這裡 */
+        padding: 30px 0; /* 增加上下緩衝區 */
+    }
+    
+    .modal-body { 
+        background: #fff; 
+        width: 95%; 
+        max-width: 1100px; 
+        /* 移除固定高度和內部滾動限制 */
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        
+        border-radius: 15px; 
+        display: flex; 
+        flex-direction: column; 
+        box-shadow: 0 20px 50px rgba(0,0,0,0.3); 
+        animation: fadeIn 0.3s; 
+        margin: 0 auto; /* 水平置中 */
+        position: relative;
+    }
+    
+    .modal-header { padding: 20px 30px; background: #fdfcf8; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; border-radius: 15px 15px 0 0; }
+    
+    /* 移除內部滾動 */
+    .modal-content-scroll { 
+        flex: 1; 
+        overflow: visible !important; /* 顯示所有內容 */
+        height: auto !important;
+        padding: 20px 30px; 
+    }
+    
     .detail-view { background: #fff; padding: 10px; }
     
+    /* 詳細內容區塊內的表格樣式 */
+    .detail-ai-box table { width: 100%; border-collapse: collapse; margin: 15px 0; border: 1px solid #8baea8; font-family: 'Noto Serif TC', 'Songti TC', serif; font-size: 1rem; }
+    .detail-ai-box th { background-color: #2A9689; color: white; padding: 10px; border: 1px solid #1e7e72; text-align: left; }
+    .detail-ai-box td { 
+        padding: 10px 15px; border: 1px solid #8baea8; vertical-align: top; text-align: left !important;
+        background-color: #fffcf6; 
+        color: #2c3e50; line-height: 1.8;
+        background-image: linear-gradient(transparent 39px, rgba(42, 150, 137, 0.2) 39px, rgba(42, 150, 137, 0.2) 40px, transparent 40px), linear-gradient(90deg, transparent 39px, rgba(0,0,0,0.02) 39px, rgba(0,0,0,0.02) 40px, transparent 40px);
+        background-size: 40px 40px; background-attachment: local;
+    }
+    .detail-ai-box th:nth-child(2), .detail-ai-box td:nth-child(2) { min-width: 150px; }
+    .detail-ai-box th:nth-child(3), .detail-ai-box td:nth-child(3) { min-width: 180px; }
+
+    /* === 修復：彈性寬度與垂直佈局 (Flex Column with Max-Width) === */
+    .grading-container { 
+        margin-top: 25px; 
+        border-top: 2px dashed #aeb6bf; 
+        padding-top: 20px; 
+        width: 100%; 
+        box-sizing: border-box;
+        overflow-x: hidden; 
+    }
+    
+    /* 強制垂直排列，並置中對齊 */
+    .grading-grid { 
+        display: flex !important; 
+        flex-direction: column !important; 
+        align-items: center !important; 
+        gap: 25px; 
+        width: 100%;
+    }
+    
+    /* 設定卡片樣式與寬度限制 */
+    .grading-scores, .grading-radar {
+        background-color: #f8f9fa; 
+        border: 1px solid #dee2e6; 
+        border-radius: 8px; 
+        padding: 20px 25px; 
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
+        box-sizing: border-box; 
+        width: 100% !important;       
+        max-width: 550px !important;  
+        min-width: 280px;             
+        margin: 0 !important;
+    }
+    
+    .score-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 15px; }
+    .score-item label { font-weight: bold; color: #495057; flex-shrink: 0; width: 80px; }
+    .slider-container { flex-grow: 1; display: flex; align-items: center; gap: 10px; max-width: none; }
+    .progress-bar-container { flex-grow: 1; height: 10px; background-color: #e9ecef; border-radius: 6px; overflow: hidden; border: 1px solid #ced4da; }
+    .progress-bar-fill { height: 100%; width: 0%; background-color: #007bff; border-radius: 6px; }
+    .score-display { font-weight: bold; width: 30px; text-align: right; color: #0056b3; font-size: 1rem; }
+    .total-score-container { margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; }
+    
+    /* === 雷達圖容器修正：限制最大寬度與高度 (Fix 1) === */
+    .radar-chart-container { 
+        position: relative; 
+        width: 100% !important; 
+        max-width: 350px !important; /* 限制寬度，確保不撐滿灰色區域 */
+        height: 350px !important;    /* 固定高度，確保方形 */
+        margin: 0 auto;              /* 水平置中 */
+        overflow: hidden; 
+    }
+
+    /* 報告樣式 */
+    .report-section { margin-bottom: 50px; }
+    .report-category-badge { display: inline-flex; align-items: center; gap: 10px; padding: 10px 25px; border-radius: 50px; color: white; font-weight: bold; font-size: 1.3rem; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); letter-spacing: 1px; }
+    .badge-narrative { background-color: #7da3c0; } .badge-argument { background-color: #a692c2; } .badge-reading { background-color: #8da399; } .badge-expand { background-color: #d69a92; }
+    .badge-general { width: 100%; max-width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; margin-bottom: 10px; background: linear-gradient(135deg, #C5B4A1 0%, #A99885 100%); box-shadow: 0 8px 20px rgba(169, 152, 133, 0.35); color: white; border-radius: 12px; position: relative; overflow: hidden; }
+    .badge-general-title { font-size: 1.6rem; font-weight: bold; letter-spacing: 2px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+    .overall-grade-tag { background-color: #fff; color: #d9534f; padding: 5px 25px; border-radius: 50px; font-size: 1.4rem; font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 2px solid #d69a92; display: flex; align-items: center; gap: 8px; }
+    .overall-grade-label { font-size: 0.8rem; color: #888; font-weight: normal; text-transform: uppercase; letter-spacing: 1px; }
+    .report-category-badge:not(.badge-general) { display: inline-flex; align-items: center; gap: 10px; padding: 10px 25px; border-radius: 50px; color: white; font-weight: bold; font-size: 1.3rem; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); letter-spacing: 1px; }
+    .report-text-card { background-color: #fdfcf8; border: 1px solid #e0ddd7; border-radius: 12px; padding: 25px; line-height: 1.9; color: #4a4a4a; font-size: 1.05rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); text-align: justify; margin-top: 10px; }
+    .report-quote-card { position: relative; background-color: #fffefb; border: 1px solid #e0ddd7; border-radius: 8px; padding: 30px 30px 30px 65px; margin-top: 40px; box-shadow: 4px 4px 0px rgba(0,0,0,0.05); text-align: left; background-image: linear-gradient(to right, transparent 49px, #eebdbd 50px, transparent 51px), radial-gradient(circle at 25px 50%, #d1cdc5 8px, transparent 9px); background-size: 100% 100%, 100% 40px; background-repeat: no-repeat, repeat-y; background-position: 0 0, 0 15px; }
+    .report-quote-content { font-family: 'Noto Serif TC', serif; font-size: 1.2rem; font-weight: bold; color: #5d4037; font-style: italic; line-height: 1.6; }
+    .report-quote-author { margin-top: 10px; font-size: 0.9rem; color: #888; text-align: right; font-style: normal; }
+    .report-separator { position: relative; height: 1px; border: 0; border-top: 3px dashed #b6a6ca; margin: 40px 0 50px 0; opacity: 0.6; }
+    .report-separator::after { content: '▼'; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #fdfcf8; padding: 0 10px; color: #b6a6ca; font-size: 12px; }
+    .report-radar-wrapper { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #eee; }
+
+    /* === 點評與建議列表視覺區分 (Fix 3：字體統一樣式) === */
+    .rewrite-explanation-container { margin-top: 20px; }
+    .explanation-point { display: flex; align-items: flex-start; margin-bottom: 20px; padding: 18px; background-color: #fff; border: 1px solid #e9ecef; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+    .explanation-point:last-child { margin-bottom: 0; }
+    .explanation-number { flex-shrink: 0; width: 28px; height: 28px; background-color: #0288d1; color: white; font-weight: bold; display: flex; align-items: center; justify-content: center; border-radius: 50%; margin-right: 15px; font-size: 1em; margin-top: 2px; }
+    .explanation-text { font-size: 1em; line-height: 1.8; color: #444; text-align: left; font-family: 'Noto Serif TC', serif; }
+    
+    /* 統一改寫範例卡片內的字體 */
+    .rewrite-explanation-card p {
+        font-size: 1em;
+        line-height: 1.8;
+        color: #444;
+        text-align: left;
+        margin: 0;
+        font-family: 'Noto Serif TC', serif;
+    }
+
     .modal-content-container { display: flex; height: 100%; overflow: hidden; }
     .submission-sidebar { width: 320px; border-right: 1px solid var(--border-color); overflow-y: auto; background: #fafafa; flex-shrink: 0; }
     .submission-item { padding: 15px 20px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
@@ -186,128 +322,14 @@
     .student-select-item:hover { background-color: #f5f5f5; }
     .student-select-item input[type="radio"] { transform: scale(1.3); accent-color: var(--m-green); cursor: pointer; }
     .year-transition-card { background-color: #fdfcf8; border: 2px solid var(--m-brown); border-radius: 15px; padding: 30px; text-align: center; max-width: 600px; margin: 0 auto; }
-    
-    /* 報告樣式 */
-    .report-section { margin-bottom: 50px; }
-    .report-category-badge { display: inline-flex; align-items: center; gap: 10px; padding: 10px 25px; border-radius: 50px; color: white; font-weight: bold; font-size: 1.3rem; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); letter-spacing: 1px; }
-    .badge-narrative { background-color: #7da3c0; } .badge-argument { background-color: #a692c2; } .badge-reading { background-color: #8da399; } .badge-expand { background-color: #d69a92; }
-    .badge-general { width: 100%; max-width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; margin-bottom: 10px; background: linear-gradient(135deg, #C5B4A1 0%, #A99885 100%); box-shadow: 0 8px 20px rgba(169, 152, 133, 0.35); color: white; border-radius: 12px; position: relative; overflow: hidden; }
-    .badge-general-title { font-size: 1.6rem; font-weight: bold; letter-spacing: 2px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-    .report-text-card { background-color: #fdfcf8; border: 1px solid #e0ddd7; border-radius: 12px; padding: 25px; line-height: 1.9; color: #4a4a4a; font-size: 1.05rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); text-align: justify; margin-top: 10px; }
-    .report-quote-card { position: relative; background-color: #fffefb; border: 1px solid #e0ddd7; border-radius: 8px; padding: 30px 30px 30px 65px; margin-top: 40px; box-shadow: 4px 4px 0px rgba(0,0,0,0.05); text-align: left; background-image: linear-gradient(to right, transparent 49px, #eebdbd 50px, transparent 51px), radial-gradient(circle at 25px 50%, #d1cdc5 8px, transparent 9px); background-size: 100% 100%, 100% 40px; background-repeat: no-repeat, repeat-y; background-position: 0 0, 0 15px; }
-    .report-quote-content { font-family: 'Noto Serif TC', serif; font-size: 1.2rem; font-weight: bold; color: #5d4037; font-style: italic; line-height: 1.6; }
-    .report-quote-author { margin-top: 10px; font-size: 0.9rem; color: #888; text-align: right; font-style: normal; }
-    .report-separator { position: relative; height: 1px; border: 0; border-top: 3px dashed #b6a6ca; margin: 40px 0 50px 0; opacity: 0.6; }
-    .report-separator::after { content: '▼'; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #fdfcf8; padding: 0 10px; color: #b6a6ca; font-size: 12px; }
-    
-    /* === 點評與建議列表視覺區分 (Fix 1) === */
-    .rewrite-explanation-container {
-        margin-top: 20px;
-    }
-    .explanation-point {
-        display: flex;
-        align-items: flex-start;
-        margin-bottom: 20px; /* 增加間距 */
-        padding: 18px;       /* 增加內部空間 */
-        background-color: #fff; /* 背景色 */
-        border: 1px solid #e9ecef; /* 邊框 */
-        border-radius: 12px;  /* 圓角 */
-        box-shadow: 0 2px 5px rgba(0,0,0,0.02); /* 輕微陰影 */
-    }
-    .explanation-point:last-child { 
-        margin-bottom: 0; 
-    }
-    .explanation-number {
-        flex-shrink: 0;
-        width: 28px;
-        height: 28px;
-        background-color: #0288d1;
-        color: white;
-        font-weight: bold;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        margin-right: 15px;
-        font-size: 1em;
-        margin-top: 2px; /* 微調對齊 */
-    }
-    .explanation-text {
-        font-size: 1em;
-        line-height: 1.8;
-        color: #444;
-        text-align: left; /* 強制內容靠左 */
-    }
-
-  /* === 修復：彈性寬度與垂直佈局 (Flex Column with Max-Width) === */
-    .grading-container { 
-        margin-top: 25px; 
-        border-top: 2px dashed #aeb6bf; 
-        padding-top: 20px; 
-        width: 100%; 
-        box-sizing: border-box;
-        overflow-x: hidden; 
-    }
-    
-    /* 強制垂直排列，並置中對齊 (不再拉伸到全寬) */
-    .grading-grid { 
-        display: flex !important; 
-        flex-direction: column !important; /* 垂直堆疊 */
-        align-items: center !important;    /* 核心：水平置中，讓寬度由內容或 max-width 決定 */
-        gap: 25px; 
-        width: 100%;
-    }
-    
-    /* 設定卡片樣式與寬度限制 */
-    .grading-scores, .grading-radar {
-        background-color: #f8f9fa; 
-        border: 1px solid #dee2e6; 
-        border-radius: 8px; 
-        padding: 20px 25px; /* 增加一點內距讓文字舒服 */
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
-        box-sizing: border-box; 
-        
-        width: 100% !important;       /* 手機版佔滿 */
-        max-width: 550px !important;  /* 電腦版核心修正：限制最大寬度，不再過寬 */
-        min-width: 280px;             /* 防止過窄 */
-        margin: 0 !important;
-    }
-    
-    /* 評分項目微調 */
-    .score-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 15px; }
-    .score-item label { font-weight: bold; color: #495057; flex-shrink: 0; width: 80px; /* 固定標籤寬度 */ }
-    .slider-container { flex-grow: 1; display: flex; align-items: center; gap: 10px; max-width: none; /* 讓拉桿自適應剩餘空間 */ }
-    .progress-bar-container { flex-grow: 1; height: 10px; background-color: #e9ecef; border-radius: 6px; overflow: hidden; border: 1px solid #ced4da; }
-    .progress-bar-fill { height: 100%; width: 0%; background-color: #007bff; border-radius: 6px; }
-    .score-display { font-weight: bold; width: 30px; text-align: right; color: #0056b3; font-size: 1rem; }
-    .total-score-container { margin-top: 15px; padding-top: 15px; border-top: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; }
-    
-    /* 雷達圖容器修正：限制高度與比例 */
-    .radar-chart-container { 
-        position: relative; 
-        width: 100% !important; 
-        height: auto !important; 
-        aspect-ratio: 1 / 1;          /* 保持正方形，避免變形 */
-        max-height: 350px !important; /* 核心修正：限制最大高度，避免撐爆畫面 */
-        margin: 0 auto;
-        overflow: visible; 
-    }
-
-    /* 手機版微調 */
-    @media (max-width: 600px) { 
-        .grading-scores, .grading-radar { max-width: 100% !important; padding: 15px; }
-        .score-item label { width: auto; min-width: 60px; font-size: 0.9em; }
-        .radar-chart-container { max-height: 300px !important; }
-    }
 
     .copyright-footer { position: fixed; bottom: 0; right: 0; padding: 5px 10px; background-color: #f1f1f1; z-index: 999; }
     .copyright-footer p { margin: 0; font-size: 14px; }
     @media (max-width: 600px) { 
         .copyright-footer p { font-size: 12px; } 
-        .score-item { flex-wrap: wrap; } 
-        .score-item label { width: 100%; margin-bottom: 5px; } 
-        .score-item .slider-container { max-width: 100%; }
-        .radar-chart-container { height: 350px !important; } /* 手機版稍低 */
+        .grading-scores, .grading-radar { max-width: 100% !important; padding: 15px; }
+        .score-item label { width: auto; min-width: 60px; font-size: 0.9em; }
+        .radar-chart-container { max-width: 300px !important; height: 300px !important; }
     }
 </style>
 </head>
@@ -762,23 +784,14 @@
     function openClassReportModal(data) {
         const m = document.getElementById('classReportModal'), c = document.getElementById('classReportContent');
         const d = document.createElement('div'); d.innerHTML = data.aiHtml;
-        
-        // 核心修改：使用新的HTML結構
-        if(data.stats.narrativeTotal>0) { 
-            const b=d.querySelector('.badge-narrative'); 
-            if(b) b.outerHTML=generateClassChartHTML('narrative', data.stats.narrAvg, data.stats.narrativeTotal); 
-        }
-        if(data.stats.argumentTotal>0) { 
-            const b=d.querySelector('.badge-argument'); 
-            if(b) b.outerHTML=generateClassChartHTML('argument', data.stats.argAvg, data.stats.argumentTotal); 
-        }
-        
+        if(data.stats.narrativeTotal>0) { const b=d.querySelector('.badge-narrative'); if(b) b.outerHTML=generateClassChartHTML('narrative', data.stats.narrAvg, data.stats.narrativeTotal); }
+        if(data.stats.argumentTotal>0) { const b=d.querySelector('.badge-argument'); if(b) b.outerHTML=generateClassChartHTML('argument', data.stats.argAvg, data.stats.argumentTotal); }
         c.innerHTML = `<div style="text-align:right;color:#999;padding:20px 20px 0 0;">報告日期：${data.dateStr}</div><div style="padding:20px;">${d.innerHTML}</div>`;
         m.style.display = 'flex';
         setTimeout(() => { if(data.stats.narrativeTotal>0) renderClassChart('narrativeClassChart', data.stats.narrAvg); if(data.stats.argumentTotal>0) renderClassChart('argumentClassChart', data.stats.argAvg); }, 200);
     }
     
-   function generateClassChartHTML(type, avg, total) {
+    function generateClassChartHTML(type, avg, total) {
         const id = type==='narrative'?'narrativeClassChart':'argumentClassChart';
         const title = type==='narrative'?'敘事抒情':'議論';
         const cls = type==='narrative'?'badge-narrative':'badge-argument';
@@ -819,7 +832,7 @@
             data: { labels: ['立意','取材','扣題','詳略','詞彙','文學性'], datasets: [{ label: '班級平均', data: [(avg.content*0.6+avg.struct*0.4).toFixed(1), (avg.content*0.8+avg.expr*0.2).toFixed(1), (avg.content*0.7+avg.struct*0.3).toFixed(1), (avg.struct*0.7+avg.content*0.3).toFixed(1), avg.expr, avg.expr], backgroundColor: 'rgba(94, 112, 103, 0.4)', borderColor: '#5e7067', borderWidth: 2, pointBackgroundColor: '#5e7067' }] },
             options: { 
                 responsive: true, 
-                maintainAspectRatio: false, // 允許填滿容器
+                maintainAspectRatio: false, 
                 scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } }, 
                 plugins: { legend: { display: false } } 
             }
@@ -1032,25 +1045,33 @@
         const recs=currentStudentHistory.filter(r=>r.category===currentCategory&&r.subFunction===sub).sort((a,b)=>b.timestamp-a.timestamp);
         if(recs.length===0){c.innerHTML='<p style="text-align:center;width:100%;color:#999;grid-column:1/-1;">無紀錄</p>';return;}
         recs.forEach(r=>{
-            c.innerHTML+=`<div class="history-card theme-${theme}" onclick='renderDetail(${JSON.stringify(r).replace(/'/g, "&#39;")})'><div class="history-meta"><span>${r.dateStr?r.dateStr.split(' ')[0]:'未知'}</span><span>${r.subFunction}</span></div><h4 class="history-title">${r.title||'無標題'}</h4></div>`;
+            // ★★★ 核心修改：使用與學生端一致的卡片結構 (打孔風格) ★★★
+            const dateStr = r.dateStr ? r.dateStr.split(' ')[0] : '未知';
+            
+            c.innerHTML+=`
+            <div class="history-card theme-${theme}" onclick='renderDetail(${JSON.stringify(r).replace(/'/g, "&#39;")})'>
+                <div style="flex-grow: 1;">
+                    <div class="history-meta">
+                        <span class="tag" style="background:var(--m-color-${theme}); color:white; border:none; margin:0;">${r.subFunction}</span>
+                        <span style="font-family: 'Courier New', monospace; font-size: 0.85em; color: #aaa; margin-left: auto;">${dateStr}</span>
+                    </div>
+                    <h4 class="history-title">${r.title||'無標題'}</h4>
+                </div>
+            </div>`;
         });
     }
     
-    // 共用解析函式：確保歷史紀錄與作業檢閱的學生內容排版 100% 一致
+    // 共用解析函式
     function renderParsedUserContent(userContent, themeIndex = 1) {
         if (!userContent) return '<div style="padding:20px; color:#999; text-align:center;">無使用者輸入內容</div>';
-        
         const lines = userContent.split('\n');
-        // 加入主題色類別以便 CSS 染色
         let html = `<div class="history-parsed-container history-theme-context-${themeIndex}">`;
         let currentLabel = '輸入內容'; 
         let currentContent = []; 
         const labelRegex = /^(.{2,10}?)[：:](.*)$/;
-        
         lines.forEach((line) => {
             const match = line.match(labelRegex);
             if (match) {
-                // 如果遇到新標籤，先渲染舊的區塊
                 if (currentContent.length > 0) {
                     html += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${currentContent.join('\n')}</div></div>`;
                 }
@@ -1061,13 +1082,11 @@
                 currentContent.push(line);
             }
         });
-        // 渲染最後一個區塊
         if (currentContent.length > 0 || lines.length === 0) {
              const finalContent = currentContent.length > 0 ? currentContent.join('\n') : userContent;
              html += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${finalContent}</div></div>`;
         }
         html += `</div>`;
-        // 返回包含外框樣式的完整 HTML
         return `<div style="background:#fff;padding:20px;border:1px solid #eee;border-radius:12px;margin-bottom:25px; box-shadow:0 2px 10px rgba(0,0,0,0.03);">${html}</div>`;
     }
 
@@ -1078,35 +1097,14 @@
             document.getElementById('teacherBreadcrumb').style.display='none';
             
             let uContent = '';
-            // 嘗試解析使用者輸入的格式 (如：題目：xxx)
-            if(r.userContent) {
-                const lines = r.userContent.split('\n');
-                let html = `<div class="history-parsed-container history-theme-context-${currentThemeIndex}">`;
-                let currentLabel = '輸入內容'; 
-                let currentContent = []; 
-                const labelRegex = /^(.{2,10}?)[：:](.*)$/;
-                
-                lines.forEach((line) => {
-                    const match = line.match(labelRegex);
-                    if (match) {
-                        if (currentContent.length > 0) {
-                            html += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${currentContent.join('\n')}</div></div>`;
-                        }
-                        currentLabel = match[1].trim(); 
-                        const rest = match[2].trim(); 
-                        currentContent = rest ? [rest] : [];
-                    } else if (line.trim() !== "") {
-                        currentContent.push(line);
-                    }
-                });
-                // 處理最後一塊
-                if (currentContent.length > 0) {
-                    html += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${currentContent.join('\n')}</div></div>`;
-                }
-                html += `</div>`;
-                uContent = `<div style="background:#fff;padding:20px;border:1px solid #eee;border-radius:12px;margin-bottom:25px; box-shadow:0 2px 10px rgba(0,0,0,0.03);">${html}</div>`;
+            if (r.category === "學習報告") {
+                uContent = ''; 
             } else {
-                uContent = `<div style="padding:20px; color:#999; text-align:center;">無使用者輸入內容</div>`;
+                if(r.userContent) {
+                    uContent = renderParsedUserContent(r.userContent, currentThemeIndex);
+                } else {
+                    uContent = `<div style="padding:20px; color:#999; text-align:center;">無使用者輸入內容</div>`;
+                }
             }
 
             document.getElementById('historyDetail').innerHTML = `
@@ -1192,36 +1190,37 @@
                         <label style="font-weight:bold; color:#8d6e63;">評語：</label>
                         <textarea id="tc" rows="3" placeholder="請輸入評語...">${fb.comment||''}</textarea>
                     </div>
-                <button class="btn-action btn-manage" onclick="sendFb('${sub.studentName}')">發還給學生</button>
-            </div>
-        </div>`;
-}
-function sendFb(name) { db.ref(`assignments_submissions/${currentViewingAssignmentId}/${name}/teacherFeedback`).set({score:document.getElementById('ts').value, comment:document.getElementById('tc').value, timestamp:Date.now(), status:'returned'}, e=>alert(e?'失敗':'成功')); }
+                    <button class="btn-action btn-manage" onclick="sendFb('${sub.studentName}')">發還給學生</button>
+                </div>
+            </div>`;
+    }
+    
+    function sendFb(name) { db.ref(`assignments_submissions/${currentViewingAssignmentId}/${name}/teacherFeedback`).set({score:document.getElementById('ts').value, comment:document.getElementById('tc').value, timestamp:Date.now(), status:'returned'}, e=>alert(e?'失敗':'成功')); }
 
-// === 學年管理 ===
-function populateTransferStudentList() {
-    const g=document.getElementById('indivFromGrade').value, c=document.getElementById('indivFromClass').value, b=document.getElementById('transferStudentListBox'); b.innerHTML='載入中...';
-    db.ref(`students/${g}/${c}`).once('value', s=>{
-        const d=s.val(); b.innerHTML=''; if(!d) { b.innerHTML='無學生'; return; }
-        Object.entries(d).sort((a,b)=>(parseInt(a[1].profile?.number)||99)-(parseInt(b[1].profile?.number)||99)).forEach(([n,i])=>{ b.innerHTML+=`<label class="student-select-item"><input type="radio" name="ts" value="${n}"> ${i.profile?.number||'??'}. ${n}</label>`; });
-    });
-}
-function moveIndividualStudent() {
-    const n = document.querySelector('input[name="ts"]:checked')?.value; if (!n) return alert("請選擇學生");
-    const fg = document.getElementById('indivFromGrade').value, fc = document.getElementById('indivFromClass').value, tg = document.getElementById('indivToGrade').value, tc = document.getElementById('indivToClass').value, nn = document.getElementById('indivNewNumber').value; if (!nn) return alert("請輸入新班號");
-    const oldPath = `students/${fg}/${fc}/${n}`, newPath = `students/${tg}/${tc}/${n}`;
-    db.ref(oldPath).once('value', s => { const d = s.val(); if (!d) return; d.profile = d.profile || {}; d.profile.grade = tg; d.profile.class = tc; d.profile.number = nn; if (oldPath === newPath) db.ref(newPath).update(d, e => { if (!e) { alert("更新成功"); populateTransferStudentList(); }}); else db.ref(newPath).set(d, e => { if (!e) { db.ref(oldPath).remove(); alert("轉班成功"); populateTransferStudentList(); }}); });
-}
-function deleteStudent() { const n=document.querySelector('input[name="ts"]:checked')?.value; if(n && confirm(`刪除 ${n}?`)) db.ref(`students/${document.getElementById('indivFromGrade').value}/${document.getElementById('indivFromClass').value}/${n}`).remove(e=>{ if(!e) populateTransferStudentList(); }); }
-function updateYearConfig() { db.ref('config/currentYear').set(document.getElementById('currentYearInput').value, e=>alert(e?'失敗':'成功')); }
-async function runYearTransition() {
-    if(prompt("密碼")!=="23262036") return; if(!confirm("確定全校升班？")) return;
-    const all = (await db.ref('students').once('value')).val(); if(!all) return;
-    const y = document.getElementById('currentYearInput').value; await db.ref(`archives/${y}/students`).set(all);
-    let n = {}; for(let g=1; g<=5; g++) { if(all[g]) { n[g+1] = all[g]; for(let c in n[g+1]) for(let s in n[g+1][c]) if(n[g+1][c][s].profile) n[g+1][c][s].profile.grade=(g+1).toString(); } }
-    if(all[6]) await db.ref(`graduates/${y}`).set(all[6]);
-    db.ref('students').set(n, e=>alert(e?'失敗':'成功'));
-}
+    // === 學年管理 ===
+    function populateTransferStudentList() {
+        const g=document.getElementById('indivFromGrade').value, c=document.getElementById('indivFromClass').value, b=document.getElementById('transferStudentListBox'); b.innerHTML='載入中...';
+        db.ref(`students/${g}/${c}`).once('value', s=>{
+            const d=s.val(); b.innerHTML=''; if(!d) { b.innerHTML='無學生'; return; }
+            Object.entries(d).sort((a,b)=>(parseInt(a[1].profile?.number)||99)-(parseInt(b[1].profile?.number)||99)).forEach(([n,i])=>{ b.innerHTML+=`<label class="student-select-item"><input type="radio" name="ts" value="${n}"> ${i.profile?.number||'??'}. ${n}</label>`; });
+        });
+    }
+    function moveIndividualStudent() {
+        const n = document.querySelector('input[name="ts"]:checked')?.value; if (!n) return alert("請選擇學生");
+        const fg = document.getElementById('indivFromGrade').value, fc = document.getElementById('indivFromClass').value, tg = document.getElementById('indivToGrade').value, tc = document.getElementById('indivToClass').value, nn = document.getElementById('indivNewNumber').value; if (!nn) return alert("請輸入新班號");
+        const oldPath = `students/${fg}/${fc}/${n}`, newPath = `students/${tg}/${tc}/${n}`;
+        db.ref(oldPath).once('value', s => { const d = s.val(); if (!d) return; d.profile = d.profile || {}; d.profile.grade = tg; d.profile.class = tc; d.profile.number = nn; if (oldPath === newPath) db.ref(newPath).update(d, e => { if (!e) { alert("更新成功"); populateTransferStudentList(); }}); else db.ref(newPath).set(d, e => { if (!e) { db.ref(oldPath).remove(); alert("轉班成功"); populateTransferStudentList(); }}); });
+    }
+    function deleteStudent() { const n=document.querySelector('input[name="ts"]:checked')?.value; if(n && confirm(`刪除 ${n}?`)) db.ref(`students/${document.getElementById('indivFromGrade').value}/${document.getElementById('indivFromClass').value}/${n}`).remove(e=>{ if(!e) populateTransferStudentList(); }); }
+    function updateYearConfig() { db.ref('config/currentYear').set(document.getElementById('currentYearInput').value, e=>alert(e?'失敗':'成功')); }
+    async function runYearTransition() {
+        if(prompt("密碼")!=="23262036") return; if(!confirm("確定全校升班？")) return;
+        const all = (await db.ref('students').once('value')).val(); if(!all) return;
+        const y = document.getElementById('currentYearInput').value; await db.ref(`archives/${y}/students`).set(all);
+        let n = {}; for(let g=1; g<=5; g++) { if(all[g]) { n[g+1] = all[g]; for(let c in n[g+1]) for(let s in n[g+1][c]) if(n[g+1][c][s].profile) n[g+1][c][s].profile.grade=(g+1).toString(); } }
+        if(all[6]) await db.ref(`graduates/${y}`).set(all[6]);
+        db.ref('students').set(n, e=>alert(e?'失敗':'成功'));
+    }
 </script>
 
 <footer class="copyright-footer">

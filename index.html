@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>神思 - 教師後台</title>
+    <title>神思 - 後台</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
 
@@ -308,6 +308,24 @@
     
     .report-radar-wrapper { margin-bottom: 30px; background: #fff; padding: 0 20px; border-radius: 0; border: none; display: block; }
 
+/* === 報告雷達圖專用修復樣式 === */
+
+/* 確保雷達圖容器有固定高度，不會無限延伸或縮小 */
+.report-radar-wrapper .radar-chart-container {
+    position: relative;
+    height: 320px !important; /* 強制高度，防止重疊 */
+    width: 100%;
+    margin-bottom: 15px;
+}
+
+/* 手機版適配 */
+@media (max-width: 768px) {
+    .report-radar-wrapper .radar-chart-container {
+        height: 300px !important;
+    }
+}
+
+    
     /* === 點評與建議列表 === */
     .rewrite-explanation-container { margin-top: 20px; display: block; }
     .explanation-point { display: flex; align-items: flex-start; margin-bottom: 20px; padding: 18px; background-color: #fff; border: 1px solid #e9ecef; border-radius: 12px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
@@ -1101,94 +1119,98 @@ function loadStudentList() {
 }
     
    // === 關鍵修訂：生成左右並置的 HTML ===
-  function generateClassChartHTML(type, avg, count) {
+function generateClassChartHTML(type, avg, count) {
     const id = type==='narrative'?'narrativeClassChart':'argumentClassChart';
-    const title = type==='narrative'?'敘事抒情':'議論';
+    const title = type==='narrative' ? '敘事抒情' : '議論'; 
     const cls = type==='narrative'?'badge-narrative':'badge-argument';
     
     // 計算加權分數
     const scoreContent = avg.content * 4;
     const scoreExpr = avg.expr * 3;
     const scoreStruct = avg.struct * 2;
-    // 預設分數
-    const scorePunc = 5; // 標點預設 5
-    const scoreTypo = 1; // 錯別字預設 1
-    
-    // 計算總分 (滿分100)
+    const scorePunc = 5; 
+    const scoreTypo = 1; 
     const totalScore = Math.min(100, scoreContent + scoreExpr + scoreStruct + scorePunc + scoreTypo);
-    
-    // 將 avg 物件轉換為 JSON 字串
-    const avgStr = JSON.stringify(avg).replace(/"/g, '&quot;');
     
     return `
     <div class="report-section">
         <div class="report-category-badge ${cls}"><i class="fas fa-book"></i> ${title}</div>
         
+        <!-- 使用 report-radar-wrapper 包裹標準評分介面 -->
         <div class="report-radar-wrapper">
-            <!-- 左右並置容器 -->
-            <div class="grading-side-by-side">
-                
-                <!-- 1. 左側：評分條 -->
-                <div class="grading-scores">
-                    <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center;">班級平均表現 (${count}份)</h3>
+            
+            <!-- ★★★ 關鍵修改：使用標準 grading-grid 結構 (與學生端一致) ★★★ -->
+            <!-- style="margin:0; border:none; box-shadow:none;" 是為了去除外層多餘的框線，只保留內容 -->
+            <div class="grading-container" style="margin:0; border:none; padding:0; box-shadow:none; background:transparent;">
+                <div class="grading-grid">
                     
-                    <!-- 內容 -->
-                    <div class="score-item">
-                        <label>內容 (40)</label>
-                        <div class="slider-container">
-                            <div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div>
-                            <span class="score-display">${scoreContent}</span>
+                    <!-- 左側：評分條 -->
+                    <div class="grading-scores" style="background:#fdfcf8;">
+                        <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555;">
+                            班級平均表現 <small style="font-weight:normal; color:#999;">(${count}份)</small>
+                        </h3>
+                        
+                        <!-- 內容 -->
+                        <div class="score-item">
+                            <label>內容 (40)</label>
+                            <div class="slider-container">
+                                <div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div>
+                                <span class="score-display">${scoreContent}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 表達 -->
+                        <div class="score-item">
+                            <label>表達 (30)</label>
+                            <div class="slider-container">
+                                <div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div>
+                                <span class="score-display">${scoreExpr}</span>
+                            </div>
+                        </div>
+                        
+                        <!-- 結構 -->
+                        <div class="score-item">
+                            <label>結構 (20)</label>
+                            <div class="slider-container">
+                                <div class="progress-bar-container"><div style="width:${avg.struct*10}%" class="progress-bar-fill"></div></div>
+                                <span class="score-display">${scoreStruct}</span>
+                            </div>
+                        </div>
+
+                        <!-- 標點 -->
+                        <div class="score-item">
+                            <label>標點 (10)</label>
+                            <div class="slider-container">
+                                <div class="progress-bar-container"><div style="width:50%" class="progress-bar-fill"></div></div>
+                                <span class="score-display">${scorePunc}</span>
+                            </div>
+                        </div>
+
+                        <!-- 錯別字 -->
+                        <div class="score-item">
+                            <label>錯別字 (+3)</label>
+                            <div class="slider-container">
+                                <div class="progress-bar-container"><div style="width:33%" class="progress-bar-fill"></div></div>
+                                <span class="score-display">+${scoreTypo}</span>
+                            </div>
+                        </div>
+
+                        <div class="total-score-container">
+                            <span style="font-size:1.1em; color:#555;">平均總分: ${totalScore} / 100</span>
+                            <span style="font-size:2em; font-weight:bold; color:#d9534f;">${determineGrade(totalScore)}</span>
                         </div>
                     </div>
                     
-                    <!-- 表達 -->
-                    <div class="score-item">
-                        <label>表達 (30)</label>
-                        <div class="slider-container">
-                            <div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div>
-                            <span class="score-display">${scoreExpr}</span>
-                        </div>
-                    </div>
-                    
-                    <!-- 結構 -->
-                    <div class="score-item">
-                        <label>結構 (20)</label>
-                        <div class="slider-container">
-                            <div class="progress-bar-container"><div style="width:${avg.struct*10}%" class="progress-bar-fill"></div></div>
-                            <span class="score-display">${scoreStruct}</span>
+                    <!-- 右側：雷達圖 -->
+                    <div class="grading-radar" style="background:#fff;">
+                        <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555;">能力分佈</h3>
+                        
+                        <!-- ★★★ 關鍵修復：這裡明確指定高度，防止重疊 ★★★ -->
+                        <div class="radar-chart-container" style="position: relative; height: 320px; width: 100%;">
+                            <canvas id="${id}"></canvas>
                         </div>
                     </div>
 
-                    <!-- 標點字體 (預設) -->
-                    <div class="score-item">
-                        <label>標點 (10)</label>
-                        <div class="slider-container">
-                            <div class="progress-bar-container"><div style="width:50%" class="progress-bar-fill"></div></div>
-                            <span class="score-display">${scorePunc}</span>
-                        </div>
-                    </div>
-
-                    <!-- 錯別字 (獎勵) -->
-                    <div class="score-item">
-                        <label>錯別字 (+3)</label>
-                        <div class="slider-container">
-                            <div class="progress-bar-container"><div style="width:33%" class="progress-bar-fill"></div></div>
-                            <span class="score-display">+${scoreTypo}</span>
-                        </div>
-                    </div>
-
-                    <div class="total-score-container">
-                        <span style="font-size:1.1em; color:#555;">平均總分: ${totalScore} / 100</span>
-                        <span style="font-size:2em; font-weight:bold; color:#d9534f;">${determineGrade(totalScore)}</span>
-                    </div>
-                </div>
-                
-                <!-- 2. 右側：雷達圖 (縮圖，點擊放大) -->
-                <div class="grading-radar-thumbnail" onclick='openEnlargedChart("${title}", ${avgStr})'>
-                    <h3>能力分佈圖</h3>
-                    <div class="radar-chart-mini-container">
-                        <canvas id="${id}"></canvas>
-                    </div>
                 </div>
             </div>
         </div>

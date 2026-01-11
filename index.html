@@ -299,7 +299,18 @@
     .overall-grade-label { font-size: 0.8rem; color: #888; font-weight: normal; text-transform: uppercase; letter-spacing: 1px; }
     .report-category-badge:not(.badge-general) { display: inline-flex; align-items: center; gap: 10px; padding: 10px 25px; border-radius: 50px; color: white; font-weight: bold; font-size: 1.3rem; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); letter-spacing: 1px; }
     .report-text-card { background-color: #fdfcf8; border: 1px solid #e0ddd7; border-radius: 12px; padding: 25px; line-height: 1.9; color: #4a4a4a; font-size: 1.05rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); text-align: justify; margin-top: 10px; display: block; }
-    
+    /* 請確保您的 CSS 中，canvas 沒有被強制設為 absolute */
+canvas {
+    max-width: 100%;
+    /* 不要加 position: absolute; 除非父容器有嚴格控制 */
+}
+
+/* 確保報告文字卡片是 block 且有間距 */
+.report-text-card {
+    display: block; 
+    clear: both; /* 這行很重要，確保它不會擠到浮動元素旁邊 */
+    margin-top: 20px;
+}
     .report-quote-card { position: relative; background-color: #fffefb; border: 1px solid #e0ddd7; border-radius: 8px; padding: 30px 30px 30px 65px; margin-top: 40px; box-shadow: 4px 4px 0px rgba(0,0,0,0.05); text-align: left; background-image: linear-gradient(to right, transparent 49px, #eebdbd 50px, transparent 51px), radial-gradient(circle at 25px 50%, #d1cdc5 8px, transparent 9px); background-size: 100% 100%, 100% 40px; background-repeat: no-repeat, repeat-y; background-position: 0 0, 0 15px; }
     .report-quote-content { font-family: 'Noto Serif TC', serif; font-size: 1.2rem; font-weight: bold; color: #5d4037; font-style: italic; line-height: 1.6; }
     .report-quote-author { margin-top: 10px; font-size: 0.9rem; color: #888; text-align: right; font-style: normal; }
@@ -1135,22 +1146,25 @@ function generateClassChartHTML(type, avg, count) {
     
     return `
     <!-- 
-       ★ 策略改變：改用 Flexbox ★
-       display: flex + flex-wrap: wrap 會讓瀏覽器自動計算高度。
-       當空間不足時，右側圖表會自動掉到下一行，並撐開高度，防止覆蓋下方文字。
+       ★ 修正重點：最外層使用 display: block 確保獨佔一行 
+       margin-bottom: 50px 強制推開下方文字
     -->
-    <div class="report-section" style="display: block; width: 100%; margin-bottom: 60px; padding-bottom: 20px; border-bottom: 1px dashed #ccc;">
+    <div class="report-section" style="display: block; width: 100%; margin-bottom: 50px; border-bottom: 1px dashed #e0ddd7; padding-bottom: 30px;">
         
-        <!-- 標題 Badge -->
+        <!-- 標題 -->
         <div class="report-category-badge ${cls}" style="margin-bottom: 25px; display: inline-flex;">
             <i class="fas fa-book"></i> ${title}
         </div>
         
-        <!-- Flex 容器 -->
-        <div style="display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start; justify-content: space-between; width: 100%;">
+        <!-- 
+           Flex 容器：負責左右排列
+           align-items: flex-start 確保高度不會互相拉伸導致變形
+           flex-wrap: wrap 確保手機版會自動換行
+        -->
+        <div style="display: flex; flex-wrap: wrap; gap: 30px; align-items: flex-start; width: 100%;">
             
-            <!-- 左側：評分條 (設定 flex-grow 讓它佔據空間，並設定最小寬度) -->
-            <div style="flex: 1 1 320px; min-width: 300px; background: #fdfcf8; border: 1px solid #eee; border-radius: 12px; padding: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+            <!-- 左側：評分條 (設定 min-width 防止被擠壓) -->
+            <div style="flex: 1; min-width: 300px; background: #fdfcf8; border: 1px solid #eee; border-radius: 12px; padding: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
                 <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555; margin-bottom: 20px;">
                     班級平均表現 <small style="font-weight:normal; color:#999;">(${count}份)</small>
                 </h3>
@@ -1167,27 +1181,31 @@ function generateClassChartHTML(type, avg, count) {
                 </div>
             </div>
             
-            <!-- 右側：雷達圖 (獨立容器) -->
-            <!-- flex: 1 1 320px 表示它基本寬度 320px，但可伸縮 -->
-            <div style="flex: 1 1 320px; min-width: 300px; background:#fff; border:1px solid #eee; border-radius:12px; padding:20px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+            <!-- 
+               右側：雷達圖容器
+               ★ 關鍵修正：這裡不依賴 flex 計算高度，而是內部撐開
+            -->
+            <div style="flex: 1; min-width: 300px; background:#fff; border:1px solid #eee; border-radius:12px; padding:20px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
                 <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555; margin-bottom: 15px;">能力分佈</h3>
                 
                 <!-- 
-                   ★ 關鍵修復：這裡設定明確的高度 ★
-                   Canvas 必須被包在一個有相對定位且有高度的 div 內
+                   ★ 絕對防禦：強制設定高度 height: 320px
+                   這樣就算 Chart 還沒畫出來，這個 div 也會佔據 320px 的高度，
+                   下方的文字絕對不可能跑上來重疊。
                 -->
-                <div style="position: relative; width: 100%; max-width: 350px; height: 320px;">
+                <div style="position: relative; width: 100%; max-width: 350px; height: 320px !important; overflow: hidden;">
                     <canvas id="${id}"></canvas>
                 </div>
             </div>
 
         </div>
         
-        <!-- 清除浮動用的墊片 (雙重保險，確保下方文字絕對不會跑上來) -->
-        <div style="clear: both; width: 100%; height: 20px;"></div>
+        <!-- 墊片：確保下方內容被推開 -->
+        <div style="height: 20px; width: 100%; clear: both;"></div>
         
     </div>`;
 }
+
     
    // === 新增：全域變數，用來儲存班級報告的圖表實例 ===
 let classReportChartInstances = {}; 

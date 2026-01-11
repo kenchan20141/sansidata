@@ -998,20 +998,49 @@ function loadStudentList() {
         </div>`;
     }
     
-    // 渲染縮圖 (保持原有邏輯)
-    function renderClassChart(id, avg) {
-        const ctx = document.getElementById(id); if(!ctx) return;
-        new Chart(ctx.getContext('2d'), {
-            type: 'radar',
-            data: { labels: ['立意','取材','扣題','詳略','詞彙','文學性'], datasets: [{ label: '班級平均', data: [(avg.content*0.6+avg.struct*0.4).toFixed(1), (avg.content*0.8+avg.expr*0.2).toFixed(1), (avg.content*0.7+avg.struct*0.3).toFixed(1), (avg.struct*0.7+avg.content*0.3).toFixed(1), avg.expr, avg.expr], backgroundColor: 'rgba(94, 112, 103, 0.4)', borderColor: '#5e7067', borderWidth: 2, pointBackgroundColor: '#5e7067' }] },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } }, // 縮圖不顯示刻度
-                plugins: { legend: { display: false } } 
-            }
-        });
+   // === 新增：全域變數，用來儲存班級報告的圖表實例 ===
+let classReportChartInstances = {}; 
+
+// === 修訂：渲染縮圖 (加入銷毀舊圖表邏輯) ===
+function renderClassChart(id, avg) {
+    const ctx = document.getElementById(id); 
+    if(!ctx) return;
+
+    // 1. 關鍵修復：檢查該 ID 是否已有存在的圖表實例，若有則銷毀
+    if (classReportChartInstances[id]) {
+        classReportChartInstances[id].destroy();
+        delete classReportChartInstances[id];
     }
+
+    // 2. 建立新圖表並存入全域變數
+    classReportChartInstances[id] = new Chart(ctx.getContext('2d'), {
+        type: 'radar',
+        data: { 
+            labels: ['立意','取材','扣題','詳略','詞彙','文學性'], 
+            datasets: [{ 
+                label: '班級平均', 
+                data: [
+                    (avg.content*0.6+avg.struct*0.4).toFixed(1), 
+                    (avg.content*0.8+avg.expr*0.2).toFixed(1), 
+                    (avg.content*0.7+avg.struct*0.3).toFixed(1), 
+                    (avg.struct*0.7+avg.content*0.3).toFixed(1), 
+                    avg.expr, 
+                    avg.expr
+                ], 
+                backgroundColor: 'rgba(94, 112, 103, 0.4)', 
+                borderColor: '#5e7067', 
+                borderWidth: 2, 
+                pointBackgroundColor: '#5e7067' 
+            }] 
+        },
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } }, // 縮圖不顯示刻度
+            plugins: { legend: { display: false } } 
+        }
+    });
+}
     
     // === 新增：打開放大圖表的 Modal 並渲染大圖 ===
     let bigChartInstance = null;

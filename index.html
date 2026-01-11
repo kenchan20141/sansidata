@@ -576,6 +576,37 @@
         </div>
     </div>
 
+
+<!-- 新增：例外學生處理區 (留班/特殊轉班用) -->
+<div class="box" style="border: 2px dashed #d9534f; background-color: #fff5f5; margin-bottom: 20px;">
+    <h3 style="color: #d9534f; margin-top:0;"><i class="fas fa-user-clock"></i> 步驟一：處理留班生 / 特殊個案</h3>
+    <p style="color: #666; font-size: 0.9em;">
+        在執行「一鍵升級」前，請先將<b>留班生</b>或<b>需要特殊處理</b>的學生移至「待分班區」。<br>
+        (例如：2A 的大雄留班，不應升上 3A，請在此先將他移走。)
+    </p>
+    
+    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom: 15px;">
+        <select id="exceptionGrade" onchange="loadExceptionList()">
+            <option value="1">中一</option><option value="2">中二</option><option value="3">中三</option>
+            <option value="4">中四</option><option value="5">中五</option>
+        </select>
+        <select id="exceptionClass" onchange="loadExceptionList()">
+            <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+        </select>
+        <button class="btn-action btn-delete" onclick="moveSelectedToPending()">
+            <i class="fas fa-sign-out-alt"></i> 移至待分班區
+        </button>
+    </div>
+    
+    <!-- 學生勾選列表 -->
+    <div id="exceptionList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; max-height: 200px; overflow-y: auto; background: #fff; padding: 10px; border: 1px solid #ddd; border-radius: 8px;">
+        <div style="color:#999; text-align:center;">請選擇班級載入名單...</div>
+    </div>
+</div>
+
+
+    
+
     <!-- 一鍵過渡卡片 -->
     <div class="year-transition-card">
         <div style="font-size:1.3em; font-weight:bold; color:#555;">一鍵全校升班 (學年過渡)</div>
@@ -1444,21 +1475,82 @@ let analyticsChartInstance = null;
 
 // === 核心：新學年過渡邏輯 (徹底清理版) ===
 
-// ============================================================
-// === 新增/修訂：學年過渡與分班核心邏輯 (請複製整段貼上) ===
-// ============================================================
+// === 1. 例外處理區邏輯 ===
 
-// 1. 核心：一鍵新學年過渡 (清洗舊資料 + 分流學生)
+function loadExceptionList() {
+    const g = document.getElementById('exceptionGrade').value;
+    const c = document.getElementById('exceptionClass').value;
+    const container = document.getElementById('exceptionList');
+    
+    container.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 載入中...';
+    
+    db.ref(`students/${g}/${c}`).once('value', snapshot => {
+        const data = snapshot.val();
+        container.innerHTML = '';
+        
+        if (!data) {
+            container.innerHTML = '<div style="color:#999; padding:10px;">此班級無學生</div>';
+            return;
+        }
+        
+        Object.entries(data).forEach(([name, student]) => {
+            const num = student.profile?.number || '?';
+            const label = document.createElement('label');
+            label.style.cssText = "display:flex; align-items:center; padding:5px; cursor:pointer; hover:background:#eee;";
+            label.innerHTML = `
+                <input type="checkbox" class="exception-check" value="${name}" style="margin-right:8px;">
+                <span>(${num}) ${name}</span>
+            `;
+            container.appendChild(label);
+        });
+    });
+}
+
+async function moveSelectedToPending() {
+    const g = document.getElementById('exceptionGrade').value;
+    const c = document.getElementById('exceptionClass').value;
+    const checks = document.querySelectorAll('.exception-check:checked');
+    
+    if (checks.length === 0) return alert("請先勾選學生");
+    if (!confirm(`確定將這 ${checks.length} 位學生移至待分班區？\n他們將不會隨大隊升班。`)) return;
+    
+    const updates = {};
+    
+    // 批次讀取並準備移動
+    for (const chk of checks) {
+        const name = chk.value;
+        const snap = await db.ref(`students/${g}/${c}/${name}`).once('value');
+        const sData = snap.val();
+        
+        if (sData) {
+            // ★★★ 關鍵：在這裡就先清空班號，避免舊班號帶到新學年 ★★★
+            if (sData.profile) sData.profile.number = ""; 
+            
+            // 寫入 Pending
+            updates[`pending_allocation/${name}`] = sData;
+            // 移除原位
+            updates[`students/${g}/${c}/${name}`] = null;
+        }
+    }
+    
+    await db.ref().update(updates);
+    alert("已移至待分班區");
+    loadExceptionList(); // 刷新列表
+    checkAndRenderS3AllocationPanel(); // 刷新下方的分班面板
+}
+
+
+// === 2. 一鍵升級邏輯 (核心修訂) ===
+
 async function runYearTransition() {
-    // 安全驗證
     if (prompt("請輸入密碼以確認清除舊紀錄並升班：") !== "23262036") return;
     
-    const confirmMsg = "⚠️ 高危操作警告 ⚠️\n\n" +
-                       "1. 所有「課業」及「繳交紀錄」將被永久清除。\n" +
-                       "2. 中六學生將被「永久刪除」 (畢業)。\n" +
-                       "3. 中三學生將進入「待分班區」等待人手分配。\n" +
-                       "4. 其他年級 (中一、二、四、五) 將自動升班。\n\n" +
-                       "確定要開始新學年嗎？";
+    const confirmMsg = "⚠️ 最終確認 ⚠️\n\n" +
+                       "1. 中六學生 -> 自動畢業 (刪除)。\n" +
+                       "2. 中三學生 -> 強制進入「待分班區」。\n" +
+                       "3. 其他學生 -> 自動升級 (1A->2A)。\n" +
+                       "4. ★ 所有學生的班號將被清空 ★\n\n" +
+                       "請確保您已經完成了「步驟一：例外處理」，將留班生移走了。繼續嗎？";
                        
     if (!confirm(confirmMsg)) return;
 
@@ -1468,14 +1560,18 @@ async function runYearTransition() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
 
     try {
-        // A. 讀取全校學生資料
         const snapshot = await db.ref('students').once('value');
         const allStudents = snapshot.val() || {};
 
-        let newStudentsMap = {}; // 存放 1,2,4,5 年級 (升班後的名單)
-        let pendingS3Map = {};   // 存放 3 年級 (待分班名單)
+        let newStudentsMap = {}; 
+        let pendingMap = {};
+        
+        // 讀取現有的 pending，以免覆蓋剛才手動移過去的學生
+        const existingPendingSnap = await db.ref('pending_allocation').once('value');
+        if (existingPendingSnap.exists()) {
+            pendingMap = existingPendingSnap.val();
+        }
 
-        // B. 遍歷並分類學生
         for (const grade in allStudents) {
             for (const cls in allStudents[grade]) {
                 const studentsInClass = allStudents[grade][cls];
@@ -1484,50 +1580,43 @@ async function runYearTransition() {
                     const studentData = studentsInClass[studentName];
                     const g = parseInt(grade);
 
+                    // ★★★ 核心：清空班號 (Decentralization) ★★★
+                    if (studentData.profile) {
+                        studentData.profile.number = ""; 
+                    }
+
                     if (g === 6) {
-                        // 中六：跳過 (不寫入新名單 = 刪除)
+                        // 中六：刪除 (或可選擇寫入 graduates 節點)
                         continue; 
                     } 
                     else if (g === 3) {
-                        // 中三：整包資料 (含History) 放入暫存區
-                        pendingS3Map[studentName] = studentData; 
+                        // 中三：強制攔截，全部放入 Pending
+                        pendingMap[studentName] = studentData; 
                     } 
                     else {
-                        // 其他年級：自動升班 (例如 1->2)
+                        // 其他：自動升班 (1->2, 2->3, 4->5, 5->6)
                         const newG = (g + 1).toString();
+                        if (studentData.profile) studentData.profile.grade = newG;
                         
-                        // 更新資料內的年級欄位
-                        if (studentData.profile) {
-                            studentData.profile.grade = newG;
-                        }
-                        
-                        // 建立路徑結構
                         if (!newStudentsMap[newG]) newStudentsMap[newG] = {};
                         if (!newStudentsMap[newG][cls]) newStudentsMap[newG][cls] = {};
                         
-                        // 寫入新位置
                         newStudentsMap[newG][cls][studentName] = studentData;
                     }
                 }
             }
         }
 
-        // C. 執行資料庫重置 (原子操作，覆蓋舊資料)
-        await db.ref('students').set(newStudentsMap);     // 覆蓋學生名單
-        await db.ref('assignments').remove();             // 清除所有功課
-        await db.ref('assignments_submissions').remove(); // 清除所有繳交紀錄
-        await db.ref('class_reports').remove();           // 清除所有班級報告
-
-        // D. 處理中三暫存區
-        if (Object.keys(pendingS3Map).length > 0) {
-            await db.ref('pending_allocation').set(pendingS3Map);
-        } else {
-            await db.ref('pending_allocation').remove();
-        }
-
-        alert("✅ 新學年過渡成功！\n\n- 舊功課已清除\n- 中六已畢業刪除\n- 其他年級已升班\n- 請在下方為原中三學生分班");
+        // 執行原子更新
+        await db.ref('students').set(newStudentsMap);
+        await db.ref('pending_allocation').set(pendingMap);
         
-        // 刷新分班面板
+        // 清除舊資料
+        await db.ref('assignments').remove();
+        await db.ref('assignments_submissions').remove();
+        await db.ref('class_reports').remove();
+
+        alert("✅ 新學年過渡成功！\n\n所有學生班號已清空。\n中三及例外學生已移至待分班區。");
         checkAndRenderS3AllocationPanel();
 
     } catch (e) {

@@ -1134,57 +1134,65 @@ function generateClassChartHTML(type, avg, count) {
     
     return `
     <!-- 
-       ★ 策略改變：強制拉高容器 ★
-       1. margin-bottom: 100px; -> 在這個區塊結束後，強制空出 100px 的距離，不管上面發生什麼事。
-       2. padding-bottom: 20px; -> 內部留白。
+       ★ 策略改變：完全獨立的容器 ★
+       不再使用 .grading-side-by-side，改用 display: block 建立一個乾淨的區塊
+       margin-bottom: 80px 用來推開下方內容
     -->
-    <div class="report-section" style="display: block; width: 100%; margin-bottom: 100px; padding-bottom: 20px;">
+    <div class="report-section" style="display: block; width: 100%; margin-bottom: 80px; clear: both; border: none; box-shadow: none; background: transparent;">
         
         <!-- 標題 Badge -->
-        <div class="report-category-badge ${cls}" style="margin-bottom: 25px;">
+        <div class="report-category-badge ${cls}" style="margin-bottom: 25px; display: inline-flex;">
             <i class="fas fa-book"></i> ${title}
         </div>
         
-        <!-- 內容容器 -->
-        <div class="grading-side-by-side" style="display: flex; flex-wrap: wrap; gap: 30px; align-items: flex-start;">
+        <!-- 
+           ★ 核心修改：CSS Grid 網格佈局 ★
+           1. display: grid; -> 啟用網格
+           2. grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); 
+              -> 這是「響應式」寫法：空間夠就並排，空間不夠就自動變成上下堆疊。
+                 最重要的是，Grid 會強制計算每一格的高度，絕不允許重疊。
+           3. gap: 40px; -> 格子之間的間距
+        -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 40px; align-items: start; width: 100%;">
             
-            <!-- 左側：評分條 (高度隨內容自動) -->
-            <div class="grading-scores" style="flex: 1; min-width: 300px; background: #fdfcf8; border: 1px solid #eee; border-radius: 12px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
-                <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555;">
+            <!-- 左側：評分條 (乾淨的 div，不套用舊 class) -->
+            <div style="background: #fdfcf8; border: 1px solid #eee; border-radius: 12px; padding: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555; margin-bottom: 20px;">
                     班級平均表現 <small style="font-weight:normal; color:#999;">(${count}份)</small>
                 </h3>
                 
+                <!-- 評分條內容 -->
                 <div class="score-item"><label>內容 (40)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div><span class="score-display">${scoreContent}</span></div></div>
                 <div class="score-item"><label>表達 (30)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div><span class="score-display">${scoreExpr}</span></div></div>
                 <div class="score-item"><label>結構 (20)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.struct*10}%" class="progress-bar-fill"></div></div><span class="score-display">${scoreStruct}</span></div></div>
                 <div class="score-item"><label>標點 (10)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:50%" class="progress-bar-fill"></div></div><span class="score-display">${scorePunc}</span></div></div>
                 <div class="score-item"><label>錯別字 (+3)</label><div class="slider-container"><div class="progress-bar-container"><div style="width:33%" class="progress-bar-fill"></div></div><span class="score-display">+${scoreTypo}</span></div></div>
 
-                <div class="total-score-container">
+                <div class="total-score-container" style="margin-top: 20px; padding-top: 15px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
                     <span style="font-size:1.1em; color:#555;">平均總分: ${totalScore} / 100</span>
                     <span style="font-size:2em; font-weight:bold; color:#d9534f;">${determineGrade(totalScore)}</span>
                 </div>
             </div>
             
-            <!-- 右側：雷達圖容器 -->
-            <!-- 
-               ★ 關鍵修改：給予巨大的固定高度 ★
-               height: 500px !important; -> 強制這個白盒子高度為 500px。
-               即使圖表只畫了 300px，剩下的 200px 空白也會佔據空間，把下方的字推下去。
-            -->
-            <div style="flex: 1; min-width: 300px; background:#fff; border:1px solid #eee; border-radius:12px; padding:20px; height: 500px !important; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
-                <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555;">能力分佈</h3>
+            <!-- 右側：雷達圖 (獨立容器) -->
+            <div style="background:#fff; border:1px solid #eee; border-radius:12px; padding:20px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555; margin-bottom: 15px;">能力分佈</h3>
                 
-                <!-- Chart 容器：也給予充足的高度 -->
-                <div style="position: relative; height: 400px; width: 100%; max-width: 400px;">
+                <!-- 
+                   ★ 圖表限制區 ★
+                   明確指定 height: 320px。
+                   Grid 佈局會看到這個高度，然後強制把這一整行(Row)的高度撐開到 320px 以上。
+                   下方的文字絕對不可能跑進來。
+                -->
+                <div style="position: relative; width: 100%; max-width: 350px; height: 320px;">
                     <canvas id="${id}"></canvas>
                 </div>
             </div>
 
         </div>
         
-        <!-- 額外的墊片：再加 50px 的實體高度 -->
-        <div style="height: 50px; width: 100%; display: block; clear: both;"></div>
+        <!-- 額外的間距墊片 -->
+        <div style="height: 40px; width: 100%;"></div>
         
     </div>`;
 }

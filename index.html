@@ -1133,18 +1133,18 @@ function generateClassChartHTML(type, avg, count) {
     const totalScore = Math.min(100, scoreContent + scoreExpr + scoreStruct + scorePunc + scoreTypo);
     
     return `
-    <!-- 1. 外層容器：display: block 確保它是方塊，margin-bottom: 80px 強力推開下方文字 -->
-    <div class="report-section" style="display: block; width: 100%; margin-bottom: 80px; position: relative;">
+    <!-- 1. 外層容器：確保是區塊元素，並在底部留出 60px 的安全距離 -->
+    <div class="report-section" style="display: block; width: 100%; margin-bottom: 60px; clear: both;">
         
         <!-- 標題 Badge -->
-        <div class="report-category-badge ${cls}" style="margin-bottom: 25px; position: relative; z-index: 5;">
+        <div class="report-category-badge ${cls}" style="margin-bottom: 20px;">
             <i class="fas fa-book"></i> ${title}
         </div>
         
-        <!-- 內容容器 -->
-        <div class="grading-side-by-side" style="display: flex; flex-wrap: wrap; gap: 30px; align-items: flex-start;">
+        <!-- 內容容器 Flexbox -->
+        <div class="grading-side-by-side" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
             
-            <!-- 左側：評分條 -->
+            <!-- 左側：評分條 (保持原樣，讓它自動適應寬度) -->
             <div class="grading-scores" style="flex: 1; min-width: 300px; background: #fdfcf8; border: 1px solid #eee; border-radius: 12px; padding: 20px;">
                 <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555;">
                     班級平均表現 <small style="font-weight:normal; color:#999;">(${count}份)</small>
@@ -1163,25 +1163,24 @@ function generateClassChartHTML(type, avg, count) {
             </div>
             
             <!-- 右側：雷達圖容器 -->
-            <!-- 2. 關鍵修正：這裡設定 height: auto 但內部強制撐開 -->
-            <div style="flex: 1; min-width: 300px; background:#fff; border:1px solid #eee; border-radius:12px; padding:20px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;">
-                <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555;">能力分佈</h3>
+            <div style="flex: 1; min-width: 280px; background:#fff; border:1px solid #eee; border-radius:12px; padding:15px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                <h3 style="margin-top:0; border-left:none; padding-left:0; text-align:center; color:#555; margin-bottom: 10px;">能力分佈</h3>
                 
                 <!-- 
-                   3. Canvas 外框：
-                   height: 350px !important; -> 強制鎖定高度，不讓瀏覽器壓縮
-                   width: 100%; -> 佔滿寬度
-                   position: relative; -> 讓 Chart.js 正確抓取大小
+                   ★ 關鍵修改：縮小尺寸 ★
+                   1. height: 250px (原本 350px) -> 變矮
+                   2. max-width: 280px -> 變窄
+                   3. margin: 0 auto -> 居中
                 -->
-                <div style="position: relative; height: 350px !important; width: 100%; min-height: 350px;">
-                    <canvas id="${id}" style="max-height: 350px;"></canvas>
+                <div style="position: relative; height: 250px !important; width: 100%; max-width: 280px; margin: 0 auto;">
+                    <canvas id="${id}"></canvas>
                 </div>
             </div>
 
         </div>
         
-        <!-- 4. 隱形牆：防止下方的「敘事抒情」文字滑上來 -->
-        <div style="display: block; width: 100%; height: 20px; clear: both;"></div>
+        <!-- 隱形牆：再次確保下方文字不會滑上來 -->
+        <div style="clear: both; display: block; height: 1px; width: 100%;"></div>
         
     </div>`;
 }

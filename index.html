@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
     
-    <!-- 引入 Chart.js 以繪製雷達圖與統計圖 -->
+    <!-- 引入 Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <!-- Firebase SDK -->
@@ -28,14 +28,14 @@
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
-            padding-bottom: 60px; /* 預留 Footer 空間 */
+            padding-bottom: 60px;
             background: url('背景.png') center/cover fixed;
             background-color: #f4f4f4;
             color: var(--text-main);
             overflow-y: scroll;
         }
 
-        /* === 登入遮罩 (安全閘門) === */
+        /* === 登入遮罩 === */
         #loginOverlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: #fdfcf8; z-index: 9999;
@@ -53,7 +53,6 @@
         }
         .login-btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(148, 167, 181, 0.4); }
 
-        /* === 隱藏主要內容，登入後才顯示 === */
         #mainApp { display: none; }
 
         /* === 通用容器 === */
@@ -83,82 +82,69 @@
         .student-name { font-size: 1.2em; font-weight: bold; color: #444; margin-bottom: 5px; }
         .last-sync { font-size: 0.85em; color: #999; display: flex; align-items: center; gap: 6px; }
 
-        /* === 歷史檢閱 UI === */
+        /* === 歷史檢閱與其他 UI === */
         .category-cards-container { display: flex; gap: 30px; justify-content: center; flex-wrap: wrap; padding: 20px; }
-        .anime-card {
-            position: relative; width: 140px; height: 200px; border-radius: 15px;
-            background-image: var(--bg-img); background-size: cover; background-position: center;
-            cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-            overflow: hidden; filter: grayscale(20%); margin-bottom: 20px; border: 2px solid #fff;
-        }
+        .anime-card { position: relative; width: 140px; height: 200px; border-radius: 15px; background-image: var(--bg-img); background-size: cover; background-position: center; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.2); overflow: hidden; filter: grayscale(20%); margin-bottom: 20px; border: 2px solid #fff; }
         .anime-card:hover { transform: translateY(-10px) scale(1.05); filter: grayscale(0%); box-shadow: 0 15px 30px rgba(0,0,0,0.3); z-index: 10; }
         .card-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 60%); }
         .card-content { position: absolute; bottom: 0; left: 0; width: 100%; padding: 15px; text-align: center; }
         .card-zh { display: block; color: #fff; font-size: 18px; font-weight: bold; text-shadow: 0 2px 4px rgba(0,0,0,0.8); letter-spacing: 2px; }
         .card-en { display: block; color: rgba(255,255,255,0.7); font-size: 10px; letter-spacing: 1px; margin-top: 5px; }
 
-        /* 第二層：子功能 Grid 按鈕 */
         .history-grid-menu { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; padding: 20px 0; }
-        .history-folder-btn {
-            background-color: #fff; border: 2px solid #e9ecef; border-radius: 12px; padding: 25px 15px; 
-            text-align: center; cursor: pointer; transition: all 0.3s; display: flex; flex-direction: column; 
-            align-items: center; justify-content: center; min-height: 120px; color: #555;
-        }
+        .history-folder-btn { background-color: #fff; border: 2px solid #e9ecef; border-radius: 12px; padding: 25px 15px; text-align: center; cursor: pointer; transition: all 0.3s; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 120px; color: #555; }
         .history-folder-btn:hover { transform: translateY(-3px); box-shadow: 0 8px 20px rgba(0,0,0,0.1); background-color: #fff; }
         .history-folder-btn i { font-size: 2em; margin-bottom: 10px; color: #ccc; transition: color 0.3s; }
-        
         .history-theme-1 { border-color: #8fa398; color: #8fa398; } .history-theme-1:hover i { color: #8fa398; }
         .history-theme-2 { border-color: #94a7b5; color: #94a7b5; } .history-theme-2:hover i { color: #94a7b5; }
         .history-theme-3 { border-color: #b6a6ca; color: #b6a6ca; } .history-theme-3:hover i { color: #b6a6ca; }
         .history-theme-4 { border-color: #d69a92; color: #d69a92; } .history-theme-4:hover i { color: #d69a92; }
         .history-theme-5 { border-color: #c7b299; color: #c7b299; } .history-theme-5:hover i { color: #c7b299; }
 
-        /* 第三層：紀錄列表卡片 */
         .history-list-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; padding-top: 10px; }
-        .history-card {
-            background-color: #fdfcf8; border: 1px solid #e0ddd7; border-radius: 8px; 
-            padding: 20px 20px 20px 55px; position: relative; box-shadow: 4px 4px 0px rgba(0,0,0,0.03); 
-            cursor: pointer; transition: all 0.3s; overflow: hidden;
-            background-image: linear-gradient(to right, transparent 39px, #e0ddd7 40px, transparent 41px), radial-gradient(circle at 20px 50%, #d1cdc5 6px, transparent 7px);
-            background-size: 100% 100%, 100% 35px; background-repeat: no-repeat, repeat-y; background-position: 0 0, 0 12px;
-        }
+        .history-card { background-color: #fdfcf8; border: 1px solid #e0ddd7; border-radius: 8px; padding: 20px 20px 20px 55px; position: relative; box-shadow: 4px 4px 0px rgba(0,0,0,0.03); cursor: pointer; transition: all 0.3s; overflow: hidden; background-image: linear-gradient(to right, transparent 39px, #e0ddd7 40px, transparent 41px), radial-gradient(circle at 20px 50%, #d1cdc5 6px, transparent 7px); background-size: 100% 100%, 100% 35px; background-repeat: no-repeat, repeat-y; background-position: 0 0, 0 12px; }
         .history-card:hover { transform: translateY(-3px); box-shadow: 6px 6px 0px rgba(0,0,0,0.08); background-color: #fff; }
         .history-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 6px; z-index: 1; }
-        
-        .theme-1::before { background: #8fa398; } .theme-2::before { background: #94a7b5; }
-        .theme-3::before { background: #b6a6ca; } .theme-4::before { background: #d69a92; } .theme-5::before { background: #c7b299; }
-
+        .theme-1::before { background: #8fa398; } .theme-2::before { background: #94a7b5; } .theme-3::before { background: #b6a6ca; } .theme-4::before { background: #d69a92; } .theme-5::before { background: #c7b299; }
         .history-meta { display: flex; justify-content: space-between; font-size: 0.85em; color: #999; margin-bottom: 10px; border-bottom: 1px dashed #e0ddd7; padding-bottom: 5px; }
         .history-title { margin: 0; font-size: 1.1em; color: #444; font-weight: bold; line-height: 1.4; }
+        
+        /* 統計專用樣式 */
+        .stat-card {
+            padding: 20px; border-radius: 12px; text-align: center; flex: 1; min-width: 150px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05); color: #fff;
+            display: flex; flex-direction: column; justify-content: center;
+        }
+        .stat-card .val { font-size: 2.2em; font-weight: bold; margin-bottom: 5px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
+        .stat-card .label { font-size: 0.9em; opacity: 0.9; letter-spacing: 1px; }
+        
+        .stat-blue { background: linear-gradient(135deg, #94a7b5 0%, #7a8f9e 100%); }
+        .stat-red { background: linear-gradient(135deg, #d69a92 0%, #bf857d 100%); }
+        .stat-sand { background: linear-gradient(135deg, #c7b299 0%, #b09b82 100%); }
 
-        .history-breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 1rem; color: #999; margin-bottom: 20px; padding: 10px 5px; border-bottom: 1px dashed #ccc; }
-        .breadcrumb-item { cursor: pointer; font-weight: bold; color: var(--m-blue); transition: color 0.2s; }
-        .breadcrumb-item:hover { color: #5e5e5e; text-decoration: underline; }
-        .breadcrumb-current { color: #5e5e5e; background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 4px; font-weight: bold; }
+        /* 學生選擇 Chips */
+        .analytics-student-list {
+            display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; padding: 15px;
+            background: #fff; border: 1px solid #e0ddd7; border-radius: 8px;
+        }
+        .student-chip {
+            padding: 6px 15px; border-radius: 50px; background: #f4f4f4; color: #666;
+            cursor: pointer; border: 1px solid #ddd; font-size: 0.9em; transition: all 0.2s;
+        }
+        .student-chip:hover { background: #e0e0e0; }
+        .student-chip.active { background: var(--m-blue); color: #fff; border-color: var(--m-blue); box-shadow: 0 2px 5px rgba(148, 167, 181, 0.4); }
 
-        /* === 課業列表 === */
+        /* 課業與Modal */
         .assignment-item { display: flex; justify-content: space-between; align-items: center; padding: 20px; margin-bottom: 15px; border: 1px solid var(--border-color); border-radius: 12px; background: #fff; transition: all 0.2s; }
         .tag { background-color: #eee; color: #666; padding: 4px 10px; border-radius: 4px; font-size: 0.85em; font-weight: normal; margin-right: 10px; }
         .publish-area { background: #fdfcf8; padding: 30px; border-radius: 15px; border: 2px dashed var(--m-green); margin-bottom: 40px; display: flex; flex-direction: column; gap: 20px; }
         .publish-inputs { display: flex; gap: 15px; width: 100%; flex-wrap: wrap; }
         .publish-inputs input { flex: 1 1 auto; min-width: 200px; padding: 15px; font-size: 1.1em; border: 1px solid #ddd; }
-
-        /* === Modals === */
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(4px); }
         .modal-body { background: #fff; width: 95%; max-width: 1100px; height: 90vh; border-radius: 15px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.3); animation: fadeIn 0.3s; }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
         .modal-header { padding: 20px 30px; background: #fdfcf8; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .modal-content-scroll { flex: 1; overflow-y: auto; padding: 20px 30px; -webkit-overflow-scrolling: touch; }
-        
-        /* 詳情頁內容 */
         .detail-view { background: #fff; padding: 10px; }
-        .history-parsed-container { background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #e1e4e8; border-left: 5px solid var(--m-blue); margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
-        .history-item-block { margin-bottom: 15px; }
-        .history-item-label { font-weight: bold; color: var(--m-blue); font-size: 1em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
-        .history-item-label::before { content: ''; display: block; width: 8px; height: 8px; background-color: var(--m-blue); border-radius: 50%; opacity: 0.8; }
-        .history-item-content { background: #fcfcfc; border: 1px solid #e1e4e8; border-radius: 4px; padding: 12px 16px; color: #444; line-height: 1.8; white-space: pre-wrap; }
-        
-        /* 繳交檢閱 */
         .modal-content-container { display: flex; height: 100%; overflow: hidden; }
         .submission-sidebar { width: 320px; border-right: 1px solid var(--border-color); overflow-y: auto; background: #fafafa; flex-shrink: 0; }
         .submission-item { padding: 15px 20px; border-bottom: 1px solid #eee; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: background 0.2s; }
@@ -169,8 +155,6 @@
         .status-pending { background: #f7ebea; color: #a67069; }
         .submission-detail-area { flex-grow: 1; padding: 30px; overflow-y: auto; background: #fff; }
         .teacher-feedback-section { background-color: #fffaf5; border: 2px solid #e6dace; border-radius: 12px; padding: 20px; margin-top: 30px; box-shadow: 0 4px 15px rgba(141, 110, 99, 0.08); }
-
-        /* 學年管理 */
         .management-section { background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 25px; margin-bottom: 30px; }
         .transfer-grid { display: flex; gap: 20px; background: #f9f9f9; padding: 20px; border-radius: 10px; align-items: flex-start; }
         .transfer-column { flex: 1; display: flex; flex-direction: column; gap: 15px; }
@@ -179,40 +163,20 @@
         .student-select-item:hover { background-color: #f5f5f5; }
         .student-select-item input[type="radio"] { transform: scale(1.3); accent-color: var(--m-green); cursor: pointer; }
         .year-transition-card { background-color: #fdfcf8; border: 2px solid var(--m-brown); border-radius: 15px; padding: 30px; text-align: center; max-width: 600px; margin: 0 auto; }
-
-        /* ============================================== */
-        /* === 學習報告專用樣式 (支援後台檢視) === */
-        /* ============================================== */
+        
+        /* 報告樣式 */
         .report-section { margin-bottom: 50px; }
-        
         .report-category-badge { display: inline-flex; align-items: center; gap: 10px; padding: 10px 25px; border-radius: 50px; color: white; font-weight: bold; font-size: 1.3rem; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); letter-spacing: 1px; }
-        .badge-narrative { background-color: #7da3c0; }
-        .badge-argument { background-color: #a692c2; }
-        .badge-reading { background-color: #8da399; }
-        .badge-expand { background-color: #d69a92; }
-        
-        .badge-general {
-            width: 100%; max-width: 100%; box-sizing: border-box; display: flex; flex-direction: column; 
-            align-items: center; justify-content: center; padding: 20px 10px; margin-bottom: 10px; 
-            background: linear-gradient(135deg, #C5B4A1 0%, #A99885 100%);
-            box-shadow: 0 8px 20px rgba(169, 152, 133, 0.35); color: white; border-radius: 12px; position: relative; overflow: hidden;
-        }
+        .badge-narrative { background-color: #7da3c0; } .badge-argument { background-color: #a692c2; } .badge-reading { background-color: #8da399; } .badge-expand { background-color: #d69a92; }
+        .badge-general { width: 100%; max-width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; margin-bottom: 10px; background: linear-gradient(135deg, #C5B4A1 0%, #A99885 100%); box-shadow: 0 8px 20px rgba(169, 152, 133, 0.35); color: white; border-radius: 12px; position: relative; overflow: hidden; }
         .badge-general-title { font-size: 1.6rem; font-weight: bold; letter-spacing: 2px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-        
-        .overall-grade-tag { background-color: #fff; color: #d9534f; padding: 5px 25px; border-radius: 50px; font-size: 1.4rem; font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 2px solid #d69a92; display: flex; align-items: center; gap: 8px; }
-        .overall-grade-label { font-size: 0.8rem; color: #888; font-weight: normal; text-transform: uppercase; letter-spacing: 1px; }
-
         .report-text-card { background-color: #fdfcf8; border: 1px solid #e0ddd7; border-radius: 12px; padding: 25px; line-height: 1.9; color: #4a4a4a; font-size: 1.05rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); text-align: justify; margin-top: 10px; }
-
         .report-quote-card { position: relative; background-color: #fffefb; border: 1px solid #e0ddd7; border-radius: 8px; padding: 30px 30px 30px 65px; margin-top: 40px; box-shadow: 4px 4px 0px rgba(0,0,0,0.05); text-align: left; background-image: linear-gradient(to right, transparent 49px, #eebdbd 50px, transparent 51px), radial-gradient(circle at 25px 50%, #d1cdc5 8px, transparent 9px); background-size: 100% 100%, 100% 40px; background-repeat: no-repeat, repeat-y; background-position: 0 0, 0 15px; }
         .report-quote-content { font-family: 'Noto Serif TC', serif; font-size: 1.2rem; font-weight: bold; color: #5d4037; font-style: italic; line-height: 1.6; }
         .report-quote-author { margin-top: 10px; font-size: 0.9rem; color: #888; text-align: right; font-style: normal; }
-
         .report-separator { position: relative; height: 1px; border: 0; border-top: 3px dashed #b6a6ca; margin: 40px 0 50px 0; opacity: 0.6; }
         .report-separator::after { content: '▼'; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #fdfcf8; padding: 0 10px; color: #b6a6ca; font-size: 12px; }
-
         .report-radar-wrapper { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #eee; }
-        .grading-container { margin-top: 0; border-top: none; }
         .grading-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .grading-scores, .grading-radar { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; }
         .score-item { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
@@ -229,19 +193,11 @@
             .modal-content-container { flex-direction: column; } .submission-sidebar { width: 100%; height: 40%; }
             .grading-grid { display: flex !important; flex-direction: column !important; gap: 20px !important; width: 100% !important; margin: 0 !important; }
             .grading-scores, .grading-radar, .report-radar-wrapper { width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; padding: 15px !important; margin: 0 !important; overflow: hidden !important; }
-            .radar-chart-container { width: 100% !important; height: auto !important; aspect-ratio: 1 / 1 !important; max-height: 350px !important; margin: 0 auto !important; }
             .badge-general { width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; border-radius: 8px !important; }
-            .report-category-badge:not(.badge-general) { width: -moz-fit-content !important; width: fit-content !important; max-width: 90% !important; display: flex !important; justify-content: center !important; margin-left: auto !important; margin-right: auto !important; border-radius: 50px !important; }
+            .report-category-badge:not(.badge-general) { width: fit-content !important; max-width: 90% !important; margin: 0 auto !important; }
         }
 
-        .copyright-footer {
-            position: fixed;
-            bottom: 0;
-            right: 0;
-            padding: 5px 10px;
-            background-color: #f1f1f1;
-            z-index: 999;
-        }
+        .copyright-footer { position: fixed; bottom: 0; right: 0; padding: 5px 10px; background-color: #f1f1f1; z-index: 999; }
         .copyright-footer p { margin: 0; font-size: 14px; }
         @media (max-width: 600px) { .copyright-footer p { font-size: 12px; } }
     </style>
@@ -298,10 +254,9 @@
             </div>
         </div>
 
-        <!-- 2. 學生報告頁面 (新增) -->
+        <!-- 2. 學生報告頁面 -->
         <div id="tab-reports" class="box" style="display:none;">
             <h2>學生學習報告管理</h2>
-            
             <div class="filter-group">
                 <label><i class="fas fa-filter" style="color:var(--m-blue);"></i> 篩選：</label>
                 <select id="reportGrade" onchange="loadReportStudentList()">
@@ -311,25 +266,17 @@
                 <select id="reportClass" onchange="loadReportStudentList()">
                     <option value="A">A 班</option><option value="B">B 班</option><option value="C">C 班</option><option value="D">D 班</option>
                 </select>
-                
-                <button id="btnClassReport" class="btn-action btn-manage" 
-                        style="background: linear-gradient(135deg, #7da3c0 0%, #5e7067 100%); margin-left: auto; box-shadow: 0 4px 10px rgba(94, 112, 103, 0.4);" 
-                        onclick="generateClassReport()">
+                <button id="btnClassReport" class="btn-action btn-manage" style="background: linear-gradient(135deg, #7da3c0 0%, #5e7067 100%); margin-left: auto; box-shadow: 0 4px 10px rgba(94, 112, 103, 0.4);" onclick="generateClassReport()">
                     <i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)
                 </button>
             </div>
-            
-            <!-- 全班報告歷史紀錄區塊 -->
             <div id="classReportHistoryContainer" style="margin-bottom: 25px; padding: 20px; background: #fdfcf8; border-radius: 12px; border: 1px solid var(--border-color); border-left: 5px solid #7da3c0; display:none; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-                    <h3 style="margin:0; border:none; padding:0; font-size:1.1em; color:var(--text-main); display:flex; align-items:center; gap:8px;">
-                        <i class="fas fa-history" style="color:#7da3c0;"></i> 過往全班綜合報告紀錄
-                    </h3>
+                    <h3 style="margin:0; border:none; padding:0; font-size:1.1em; color:var(--text-main); display:flex; align-items:center; gap:8px;"><i class="fas fa-history" style="color:#7da3c0;"></i> 過往全班綜合報告紀錄</h3>
                     <small style="color:#999; font-style:italic;">點擊下方按鈕以重看報告</small>
                 </div>
                 <div id="classReportList" style="display:flex; gap:12px; overflow-x:auto; padding:5px 0; align-items: center; scroll-behavior: smooth;"></div>
             </div>
-
             <div id="reportStudentListContainer" class="student-grid">
                 <p style="text-align:center; width:100%; color:#aaa; padding:30px;">請選擇年級和班別以載入報告列表</p>
             </div>
@@ -349,27 +296,18 @@
                 </select>
             </div>
             <div class="publish-area">
-                <div style="font-weight:bold; color:var(--m-green); margin-bottom:5px; font-size:1.1em;">
-                    <i class="fas fa-pen-fancy"></i> 創建新任務
-                </div>
+                <div style="font-weight:bold; color:var(--m-green); margin-bottom:5px; font-size:1.1em;"><i class="fas fa-pen-fancy"></i> 創建新任務</div>
                 <div class="publish-inputs">
                     <input type="text" id="assignTopic" placeholder="課業題目">
-                    <select id="assignType">
-                        <option value="閱讀">閱讀</option> 
-                        <option value="敘事抒情">敘事抒情</option>
-                        <option value="議論">議論</option>
-                        <option value="整合拓展">整合拓展</option>
-                    </select>
+                    <select id="assignType"><option value="閱讀">閱讀</option><option value="敘事抒情">敘事抒情</option><option value="議論">議論</option><option value="整合拓展">整合拓展</option></select>
                 </div>
-                <button id="btnPublish" class="btn-action btn-publish" onclick="publishAssignment()">
-                    <i class="fas fa-paper-plane"></i> 立即派發
-                </button>
+                <button id="btnPublish" class="btn-action btn-publish" onclick="publishAssignment()"><i class="fas fa-paper-plane"></i> 立即派發</button>
             </div>
             <h3>已派發課業列表</h3>
             <div id="assignmentHistoryList"></div>
         </div>
 
-        <!-- 4. 數據統計頁面 (新增) -->
+        <!-- 4. 數據統計頁面 (修訂版) -->
         <div id="tab-analytics" class="box" style="display:none;">
             <h2>神思大數據統計</h2>
             
@@ -379,15 +317,11 @@
                     <option value="global">所有用家 (含訪客)</option>
                     <option value="school">全校 (僅已登入)</option>
                     <option value="class">個別班級</option>
-                    <option value="student">個別學生</option>
                 </select>
 
                 <span id="statClassInput" style="display:none;">
-                    <select id="statGrade"><option value="1">中一</option><option value="2">中二</option><option value="3">中三</option><option value="4">中四</option><option value="5">中五</option><option value="6">中六</option></select>
-                    <select id="statClass"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
-                </span>
-                <span id="statStudentInput" style="display:none;">
-                    <input type="text" id="statStudentName" placeholder="學生姓名" style="width:120px;">
+                    <select id="statGrade" onchange="loadAnalyticsClassList()"><option value="1">中一</option><option value="2">中二</option><option value="3">中三</option><option value="4">中四</option><option value="5">中五</option><option value="6">中六</option></select>
+                    <select id="statClass" onchange="loadAnalyticsClassList()"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
                 </span>
 
                 <label style="margin-left:15px;"><i class="far fa-clock" style="color:var(--m-brown);"></i> 時間：</label>
@@ -399,27 +333,36 @@
                 
                 <input type="date" id="statDate" style="display:inline-block;">
                 <select id="statMonth" style="display:none;"></select>
-                <select id="statYear" style="display:none;">
-                    <option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option>
-                </select>
+                <select id="statYear" style="display:none;"><option value="2025">2025</option><option value="2026">2026</option><option value="2027">2027</option></select>
 
                 <button class="btn-action btn-view" onclick="fetchAndRenderStats()">
                     <i class="fas fa-search"></i> 查詢
                 </button>
             </div>
 
-            <div style="display:flex; gap:20px; justify-content:center; margin-bottom:30px; flex-wrap:wrap;">
-                <div style="background:#f0f7ff; padding:20px; border-radius:12px; text-align:center; flex:1; min-width:150px; border:1px solid #cce5ff;">
-                    <div style="color:#007bff; font-size:2em; font-weight:bold;" id="dispVisits">0</div>
-                    <div style="color:#666;">總進入次數</div>
+            <!-- 新增：學生選擇區域 -->
+            <div id="analyticsStudentListContainer" style="display:none;">
+                <h4 style="margin:0 0 10px 0; font-size:1em; color:var(--text-main);">
+                    <i class="fas fa-user-friends"></i> 選擇學生 (點擊可切換，再次點擊取消)
+                </h4>
+                <div id="analyticsStudentList" class="analytics-student-list">
+                    <!-- JS 自動填充 -->
                 </div>
-                <div style="background:#fff0f0; padding:20px; border-radius:12px; text-align:center; flex:1; min-width:150px; border:1px solid #ffcccc;">
-                    <div style="color:#dc3545; font-size:2em; font-weight:bold;" id="dispDuration">0</div>
-                    <div style="color:#666;">總使用時長 (分鐘)</div>
+            </div>
+
+            <!-- 數據概覽卡片 (莫蘭迪色設計) -->
+            <div style="display:flex; gap:20px; justify-content:center; margin:30px 0; flex-wrap:wrap;">
+                <div class="stat-card stat-blue">
+                    <div class="val" id="dispVisits">0</div>
+                    <div class="label">總進入次數</div>
                 </div>
-                <div style="background:#f0fff4; padding:20px; border-radius:12px; text-align:center; flex:1; min-width:150px; border:1px solid #c3e6cb;">
-                    <div style="color:#28a745; font-size:2em; font-weight:bold;" id="dispAvg">0</div>
-                    <div style="color:#666;">平均每次時長 (分鐘)</div>
+                <div class="stat-card stat-red">
+                    <div class="val" id="dispDuration">0</div>
+                    <div class="label">總使用時長 (分鐘)</div>
+                </div>
+                <div class="stat-card stat-sand">
+                    <div class="val" id="dispAvg">0</div>
+                    <div class="label">平均每人時長 (分鐘)</div>
                 </div>
             </div>
 
@@ -447,9 +390,7 @@
                             <select id="indivFromGrade" onchange="populateTransferStudentList()"><option value="6">中六</option><option value="5">中五</option><option value="4">中四</option><option value="3">中三</option><option value="2">中二</option><option value="1">中一</option></select>
                             <select id="indivFromClass" onchange="populateTransferStudentList()"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
                         </div>
-                        <div id="transferStudentListBox" class="transfer-list-box">
-                            <div style="padding:20px; text-align:center; color:#999;">請先選擇班級...</div>
-                        </div>
+                        <div id="transferStudentListBox" class="transfer-list-box"><div style="padding:20px; text-align:center; color:#999;">請先選擇班級...</div></div>
                     </div>
                     <div class="transfer-arrow-icon" style="align-self:center; color:#ccc; font-size:1.5em;"><i class="fas fa-arrow-right"></i></div>
                     <div class="transfer-column" style="justify-content:center;">
@@ -479,66 +420,10 @@
         </div>
     </div>
 
-    <!-- Modal: 學生歷史檢閱 (通用) -->
-    <div id="historyViewerModal" class="modal-overlay">
-        <div class="modal-body">
-            <div class="modal-header">
-                <h3 id="viewerTitle" style="margin:0; color:var(--m-blue);">學生歷程</h3>
-                <button onclick="document.getElementById('historyViewerModal').style.display='none'" style="font-size:28px; border:none; background:none; cursor:pointer; color:#999;">&times;</button>
-            </div>
-            <div class="modal-content-scroll">
-                <!-- 麵包屑導航 -->
-                <div id="teacherBreadcrumb" class="history-breadcrumb" style="display: none;">
-                    <span class="breadcrumb-item" onclick="renderLevel1()"><i class="fas fa-home"></i> 主範疇</span> 
-                    <span class="breadcrumb-sep"> &gt; </span>
-                    <span class="breadcrumb-item" id="breadCategory" onclick="renderLevel2(currentCategory)"></span>
-                    <span class="breadcrumb-sep" id="breadSep2"> &gt; </span>
-                    <span class="breadcrumb-current" id="breadSub"></span>
-                </div>
-
-                <!-- Level 1: 主範疇卡片 -->
-                <div id="historyLevel1" class="category-cards-container"></div>
-                <!-- Level 2: 子功能按鈕 -->
-                <div id="historyLevel2" class="history-grid-menu" style="display: none;"></div>
-                <!-- Level 3: 紀錄列表 -->
-                <div id="historyLevel3" class="history-list-container" style="display: none;"></div>
-                <!-- Detail: 詳細內容 -->
-                <div id="historyDetail" style="display: none;"></div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal: 課業繳交檢閱 -->
-    <div id="submissionViewerModal" class="modal-overlay">
-        <div class="modal-body">
-            <div class="modal-header">
-                <h3 id="submissionTitle" style="margin:0; color:var(--m-green);"></h3>
-                <div style="font-size:0.9em; color:#888;">已繳交: <span id="submitCount" style="color:var(--m-green); font-weight:bold;">0</span> / 未繳交: <span id="pendingCount" style="color:var(--m-red); font-weight:bold;">0</span></div>
-                <button onclick="document.getElementById('submissionViewerModal').style.display='none'" style="font-size:28px; border:none; background:none; cursor:pointer; color:#999;">&times;</button>
-            </div>
-            <div class="modal-content-container">
-                <div class="submission-sidebar">
-                    <ul id="submissionList" style="list-style:none; padding:0; margin:0;"></ul>
-                </div>
-                <div id="submissionDetailArea" class="submission-detail-area">
-                    <div style="text-align:center; color:#ccc; margin-top:100px;"><i class="far fa-file-alt" style="font-size:48px;"></i><p>請選擇學生</p></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal: 全班綜合報告顯示視窗 (新增) -->
-    <div id="classReportModal" class="modal-overlay">
-        <div class="modal-body" style="max-width: 900px;">
-            <div class="modal-header">
-                <h3 style="margin:0; color:var(--m-blue);"><i class="fas fa-chart-pie"></i> 全班綜合學習報告</h3>
-                <button onclick="document.getElementById('classReportModal').style.display='none'" style="font-size:28px; border:none; background:none; cursor:pointer; color:#999;">&times;</button>
-            </div>
-            <div id="classReportContent" class="modal-content-scroll" style="background:#f9f9f9; padding: 0;">
-                <!-- AI 生成內容將注入此處 -->
-            </div>
-        </div>
-    </div>
+    <!-- Modals -->
+    <div id="historyViewerModal" class="modal-overlay"><div class="modal-body"><div class="modal-header"><h3 id="viewerTitle" style="margin:0; color:var(--m-blue);">學生歷程</h3><button onclick="document.getElementById('historyViewerModal').style.display='none'" style="font-size:28px; border:none; background:none; cursor:pointer; color:#999;">&times;</button></div><div class="modal-content-scroll"><div id="teacherBreadcrumb" class="history-breadcrumb" style="display: none;"><span class="breadcrumb-item" onclick="renderLevel1()"><i class="fas fa-home"></i> 主範疇</span> <span class="breadcrumb-sep"> &gt; </span><span class="breadcrumb-item" id="breadCategory" onclick="renderLevel2(currentCategory)"></span><span class="breadcrumb-sep" id="breadSep2"> &gt; </span><span class="breadcrumb-current" id="breadSub"></span></div><div id="historyLevel1" class="category-cards-container"></div><div id="historyLevel2" class="history-grid-menu" style="display: none;"></div><div id="historyLevel3" class="history-list-container" style="display: none;"></div><div id="historyDetail" style="display: none;"></div></div></div></div>
+    <div id="submissionViewerModal" class="modal-overlay"><div class="modal-body"><div class="modal-header"><h3 id="submissionTitle" style="margin:0; color:var(--m-green);"></h3><div style="font-size:0.9em; color:#888;">已繳交: <span id="submitCount" style="color:var(--m-green); font-weight:bold;">0</span> / 未繳交: <span id="pendingCount" style="color:var(--m-red); font-weight:bold;">0</span></div><button onclick="document.getElementById('submissionViewerModal').style.display='none'" style="font-size:28px; border:none; background:none; cursor:pointer; color:#999;">&times;</button></div><div class="modal-content-container"><div class="submission-sidebar"><ul id="submissionList" style="list-style:none; padding:0; margin:0;"></ul></div><div id="submissionDetailArea" class="submission-detail-area"><div style="text-align:center; color:#ccc; margin-top:100px;"><i class="far fa-file-alt" style="font-size:48px;"></i><p>請選擇學生</p></div></div></div></div></div>
+    <div id="classReportModal" class="modal-overlay"><div class="modal-body" style="max-width: 900px;"><div class="modal-header"><h3 style="margin:0; color:var(--m-blue);"><i class="fas fa-chart-pie"></i> 全班綜合學習報告</h3><button onclick="document.getElementById('classReportModal').style.display='none'" style="font-size:28px; border:none; background:none; cursor:pointer; color:#999;">&times;</button></div><div id="classReportContent" class="modal-content-scroll" style="background:#f9f9f9; padding: 0;"></div></div></div>
 
     <script>
         const firebaseConfig = {
@@ -554,12 +439,10 @@
         const db = firebase.database();
         const auth = firebase.auth();
 
-        // API Key for AI Report Generation
         const READING_API_KEYS = ["pk_D77NeM4n6GnNCYbo", "pk_c17y17tQ3BY71cpd", "pk_Ax3rRTHkrdTQVIGD", "pk_dGVqEggn4T4dwQI3", "pk_YIFWnDFts0quviE0"];
         const READING_API_URL = "https://gen.pollinations.ai/v1/chat/completions";
         const READING_MODEL = "deepseek";
 
-        // === OneSignal 發送函式 (保留原始版本，不參考 Reference) ===
         const _k1 = "os_v2_app_";
         const _k2 = "7bo2joflvzgf5dnzzh2gh7eycxk5kn45q25uwymlyhqbq746uburtgfhd3xfyyxullklptksmnddfdwgpechno4byssraz7yysuusrq";
         const _OS_KEY = _k1 + _k2;
@@ -567,44 +450,17 @@
         async function sendClassNotification(targetGrade, targetClass, title, message) {
             const options = {
                 method: 'POST',
-                headers: {
-                    accept: 'application/json',
-                    'Content-Type': 'application/json',
-                    Authorization: 'Basic ' + _OS_KEY
-                },
-                body: JSON.stringify({
-                    app_id: "f85da4b8-abae-4c5e-8db9-c9f463fc9815", 
-                    headings: { en: title, zh: title },
-                    contents: { en: message, zh: message },
-                    filters: [
-                        { field: "tag", key: "grade", relation: "=", value: targetGrade },
-                        { operator: "AND" },
-                        { field: "tag", key: "class", relation: "=", value: targetClass }
-                    ],
-                    url: "https://kenchan20141.github.io/AIChinese/"
-                })
+                headers: { accept: 'application/json', 'Content-Type': 'application/json', Authorization: 'Basic ' + _OS_KEY },
+                body: JSON.stringify({ app_id: "f85da4b8-abae-4c5e-8db9-c9f463fc9815", headings: { en: title, zh: title }, contents: { en: message, zh: message }, filters: [{ field: "tag", key: "grade", relation: "=", value: targetGrade }, { operator: "AND" }, { field: "tag", key: "class", relation: "=", value: targetClass }], url: "https://kenchan20141.github.io/AIChinese/" })
             };
-
-            try {
-                await fetch('https://onesignal.com/api/v1/notifications', options);
-                console.log('推播發送成功');
-            } catch (err) {
-                console.error('推播發送失敗:', err);
-            }
+            try { await fetch('https://onesignal.com/api/v1/notifications', options); console.log('推播發送成功'); } catch (err) { console.error('推播發送失敗:', err); }
         }
 
-        // 輔助函式：DSE等級計算
         function determineGrade(score) {
-            if (score >= 72) return "5**";
-            if (score >= 69) return "5*";
-            if (score >= 64) return "5";
-            if (score >= 57) return "4";
-            if (score >= 50) return "3";
-            if (score >= 45) return "2";
-            return "1";
+            if (score >= 72) return "5**"; if (score >= 69) return "5*"; if (score >= 64) return "5";
+            if (score >= 57) return "4"; if (score >= 50) return "3"; if (score >= 45) return "2"; return "1";
         }
 
-        // === 登入與基礎邏輯 ===
         function teacherLogin() {
             const provider = new firebase.auth.GoogleAuthProvider();
             provider.setCustomParameters({ prompt: 'select_account' });
@@ -625,7 +481,7 @@
         }
         auth.onAuthStateChanged(user => { if (user && user.email.endsWith('@ccckyc.edu.hk')) showApp(user); });
 
-        // === Tab 切換邏輯 (修訂版) ===
+        // === Tab 切換 ===
         function switchTab(tabId) {
             document.querySelectorAll('.box').forEach(b => b.style.display = 'none');
             document.getElementById('tab-' + tabId).style.display = 'block';
@@ -637,34 +493,25 @@
             if(tabId === 'reports') loadReportStudentList();
             if(tabId === 'analytics') {
                 if(document.getElementById('statMonth').options.length === 0) initStatUI();
+                loadAnalyticsClassList(); // 預載班級列表
             }
         }
 
-        // === 歷史檢閱邏輯 (共用) ===
+        // === 歷史檢閱 ===
         let currentStudentHistory = [], currentCategory = '', currentSubFunction = '', currentThemeIndex = 1, currentViewingAssignmentId = ''; 
-        const HISTORY_STRUCTURE = { 
-            "閱讀": ["點評", "指引"], "敘事抒情": ["文章點評", "大綱點評", "解題指引", "敘事物象"], 
-            "議論": ["文章點評", "大綱點評", "指引"], "整合拓展": ["點評", "指引"],
-            "課外書籍": ["討論紀錄"], "學習報告": ["綜合分析"]
-        };
-        const CATEGORY_ASSETS = { 
-            "閱讀": { img: '郵筒.png', en: 'READING' }, "敘事抒情": { img: '相機.png', en: 'NARRATIVE' }, 
-            "議論": { img: '筆.png', en: 'ARGUMENT' }, "整合拓展": { img: '火車.png', en: 'EXPAND' }, 
-            "課外書籍": { img: '書.png', en: 'LIBRARY' }, "學習報告": { img: '書.png', en: 'REPORT' } 
-        };
+        const HISTORY_STRUCTURE = { "閱讀": ["點評", "指引"], "敘事抒情": ["文章點評", "大綱點評", "解題指引", "敘事物象"], "議論": ["文章點評", "大綱點評", "指引"], "整合拓展": ["點評", "指引"], "課外書籍": ["討論紀錄"], "學習報告": ["綜合分析"] };
+        const CATEGORY_ASSETS = { "閱讀": { img: '郵筒.png', en: 'READING' }, "敘事抒情": { img: '相機.png', en: 'NARRATIVE' }, "議論": { img: '筆.png', en: 'ARGUMENT' }, "整合拓展": { img: '火車.png', en: 'EXPAND' }, "課外書籍": { img: '書.png', en: 'LIBRARY' }, "學習報告": { img: '書.png', en: 'REPORT' } };
         const SUB_ICONS = { "文章點評": "fa-file-alt", "大綱點評": "fa-list-ol", "綜合分析": "fa-chart-pie", "敘事物象": "fa-tree", "解題指引": "fa-compass", "指引": "fa-lightbulb", "點評": "fa-comment-dots", "討論紀錄": "fa-comments" };
 
         function loadStudentList() {
-            const g = document.getElementById('viewGrade').value;
-            const c = document.getElementById('viewClass').value;
+            const g = document.getElementById('viewGrade').value, c = document.getElementById('viewClass').value;
             const container = document.getElementById('studentListContainer');
             container.innerHTML = '<p style="text-align:center; padding:20px; width:100%; color:#888;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
             db.ref(`students/${g}/${c}`).once('value', snapshot => {
                 const data = snapshot.val();
                 if (!data) { container.innerHTML = '<p style="text-align:center; width:100%; color:#aaa;">暫無資料。</p>'; return; }
                 container.innerHTML = '';
-                Object.entries(data).sort(([,a], [,b]) => (parseInt(a.profile?.number)||99) - (parseInt(b.profile?.number)||99))
-                .forEach(([name, d]) => {
+                Object.entries(data).sort(([,a], [,b]) => (parseInt(a.profile?.number)||99) - (parseInt(b.profile?.number)||99)).forEach(([name, d]) => {
                     const h = d.history ? (Array.isArray(d.history) ? d.history : Object.values(d.history)) : [];
                     const div = document.createElement('div'); div.className = 'student-card';
                     div.innerHTML = `<div class="student-name">${name} <small>(${d.profile?.number||''})</small></div><div class="last-sync"><i class="fas fa-history"></i> 紀錄: ${h.length} 筆</div>`;
@@ -674,30 +521,24 @@
             });
         }
 
-        // === 新增：報告管理邏輯 ===
+        // === 報告管理 ===
         function loadReportStudentList() {
-            const g = document.getElementById('reportGrade').value;
-            const c = document.getElementById('reportClass').value;
+            const g = document.getElementById('reportGrade').value, c = document.getElementById('reportClass').value;
             const container = document.getElementById('reportStudentListContainer');
             container.innerHTML = '<p style="text-align:center; padding:20px; width:100%; color:#888;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
             loadClassReportHistory();
-            
             db.ref(`students/${g}/${c}`).once('value', snapshot => {
                 const data = snapshot.val();
                 if (!data) { container.innerHTML = '<p style="text-align:center; width:100%; color:#aaa;">暫無資料。</p>'; return; }
                 container.innerHTML = '';
-                Object.entries(data).sort(([,a], [,b]) => (parseInt(a.profile?.number)||99) - (parseInt(b.profile?.number)||99))
-                .forEach(([name, d]) => {
+                Object.entries(data).sort(([,a], [,b]) => (parseInt(a.profile?.number)||99) - (parseInt(b.profile?.number)||99)).forEach(([name, d]) => {
                     const h = d.history ? (Array.isArray(d.history) ? d.history : Object.values(d.history)) : [];
                     const reports = h.filter(r => r.category === "學習報告");
                     const div = document.createElement('div'); div.className = 'student-card';
                     const style = reports.length > 0 ? '' : 'opacity: 0.6; filter: grayscale(100%);';
-                    const iconColor = reports.length > 0 ? 'var(--m-red)' : '#ccc';
                     div.style.cssText = style;
-                    div.innerHTML = `<div class="student-name">${name} <small>(${d.profile?.number||''})</small></div><div class="last-sync" style="color:${iconColor}; font-weight:bold;"><i class="fas fa-chart-pie"></i> 已生成報告: ${reports.length} 份</div>`;
-                    if (reports.length > 0) {
-                        div.onclick = () => { openHistoryModal(name, h); setTimeout(() => { renderLevel2('學習報告'); setTimeout(() => renderLevel3('綜合分析', 5), 100); }, 300); };
-                    }
+                    div.innerHTML = `<div class="student-name">${name} <small>(${d.profile?.number||''})</small></div><div class="last-sync" style="color:${reports.length>0?'var(--m-red)':'#ccc'}; font-weight:bold;"><i class="fas fa-chart-pie"></i> 已生成報告: ${reports.length} 份</div>`;
+                    if (reports.length > 0) { div.onclick = () => { openHistoryModal(name, h); setTimeout(() => { renderLevel2('學習報告'); setTimeout(() => renderLevel3('綜合分析', 5), 100); }, 300); }; }
                     container.appendChild(div);
                 });
             });
@@ -705,26 +546,19 @@
 
         async function generateClassReport() {
             const btn = document.getElementById('btnClassReport');
-            const g = document.getElementById('reportGrade').value;
-            const c = document.getElementById('reportClass').value;
+            const g = document.getElementById('reportGrade').value, c = document.getElementById('reportClass').value;
             btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 分析全班數據中...';
-
             try {
                 const snapshot = await db.ref(`students/${g}/${c}`).once('value');
                 const data = snapshot.val();
                 if (!data) { alert("此班級無學生資料！"); return; }
-
                 let classSummary="", outlineSummary="", readingSummary="", expandSummary="";
                 let narrativeTotal={content:0,expr:0,struct:0,count:0}, argumentTotal={content:0,expr:0,struct:0,count:0};
                 let studentCount = 0;
-
                 Object.entries(data).forEach(([name, d]) => {
                     const h = d.history ? (Array.isArray(d.history) ? d.history : Object.values(d.history)) : [];
                     const reports = h.filter(r => r.category === "學習報告").sort((a,b) => b.timestamp - a.timestamp);
-                    if (reports.length > 0) {
-                        studentCount++;
-                        classSummary += `學生 ${studentCount}: ${reports[0].aiContent.replace(/<[^>]*>?/gm, ' ').substring(0, 300)}...\n`;
-                    }
+                    if (reports.length > 0) { studentCount++; classSummary += `學生 ${studentCount}: ${reports[0].aiContent.replace(/<[^>]*>?/gm, ' ').substring(0, 300)}...\n`; }
                     h.forEach(r => {
                         const scoreMatch = r.aiContent.match(/總分:\s*(\d+)/);
                         if (scoreMatch) {
@@ -737,28 +571,19 @@
                         if (r.category==="整合拓展" && r.subFunction==="點評") { let t=r.aiContent.replace(/<[^>]*>?/gm, ' '); let i=t.indexOf("點評"); if(i!==-1) expandSummary+=`[整合]: ${t.substring(i, i+150)}...\n`; }
                     });
                 });
-
                 if (studentCount === 0 && narrativeTotal.count === 0 && argumentTotal.count === 0 && !outlineSummary) { alert("此班級數據不足。"); return; }
-
                 const narrAvg = { content: narrativeTotal.count ? Math.round((narrativeTotal.content/narrativeTotal.count)/4) : 0, expr: narrativeTotal.count ? Math.round((narrativeTotal.expr/narrativeTotal.count)/3) : 0, struct: narrativeTotal.count ? Math.round((narrativeTotal.struct/narrativeTotal.count)/2) : 0 };
                 const argAvg = { content: argumentTotal.count ? Math.round((argumentTotal.content/argumentTotal.count)/4) : 0, expr: argumentTotal.count ? Math.round((argumentTotal.expr/argumentTotal.count)/3) : 0, struct: argumentTotal.count ? Math.round((argumentTotal.struct/argumentTotal.count)/2) : 0 };
-
                 const prompt = `你是一位中文科科主任。分析 ${g}年${c}班 數據：敘事平均(內容${narrAvg.content},表達${narrAvg.expr},結構${narrAvg.struct})，議論平均(內容${argAvg.content},表達${argAvg.expr},結構${argAvg.struct})。\n大綱表現：${outlineSummary}\n閱讀表現：${readingSummary}\n整合表現：${expandSummary}\n成品摘要：${classSummary}\n\n任務：生成「全班綜合學習評估報告」。\n格式要求(HTML)：\n1. <div class="report-section"><div class="report-category-badge badge-general"><div class="badge-general-title">${g}${c}班 綜合評估</div></div><div class="report-text-card"><p>總結</p></div></div><div class="report-separator"></div>\n2. 分別為閱讀(.badge-reading)、敘事(.badge-narrative)、議論(.badge-argument)、整合拓展(.badge-expand)提供 .report-text-card 分析。\n3. <div class="report-quote-card"><div class="report-quote-content">教學建議</div></div>`;
-
                 const response = await callAPI(prompt);
-                const reportData = {
-                    timestamp: firebase.database.ServerValue.TIMESTAMP, dateStr: new Date().toLocaleString(),
-                    stats: { narrAvg, argAvg, narrativeTotal: Math.round((narrativeTotal.content+narrativeTotal.expr+narrativeTotal.struct)/narrativeTotal.count)||0, argumentTotal: Math.round((argumentTotal.content+argumentTotal.expr+argumentTotal.struct)/argumentTotal.count)||0 },
-                    aiHtml: response
-                };
+                const reportData = { timestamp: firebase.database.ServerValue.TIMESTAMP, dateStr: new Date().toLocaleString(), stats: { narrAvg, argAvg, narrativeTotal: Math.round((narrativeTotal.content+narrativeTotal.expr+narrativeTotal.struct)/narrativeTotal.count)||0, argumentTotal: Math.round((argumentTotal.content+argumentTotal.expr+argumentTotal.struct)/argumentTotal.count)||0 }, aiHtml: response };
                 await db.ref(`class_reports/${g}/${c}`).push(reportData);
                 loadClassReportHistory(); openClassReportModal(reportData);
             } catch (e) { console.error(e); alert("生成失敗"); } finally { btn.disabled = false; btn.innerHTML = '<i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)'; }
         }
 
         function loadClassReportHistory() {
-            const g = document.getElementById('reportGrade').value;
-            const c = document.getElementById('reportClass').value;
+            const g = document.getElementById('reportGrade').value, c = document.getElementById('reportClass').value;
             const container = document.getElementById('classReportHistoryContainer');
             const list = document.getElementById('classReportList');
             db.ref(`class_reports/${g}/${c}`).once('value', snapshot => {
@@ -773,37 +598,22 @@
                 });
             });
         }
-
-        function deleteClassReport(key) {
-            if(!confirm("確定刪除此報告？")) return;
-            const g = document.getElementById('reportGrade').value;
-            const c = document.getElementById('reportClass').value;
-            db.ref(`class_reports/${g}/${c}/${key}`).remove().then(()=>loadClassReportHistory());
-        }
-
+        function deleteClassReport(key) { if(confirm("確定刪除此報告？")) { const g=document.getElementById('reportGrade').value, c=document.getElementById('reportClass').value; db.ref(`class_reports/${g}/${c}/${key}`).remove().then(()=>loadClassReportHistory()); }}
         function openClassReportModal(data) {
-            const m = document.getElementById('classReportModal');
-            const c = document.getElementById('classReportContent');
+            const m = document.getElementById('classReportModal'), c = document.getElementById('classReportContent');
             const d = document.createElement('div'); d.innerHTML = data.aiHtml;
-            
             if(data.stats.narrativeTotal>0) { const b=d.querySelector('.badge-narrative'); if(b) b.outerHTML=generateClassChartHTML('narrative', data.stats.narrAvg, data.stats.narrativeTotal); }
             if(data.stats.argumentTotal>0) { const b=d.querySelector('.badge-argument'); if(b) b.outerHTML=generateClassChartHTML('argument', data.stats.argAvg, data.stats.argumentTotal); }
-
             c.innerHTML = `<div style="text-align:right;color:#999;padding:20px 20px 0 0;">報告日期：${data.dateStr}</div><div style="padding:20px;">${d.innerHTML}</div>`;
             m.style.display = 'flex';
-            setTimeout(() => {
-                if(data.stats.narrativeTotal>0) renderClassChart('narrativeClassChart', data.stats.narrAvg);
-                if(data.stats.argumentTotal>0) renderClassChart('argumentClassChart', data.stats.argAvg);
-            }, 200);
+            setTimeout(() => { if(data.stats.narrativeTotal>0) renderClassChart('narrativeClassChart', data.stats.narrAvg); if(data.stats.argumentTotal>0) renderClassChart('argumentClassChart', data.stats.argAvg); }, 200);
         }
-
         function generateClassChartHTML(type, avg, total) {
             const id = type==='narrative'?'narrativeClassChart':'argumentClassChart';
             const title = type==='narrative'?'敘事抒情':'議論';
             const cls = type==='narrative'?'badge-narrative':'badge-argument';
             return `<div class="report-section"><div class="report-category-badge ${cls}"><i class="fas fa-book"></i> ${title}</div><div class="report-radar-wrapper"><div class="grading-grid"><div class="grading-scores"><h3>班級平均表現</h3><div class="score-item"><label>內容</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.content*4}</span></div></div><div class="score-item"><label>表達</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.expr*3}</span></div></div><div class="score-item"><label>結構</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.struct*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.struct*2}</span></div></div><div class="total-score-container"><span style="font-size:1.1em;">平均總分: ${total}</span><span style="font-size:2em;font-weight:bold;color:#d9534f;">${determineGrade(total)}</span></div></div><div class="grading-radar"><div class="radar-chart-container" style="height:250px;"><canvas id="${id}"></canvas></div></div></div></div></div>`;
         }
-
         function renderClassChart(id, avg) {
             const ctx = document.getElementById(id); if(!ctx) return;
             new Chart(ctx.getContext('2d'), {
@@ -812,29 +622,69 @@
                 options: { responsive: true, maintainAspectRatio: false, scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } }, plugins: { legend: { display: false } } }
             });
         }
-
         async function callAPI(prompt) {
             let k = READING_API_KEYS[Math.floor(Math.random() * READING_API_KEYS.length)];
             const r = await fetch(READING_API_URL, { method: "POST", headers: { "Authorization": `Bearer ${k}`, "Content-Type": "application/json" }, body: JSON.stringify({ model: READING_MODEL, messages: [{ role: "user", content: prompt }], max_tokens: 4000 }) });
-            const d = await r.json();
-            return d.choices[0].message.content.replace(/<think\s*>.*?<\/think\s*>|<think\s*\/>/gis, '').trim();
+            const d = await r.json(); return d.choices[0].message.content.replace(/<think\s*>.*?<\/think\s*>|<think\s*\/>/gis, '').trim();
         }
 
-        // === 新增：數據統計邏輯 ===
+        // === 數據統計 ===
+        let selectedAnalyticsStudent = null; // 當前選擇的學生，null 代表全班
+
         function initStatUI() {
             const now = new Date();
-            const y = now.getFullYear();
-            const m = String(now.getMonth() + 1).padStart(2, '0');
-            const d = String(now.getDate()).padStart(2, '0');
+            const y = now.getFullYear(); const m = String(now.getMonth() + 1).padStart(2, '0'); const d = String(now.getDate()).padStart(2, '0');
             document.getElementById('statDate').value = `${y}-${m}-${d}`;
             document.getElementById('statYear').value = y;
             const ms = document.getElementById('statMonth'); ms.innerHTML = '';
             for(let i=1; i<=12; i++) { const o=document.createElement('option'); o.value=String(i).padStart(2,'0'); o.text=i+'月'; if(o.value===m) o.selected=true; ms.add(o); }
             updateStatInputs(); updateTimeInputs();
         }
-        function updateStatInputs() { const s=document.getElementById('statScope').value; document.getElementById('statClassInput').style.display=(s==='class'||s==='student')?'inline-block':'none'; document.getElementById('statStudentInput').style.display=(s==='student')?'inline-block':'none'; }
+        function updateStatInputs() { 
+            const s=document.getElementById('statScope').value; 
+            document.getElementById('statClassInput').style.display=(s==='class')?'inline-block':'none';
+            document.getElementById('analyticsStudentListContainer').style.display=(s==='class')?'block':'none';
+            if(s==='class') loadAnalyticsClassList();
+        }
         function updateTimeInputs() { const m=document.getElementById('statTimeMode').value; document.getElementById('statDate').style.display=(m==='day')?'inline-block':'none'; document.getElementById('statMonth').style.display=(m==='month')?'inline-block':'none'; document.getElementById('statYear').style.display=(m==='month'||m==='year')?'inline-block':'none'; }
         
+        function loadAnalyticsClassList() {
+            const g = document.getElementById('statGrade').value;
+            const c = document.getElementById('statClass').value;
+            const list = document.getElementById('analyticsStudentList');
+            selectedAnalyticsStudent = null; // 重置選擇
+            list.innerHTML = '載入學生中...';
+            
+            db.ref(`students/${g}/${c}`).once('value', s => {
+                const data = s.val();
+                list.innerHTML = '';
+                if(!data) { list.innerHTML = '此班級無學生'; return; }
+                
+                // 排序學生
+                const sorted = Object.entries(data).sort(([,a], [,b]) => (parseInt(a.profile?.number)||99) - (parseInt(b.profile?.number)||99));
+                
+                sorted.forEach(([name, d]) => {
+                    const chip = document.createElement('div');
+                    chip.className = 'student-chip';
+                    chip.innerText = `${d.profile?.number||''}. ${name}`;
+                    chip.onclick = () => {
+                        // 切換選擇狀態
+                        if (selectedAnalyticsStudent === name) {
+                            selectedAnalyticsStudent = null; // 取消選擇 -> 變回全班
+                            document.querySelectorAll('.student-chip').forEach(el => el.classList.remove('active'));
+                        } else {
+                            selectedAnalyticsStudent = name;
+                            document.querySelectorAll('.student-chip').forEach(el => el.classList.remove('active'));
+                            chip.classList.add('active');
+                        }
+                        // 自動觸發查詢 (可選)
+                        // fetchAndRenderStats(); 
+                    };
+                    list.appendChild(chip);
+                });
+            });
+        }
+
         let analyticsChartInstance = null;
         async function fetchAndRenderStats() {
             const scope = document.getElementById('statScope').value;
@@ -845,6 +695,40 @@
             
             let path = `analytics/${y}`; if(mode==='day') path+=`/${m}/${d}`; else if(mode==='month') path+=`/${m}`;
             
+            // 取得註冊人數 (用於計算平均)
+            let registeredCount = 1; // 預設 1 (避免除以 0)
+            
+            // 如果選了 Global，目前無法準確得知總註冊數，暫設為 School 的人數或較大值
+            // 如果選了 School，查詢全校學生數
+            if (scope === 'school') {
+                const snap = await db.ref('students').once('value');
+                const all = snap.val();
+                let count = 0;
+                if(all) {
+                    // 遍歷所有年級班級
+                    Object.values(all).forEach(grade => {
+                        Object.values(grade).forEach(cls => {
+                            count += Object.keys(cls).length;
+                        });
+                    });
+                }
+                registeredCount = count || 1;
+            }
+            // 如果選了 Class
+            else if (scope === 'class') {
+                const g = document.getElementById('statGrade').value;
+                const c = document.getElementById('statClass').value;
+                // 如果有選學生 -> 1 人
+                if (selectedAnalyticsStudent) {
+                    registeredCount = 1;
+                } else {
+                    // 否則 -> 全班人數
+                    const snap = await db.ref(`students/${g}/${c}`).once('value');
+                    const clsData = snap.val();
+                    registeredCount = clsData ? Object.keys(clsData).length : 1;
+                }
+            }
+
             try {
                 const snap = await db.ref(path).once('value');
                 const data = snap.val();
@@ -856,8 +740,16 @@
                     let t = null;
                     if(scope==='global') t=node.global;
                     else if(scope==='school') t=node.school;
-                    else if(scope==='class') { const g=document.getElementById('statGrade').value, c=document.getElementById('statClass').value; if(node.classes) t=node.classes[g+c]; }
-                    else if(scope==='student') { const g=document.getElementById('statGrade').value, c=document.getElementById('statClass').value, n=document.getElementById('statStudentName').value; if(node.students && node.students[g] && node.students[g][c]) t=node.students[g][c][n]; }
+                    else if(scope==='class') { 
+                        const g=document.getElementById('statGrade').value, c=document.getElementById('statClass').value; 
+                        if (selectedAnalyticsStudent) {
+                            // 個別學生
+                            if(node.students && node.students[g] && node.students[g][c]) t=node.students[g][c][selectedAnalyticsStudent];
+                        } else {
+                            // 全班
+                            if(node.classes) t=node.classes[g+c]; 
+                        }
+                    }
                     
                     if(t) {
                         const v=parseInt(t.visits||0), dur=parseInt(t.duration||0);
@@ -872,30 +764,62 @@
 
                 document.getElementById('dispVisits').innerText=total.v;
                 document.getElementById('dispDuration').innerText=Math.round(total.d/60);
-                document.getElementById('dispAvg').innerText=total.v>0?Math.round((total.d/60)/total.v):0;
+                
+                // 修改：平均每人時長 = 總時長 / 註冊人數
+                const avgPerPerson = Math.round((total.d/60) / registeredCount);
+                document.getElementById('dispAvg').innerText = avgPerPerson;
+                
+                // Chart.js - 莫蘭迪色
+                const mBlue = 'rgba(148, 167, 181, 0.7)';
+                const mRed = 'rgba(214, 154, 146, 1)';
                 
                 const ctx = document.getElementById('analyticsChart').getContext('2d');
                 if(analyticsChartInstance) analyticsChartInstance.destroy();
                 analyticsChartInstance = new Chart(ctx, {
                     type: 'bar',
-                    data: { labels: Object.keys(agg), datasets: [{ label: '次數', data: Object.values(agg).map(a=>a.v), backgroundColor: 'rgba(54, 162, 235, 0.5)', yAxisID: 'y' }, { label: '時長(分)', data: Object.values(agg).map(a=>Math.round(a.d/60)), type: 'line', borderColor: 'rgba(255, 99, 132, 1)', yAxisID: 'y1' }] },
-                    options: { maintainAspectRatio: false, scales: { y: { beginAtZero: true, position: 'left' }, y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } } } }
+                    data: { 
+                        labels: Object.keys(agg), 
+                        datasets: [
+                            { 
+                                label: '次數', 
+                                data: Object.values(agg).map(a=>a.v), 
+                                backgroundColor: mBlue, 
+                                borderColor: '#7a8f9e',
+                                borderWidth: 1,
+                                maxBarThickness: 50, // 限制最大寬度
+                                yAxisID: 'y' 
+                            }, 
+                            { 
+                                label: '時長(分)', 
+                                data: Object.values(agg).map(a=>Math.round(a.d/60)), 
+                                type: 'line', 
+                                borderColor: mRed,
+                                backgroundColor: 'rgba(214, 154, 146, 0.2)',
+                                borderWidth: 2,
+                                yAxisID: 'y1' 
+                            }
+                        ] 
+                    },
+                    options: { 
+                        maintainAspectRatio: false, 
+                        scales: { 
+                            y: { beginAtZero: true, position: 'left', title: {display:true, text:'次數'} }, 
+                            y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, title: {display:true, text:'分鐘'} } 
+                        } 
+                    }
                 });
 
             } catch(e) { console.error(e); alert("讀取失敗"); }
         }
 
-        // === 歷史檢閱共用邏輯 ===
+        // === 共用功能 ===
         function openHistoryModal(name, h) {
             document.getElementById('viewerTitle').innerHTML = `<i class="fas fa-user-graduate"></i> ${name}`;
-            currentStudentHistory = h;
-            document.getElementById('historyViewerModal').style.display = 'flex';
-            renderLevel1();
+            currentStudentHistory = h; document.getElementById('historyViewerModal').style.display = 'flex'; renderLevel1();
         }
         function renderLevel1() {
             ['historyLevel2','historyLevel3','historyDetail'].forEach(id=>document.getElementById(id).style.display='none');
-            document.getElementById('historyLevel1').style.display='flex';
-            document.getElementById('teacherBreadcrumb').style.display='none';
+            document.getElementById('historyLevel1').style.display='flex'; document.getElementById('teacherBreadcrumb').style.display='none';
             const c = document.getElementById('historyLevel1'); c.innerHTML='';
             Object.keys(HISTORY_STRUCTURE).forEach(cat => {
                 const count = currentStudentHistory.filter(r => r.category === cat).length;
@@ -905,10 +829,8 @@
             });
         }
         function renderLevel2(cat) {
-            currentCategory=cat; 
-            ['historyLevel1','historyLevel3','historyDetail'].forEach(id=>document.getElementById(id).style.display='none');
-            document.getElementById('historyLevel2').style.display='grid';
-            updateBreadcrumb(cat);
+            currentCategory=cat; ['historyLevel1','historyLevel3','historyDetail'].forEach(id=>document.getElementById(id).style.display='none');
+            document.getElementById('historyLevel2').style.display='grid'; updateBreadcrumb(cat);
             const c = document.getElementById('historyLevel2'); c.innerHTML='';
             const subs = HISTORY_STRUCTURE[cat] || [];
             subs.forEach((sub,i)=>{
@@ -918,10 +840,8 @@
             });
         }
         function renderLevel3(sub, theme) {
-            currentSubFunction=sub; currentThemeIndex=theme;
-            ['historyLevel1','historyLevel2','historyDetail'].forEach(id=>document.getElementById(id).style.display='none');
-            document.getElementById('historyLevel3').style.display='grid';
-            updateBreadcrumb(currentCategory,sub);
+            currentSubFunction=sub; currentThemeIndex=theme; ['historyLevel1','historyLevel2','historyDetail'].forEach(id=>document.getElementById(id).style.display='none');
+            document.getElementById('historyLevel3').style.display='grid'; updateBreadcrumb(currentCategory,sub);
             const c=document.getElementById('historyLevel3'); c.innerHTML='';
             const recs=currentStudentHistory.filter(r=>r.category===currentCategory&&r.subFunction===sub).sort((a,b)=>b.timestamp-a.timestamp);
             if(recs.length===0){c.innerHTML='<p style="text-align:center;width:100%;color:#999;grid-column:1/-1;">無紀錄</p>';return;}
@@ -931,36 +851,16 @@
         }
         function renderDetail(r) {
             ['historyLevel1','historyLevel2','historyLevel3'].forEach(id=>document.getElementById(id).style.display='none');
-            document.getElementById('historyDetail').style.display='block';
-            document.getElementById('teacherBreadcrumb').style.display='none';
-            let uContent = '';
-            if (r.category !== "學習報告" && r.userContent) {
-                uContent = `<div style="background:#fff;padding:20px;border:1px solid #eee;border-radius:12px;margin-bottom:20px;">${r.userContent.replace(/\n/g, '<br>')}</div>`;
-            }
-            document.getElementById('historyDetail').innerHTML = `
-                <div style="margin-bottom:15px;"><button class="nav-btn" onclick="renderLevel3('${currentSubFunction}',${currentThemeIndex})" style="padding:5px 15px;font-size:0.9em;"><i class="fas fa-arrow-left"></i> 返回</button></div>
-                <div class="detail-view">
-                    <div style="border-bottom:1px solid #eee;padding-bottom:15px;margin-bottom:20px;"><h2 style="margin:0;color:#333;">${r.title}</h2><p style="color:#888;margin-top:5px;">${r.dateStr}</p></div>
-                    ${uContent}
-                    <div class="detail-ai-box" style="margin-top:20px;">${r.aiContent}</div>
-                </div>`;
+            document.getElementById('historyDetail').style.display='block'; document.getElementById('teacherBreadcrumb').style.display='none';
+            let uContent = ''; if (r.category !== "學習報告" && r.userContent) { uContent = `<div style="background:#fff;padding:20px;border:1px solid #eee;border-radius:12px;margin-bottom:20px;">${r.userContent.replace(/\n/g, '<br>')}</div>`; }
+            document.getElementById('historyDetail').innerHTML = `<div style="margin-bottom:15px;"><button class="nav-btn" onclick="renderLevel3('${currentSubFunction}',${currentThemeIndex})" style="padding:5px 15px;font-size:0.9em;"><i class="fas fa-arrow-left"></i> 返回</button></div><div class="detail-view"><div style="border-bottom:1px solid #eee;padding-bottom:15px;margin-bottom:20px;"><h2 style="margin:0;color:#333;">${r.title}</h2><p style="color:#888;margin-top:5px;">${r.dateStr}</p></div>${uContent}<div class="detail-ai-box" style="margin-top:20px;">${r.aiContent}</div></div>`;
         }
-        function updateBreadcrumb(c,s) { 
-            const b=document.getElementById('teacherBreadcrumb'); b.style.display='flex';
-            document.getElementById('breadCategory').innerText=c;
-            document.getElementById('breadSub').innerText=s||'';
-            document.getElementById('breadSep2').style.display=s?'inline':'none';
-        }
-
-        // === 課業管理邏輯 ===
+        function updateBreadcrumb(c,s) { const b=document.getElementById('teacherBreadcrumb'); b.style.display='flex'; document.getElementById('breadCategory').innerText=c; document.getElementById('breadSub').innerText=s||''; document.getElementById('breadSep2').style.display=s?'inline':'none'; }
         function loadAssignmentHistory() {
-            const g = document.getElementById('assignGrade').value;
-            const c = document.getElementById('assignClass').value;
-            const list = document.getElementById('assignmentHistoryList');
+            const g = document.getElementById('assignGrade').value, c = document.getElementById('assignClass').value, list = document.getElementById('assignmentHistoryList');
             list.innerHTML = '<p style="text-align:center; padding:20px; color:#999;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
             db.ref(`assignments/${g}/${c}`).on('value', (snapshot) => {
-                const data = snapshot.val();
-                list.innerHTML = '';
+                const data = snapshot.val(); list.innerHTML = '';
                 if (!data) { list.innerHTML = '<div style="text-align:center; padding:30px; color:#ccc;">無課業</div>'; return; }
                 Object.entries(data).sort((a, b) => b[1].timestamp - a[1].timestamp).forEach(([key, task]) => {
                     const div = document.createElement('div'); div.className = 'assignment-item';
@@ -970,19 +870,13 @@
             });
         }
         function publishAssignment() {
-            const g = document.getElementById('assignGrade').value;
-            const c = document.getElementById('assignClass').value;
-            const topic = document.getElementById('assignTopic').value.trim();
-            const type = document.getElementById('assignType').value;
+            const g = document.getElementById('assignGrade').value, c = document.getElementById('assignClass').value, topic = document.getElementById('assignTopic').value.trim(), type = document.getElementById('assignType').value;
             if (!topic) return alert("請輸入題目");
-            db.ref(`assignments/${g}/${c}`).push().set({ topic, type, timestamp: Date.now() }, e => {
-                if(e) alert("失敗"); else { sendClassNotification(g, c, "新課業發佈", `老師發佈了：${topic}`); alert("發佈成功"); document.getElementById('assignTopic').value=''; }
-            });
+            db.ref(`assignments/${g}/${c}`).push().set({ topic, type, timestamp: Date.now() }, e => { if(e) alert("失敗"); else { sendClassNotification(g, c, "新課業發佈", `老師發佈了：${topic}`); alert("發佈成功"); document.getElementById('assignTopic').value=''; } });
         }
         function deleteAssignment(id, g, c) { if(confirm("確定刪除？")) db.ref(`assignments/${g}/${c}/${id}`).remove(); }
         async function viewSubmissions(aid, title, g, c) {
-            currentViewingAssignmentId = aid; document.getElementById('submissionTitle').innerText = title;
-            document.getElementById('submissionViewerModal').style.display = 'flex';
+            currentViewingAssignmentId = aid; document.getElementById('submissionTitle').innerText = title; document.getElementById('submissionViewerModal').style.display = 'flex';
             const list = document.getElementById('submissionList'); list.innerHTML = '<li>載入中...</li>';
             try {
                 const [stus, subs] = await Promise.all([db.ref(`students/${g}/${c}`).once('value').then(s=>s.val()||{}), db.ref(`assignments_submissions/${aid}`).once('value').then(s=>s.val()||{})]);
@@ -1001,39 +895,21 @@
             const fb = sub.teacherFeedback || {};
             document.getElementById('submissionDetailArea').innerHTML = `<div class="detail-view"><h2>${sub.studentName}</h2><div style="background:#fff;padding:20px;border:1px solid #eee;margin:10px 0;">${sub.userContent?sub.userContent.replace(/\n/g,'<br>'):'無內容'}</div><div class="detail-ai-box">${sub.aiContent}</div><div class="teacher-feedback-section"><h3><i class="fas fa-pen-alt"></i> 老師批改</h3><input id="ts" value="${fb.score||''}" placeholder="評分" style="margin:5px 0;"><textarea id="tc" style="width:100%;" rows="3">${fb.comment||''}</textarea><button class="btn-action btn-manage" onclick="sendFb('${sub.studentName}')">發還</button></div></div>`;
         }
-        function sendFb(name) {
-            db.ref(`assignments_submissions/${currentViewingAssignmentId}/${name}/teacherFeedback`).set({score:document.getElementById('ts').value, comment:document.getElementById('tc').value, timestamp:Date.now(), status:'returned'}, e=>alert(e?'失敗':'成功'));
-        }
-
-        // === 3. 學年管理 ===
+        function sendFb(name) { db.ref(`assignments_submissions/${currentViewingAssignmentId}/${name}/teacherFeedback`).set({score:document.getElementById('ts').value, comment:document.getElementById('tc').value, timestamp:Date.now(), status:'returned'}, e=>alert(e?'失敗':'成功')); }
         function populateTransferStudentList() {
-            const g=document.getElementById('indivFromGrade').value, c=document.getElementById('indivFromClass').value;
-            const b=document.getElementById('transferStudentListBox'); b.innerHTML='載入中...';
+            const g=document.getElementById('indivFromGrade').value, c=document.getElementById('indivFromClass').value, b=document.getElementById('transferStudentListBox'); b.innerHTML='載入中...';
             db.ref(`students/${g}/${c}`).once('value', s=>{
-                const d=s.val(); b.innerHTML='';
-                if(!d) { b.innerHTML='無學生'; return; }
-                Object.entries(d).sort((a,b)=>(parseInt(a[1].profile?.number)||99)-(parseInt(b[1].profile?.number)||99)).forEach(([n,i])=>{
-                    b.innerHTML+=`<label class="student-select-item"><input type="radio" name="ts" value="${n}"> ${i.profile?.number||'??'}. ${n}</label>`;
-                });
+                const d=s.val(); b.innerHTML=''; if(!d) { b.innerHTML='無學生'; return; }
+                Object.entries(d).sort((a,b)=>(parseInt(a[1].profile?.number)||99)-(parseInt(b[1].profile?.number)||99)).forEach(([n,i])=>{ b.innerHTML+=`<label class="student-select-item"><input type="radio" name="ts" value="${n}"> ${i.profile?.number||'??'}. ${n}</label>`; });
             });
         }
         function moveIndividualStudent() {
             const n = document.querySelector('input[name="ts"]:checked')?.value; if (!n) return alert("請選擇學生");
-            const fg = document.getElementById('indivFromGrade').value, fc = document.getElementById('indivFromClass').value;
-            const tg = document.getElementById('indivToGrade').value, tc = document.getElementById('indivToClass').value;
-            const nn = document.getElementById('indivNewNumber').value; if (!nn) return alert("請輸入新班號");
+            const fg = document.getElementById('indivFromGrade').value, fc = document.getElementById('indivFromClass').value, tg = document.getElementById('indivToGrade').value, tc = document.getElementById('indivToClass').value, nn = document.getElementById('indivNewNumber').value; if (!nn) return alert("請輸入新班號");
             const oldPath = `students/${fg}/${fc}/${n}`, newPath = `students/${tg}/${tc}/${n}`;
-            db.ref(oldPath).once('value', s => {
-                const d = s.val(); if (!d) return;
-                d.profile = d.profile || {}; d.profile.grade = tg; d.profile.class = tc; d.profile.number = nn;
-                if (oldPath === newPath) db.ref(newPath).update(d, e => { if (!e) { alert("更新成功"); populateTransferStudentList(); }});
-                else db.ref(newPath).set(d, e => { if (!e) { db.ref(oldPath).remove(); alert("轉班成功"); populateTransferStudentList(); }});
-            });
+            db.ref(oldPath).once('value', s => { const d = s.val(); if (!d) return; d.profile = d.profile || {}; d.profile.grade = tg; d.profile.class = tc; d.profile.number = nn; if (oldPath === newPath) db.ref(newPath).update(d, e => { if (!e) { alert("更新成功"); populateTransferStudentList(); }}); else db.ref(newPath).set(d, e => { if (!e) { db.ref(oldPath).remove(); alert("轉班成功"); populateTransferStudentList(); }}); });
         }
-        function deleteStudent() {
-            const n=document.querySelector('input[name="ts"]:checked')?.value;
-            if(n && confirm(`刪除 ${n}?`)) db.ref(`students/${document.getElementById('indivFromGrade').value}/${document.getElementById('indivFromClass').value}/${n}`).remove(e=>{ if(!e) populateTransferStudentList(); });
-        }
+        function deleteStudent() { const n=document.querySelector('input[name="ts"]:checked')?.value; if(n && confirm(`刪除 ${n}?`)) db.ref(`students/${document.getElementById('indivFromGrade').value}/${document.getElementById('indivFromClass').value}/${n}`).remove(e=>{ if(!e) populateTransferStudentList(); }); }
         function updateYearConfig() { db.ref('config/currentYear').set(document.getElementById('currentYearInput').value, e=>alert(e?'失敗':'成功')); }
         async function runYearTransition() {
             if(prompt("密碼")!=="23262036") return; if(!confirm("確定全校升班？")) return;

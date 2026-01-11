@@ -121,7 +121,7 @@
         .breadcrumb-item:hover { color: #5e5e5e; text-decoration: underline; }
         .breadcrumb-current { color: #5e5e5e; background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 4px; font-weight: bold; }
 
-        /* === 內容結構化顯示樣式 (移植自學生端，確保一致性) === */
+        /* === 內容結構化顯示樣式 === */
         .history-parsed-container { background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #e1e4e8; border-left: 5px solid #ccc; margin-bottom: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); }
         .history-item-block { margin-bottom: 15px; }
         .history-item-label { font-weight: bold; font-size: 1em; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
@@ -129,54 +129,24 @@
         .history-item-content { background: #fcfcfc; border: 1px solid #e1e4e8; border-radius: 4px; padding: 12px 16px; color: #444; line-height: 1.8; white-space: pre-wrap; word-break: break-word; }
         
         /* 定義主題色對應 */
-        .history-theme-context-1 { border-left-color: var(--m-color-1); }
-        .history-theme-context-1 .history-item-label { color: var(--m-color-1); }
-        .history-theme-context-1 .history-item-label::before { background-color: var(--m-color-1); }
-        .history-theme-context-1 .history-item-content { border-left: 4px solid var(--m-color-1); }
-
-        .history-theme-context-2 { border-left-color: var(--m-color-2); }
-        .history-theme-context-2 .history-item-label { color: var(--m-color-2); }
-        .history-theme-context-2 .history-item-label::before { background-color: var(--m-color-2); }
-        .history-theme-context-2 .history-item-content { border-left: 4px solid var(--m-color-2); }
-
-        .history-theme-context-3 { border-left-color: var(--m-color-3); }
-        .history-theme-context-3 .history-item-label { color: var(--m-color-3); }
-        .history-theme-context-3 .history-item-label::before { background-color: var(--m-color-3); }
-        .history-theme-context-3 .history-item-content { border-left: 4px solid var(--m-color-3); }
-
-        .history-theme-context-4 { border-left-color: var(--m-color-4); }
-        .history-theme-context-4 .history-item-label { color: var(--m-color-4); }
-        .history-theme-context-4 .history-item-label::before { background-color: var(--m-color-4); }
-        .history-theme-context-4 .history-item-content { border-left: 4px solid var(--m-color-4); }
-
-        .history-theme-context-5 { border-left-color: var(--m-color-5); }
-        .history-theme-context-5 .history-item-label { color: var(--m-color-5); }
-        .history-theme-context-5 .history-item-label::before { background-color: var(--m-color-5); }
-        .history-theme-context-5 .history-item-content { border-left: 4px solid var(--m-color-5); }
+        .history-theme-context-1 { border-left-color: var(--m-color-1); } .history-theme-context-1 .history-item-label { color: var(--m-color-1); } .history-theme-context-1 .history-item-label::before { background-color: var(--m-color-1); } .history-theme-context-1 .history-item-content { border-left: 4px solid var(--m-color-1); }
+        .history-theme-context-2 { border-left-color: var(--m-color-2); } .history-theme-context-2 .history-item-label { color: var(--m-color-2); } .history-theme-context-2 .history-item-label::before { background-color: var(--m-color-2); } .history-theme-context-2 .history-item-content { border-left: 4px solid var(--m-color-2); }
+        .history-theme-context-3 { border-left-color: var(--m-color-3); } .history-theme-context-3 .history-item-label { color: var(--m-color-3); } .history-theme-context-3 .history-item-label::before { background-color: var(--m-color-3); } .history-theme-context-3 .history-item-content { border-left: 4px solid var(--m-color-3); }
+        .history-theme-context-4 { border-left-color: var(--m-color-4); } .history-theme-context-4 .history-item-label { color: var(--m-color-4); } .history-theme-context-4 .history-item-label::before { background-color: var(--m-color-4); } .history-theme-context-4 .history-item-content { border-left: 4px solid var(--m-color-4); }
+        .history-theme-context-5 { border-left-color: var(--m-color-5); } .history-theme-context-5 .history-item-label { color: var(--m-color-5); } .history-theme-context-5 .history-item-label::before { background-color: var(--m-color-5); } .history-theme-context-5 .history-item-content { border-left: 4px solid var(--m-color-5); }
 
         /* 統計專用樣式 */
-        .stat-card {
-            padding: 20px; border-radius: 12px; text-align: center; flex: 1; min-width: 150px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05); color: #fff;
-            display: flex; flex-direction: column; justify-content: center;
-        }
+        .stat-card { padding: 20px; border-radius: 12px; text-align: center; flex: 1; min-width: 150px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); color: #fff; display: flex; flex-direction: column; justify-content: center; }
         .stat-card .val { font-size: 2.2em; font-weight: bold; margin-bottom: 5px; text-shadow: 1px 1px 2px rgba(0,0,0,0.1); }
         .stat-card .label { font-size: 0.9em; opacity: 0.9; letter-spacing: 1px; }
-        
         .stat-purple { background: linear-gradient(135deg, #b6a6ca 0%, #9e8fb0 100%); }
         .stat-blue { background: linear-gradient(135deg, #94a7b5 0%, #7a8f9e 100%); }
         .stat-red { background: linear-gradient(135deg, #d69a92 0%, #bf857d 100%); }
         .stat-sand { background: linear-gradient(135deg, #c7b299 0%, #b09b82 100%); }
 
         /* 學生選擇 Chips */
-        .analytics-student-list {
-            display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; padding: 15px;
-            background: #fff; border: 1px solid #e0ddd7; border-radius: 8px;
-        }
-        .student-chip {
-            padding: 6px 15px; border-radius: 50px; background: #f4f4f4; color: #666;
-            cursor: pointer; border: 1px solid #ddd; font-size: 0.9em; transition: all 0.2s;
-        }
+        .analytics-student-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; padding: 15px; background: #fff; border: 1px solid #e0ddd7; border-radius: 8px; }
+        .student-chip { padding: 6px 15px; border-radius: 50px; background: #f4f4f4; color: #666; cursor: pointer; border: 1px solid #ddd; font-size: 0.9em; transition: all 0.2s; }
         .student-chip:hover { background: #e0e0e0; }
         .student-chip.active { background: var(--m-blue); color: #fff; border-color: var(--m-blue); box-shadow: 0 2px 5px rgba(148, 167, 181, 0.4); }
 
@@ -189,7 +159,6 @@
         
         .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); display: none; justify-content: center; align-items: center; z-index: 1000; backdrop-filter: blur(4px); }
         .modal-body { background: #fff; width: 95%; max-width: 1100px; height: 90vh; border-radius: 15px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.3); animation: fadeIn 0.3s; }
-        @keyframes fadeIn { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
         .modal-header { padding: 20px 30px; background: #fdfcf8; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; }
         .modal-content-scroll { flex: 1; overflow-y: auto; padding: 20px 30px; -webkit-overflow-scrolling: touch; }
         .detail-view { background: #fff; padding: 10px; }
@@ -205,24 +174,8 @@
         .submission-detail-area { flex-grow: 1; padding: 30px; overflow-y: auto; background: #fff; }
         
         .teacher-feedback-section { background-color: #fffaf5; border: 2px solid #e6dace; border-radius: 12px; padding: 20px; margin-top: 30px; box-shadow: 0 4px 15px rgba(141, 110, 99, 0.08); }
-        /* 修復：統一 Input 和 Textarea 樣式，使其一致且美觀 */
-        .teacher-feedback-section input, .teacher-feedback-section textarea {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #e6dace; /* 與 Section 邊框色系一致 */
-            border-radius: 8px;
-            font-family: 'Noto Serif TC', serif;
-            box-sizing: border-box; 
-            margin-top: 5px;
-            background: #fff;
-            font-size: 1rem;
-            color: #555;
-            outline: none;
-        }
-        .teacher-feedback-section input:focus, .teacher-feedback-section textarea:focus {
-            border-color: var(--m-brown);
-            box-shadow: 0 0 5px rgba(199, 178, 153, 0.3);
-        }
+        .teacher-feedback-section input, .teacher-feedback-section textarea { width: 100%; padding: 10px; border: 1px solid #e6dace; border-radius: 8px; font-family: 'Noto Serif TC', serif; box-sizing: border-box; margin-top: 5px; background: #fff; font-size: 1rem; color: #555; outline: none; }
+        .teacher-feedback-section input:focus, .teacher-feedback-section textarea:focus { border-color: var(--m-brown); box-shadow: 0 0 5px rgba(199, 178, 153, 0.3); }
 
         .management-section { background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 25px; margin-bottom: 30px; }
         .transfer-grid { display: flex; gap: 20px; background: #f9f9f9; padding: 20px; border-radius: 10px; align-items: flex-start; }
@@ -247,8 +200,9 @@
         .report-separator::after { content: '▼'; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #fdfcf8; padding: 0 10px; color: #b6a6ca; font-size: 12px; }
         .report-radar-wrapper { margin-bottom: 30px; background: #fff; padding: 20px; border-radius: 12px; border: 1px solid #eee; }
         
-        /* === 修復：雷達圖與評分表樣式 (移植自學生端) === */
+        /* === 修復：雷達圖與評分表樣式 (移植自學生端 - 終極版) === */
         .grading-container { margin-top: 25px; border-top: 2px dashed #aeb6bf; padding-top: 20px; max-width: 100%; overflow-x: hidden; }
+        /* 默認 Grid 佈局：左右各一半 */
         .grading-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: flex-start; }
         
         .grading-scores, .grading-radar {
@@ -264,17 +218,45 @@
         .score-display { font-weight: bold; width: 25px; text-align: center; color: #0056b3; }
         .total-score-container { margin-top: 20px; padding-top: 15px; border-top: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; }
         
-        .radar-chart-container { position: relative; aspect-ratio: 4 / 3; max-height: 350px; width: 100%; }
+        /* === 關鍵修復：雷達圖容器 === */
+        .radar-chart-container { 
+            position: relative; 
+            width: 100%; 
+            height: auto; 
+            aspect-ratio: 1 / 1; /* 強制保持正方形比例 */
+            max-height: 400px;   /* 限制最大高度，避免在大螢幕過大 */
+            margin: 0 auto;
+        }
 
+        /* === 關鍵修復：手機版/窄螢幕強制垂直堆疊 === */
         @media (max-width: 768px) {
             .box { padding: 15px; } .nav-btn { width: 100%; } .filter-group { flex-direction: column; }
             .filter-group select, .filter-group input { width: 100%; } .transfer-grid { flex-direction: column; }
             .modal-content-container { flex-direction: column; } .submission-sidebar { width: 100%; height: 40%; }
             
-            /* 針對雷達圖與評分表的修復 */
-            .grading-grid { display: flex !important; flex-direction: column !important; gap: 20px !important; width: 100% !important; margin: 0 !important; }
-            .grading-scores, .grading-radar, .report-radar-wrapper { width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; padding: 15px !important; margin: 0 !important; overflow: hidden !important; }
-            .radar-chart-container { width: 100% !important; height: auto !important; aspect-ratio: 1/1 !important; max-height: 350px !important; margin: 0 auto !important; }
+            /* 針對雷達圖與評分表的強制修復 */
+            .grading-grid { 
+                display: flex !important;       /* 使用 Flex 取代 Grid */
+                flex-direction: column !important; /* 強制垂直排列 */
+                gap: 20px !important; 
+                width: 100% !important; 
+                margin: 0 !important; 
+            }
+            .grading-scores, .grading-radar, .report-radar-wrapper { 
+                width: 100% !important; 
+                max-width: 100% !important; 
+                box-sizing: border-box !important; 
+                padding: 15px !important; 
+                margin: 0 !important; 
+                overflow: hidden !important; 
+            }
+            .radar-chart-container { 
+                width: 100% !important; 
+                height: auto !important; 
+                aspect-ratio: 1/1 !important; 
+                max-height: 350px !important; 
+                margin: 0 auto !important; 
+            }
             .score-item { flex-wrap: wrap; } .score-item label { width: 100%; margin-bottom: 5px; } .score-item .slider-container { max-width: 100%; }
             
             .badge-general { width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; border-radius: 8px !important; }
@@ -744,7 +726,7 @@
         const id = type==='narrative'?'narrativeClassChart':'argumentClassChart';
         const title = type==='narrative'?'敘事抒情':'議論';
         const cls = type==='narrative'?'badge-narrative':'badge-argument';
-        return `<div class="report-section"><div class="report-category-badge ${cls}"><i class="fas fa-book"></i> ${title}</div><div class="report-radar-wrapper"><div class="grading-grid"><div class="grading-scores"><h3>班級平均表現</h3><div class="score-item"><label>內容</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.content*4}</span></div></div><div class="score-item"><label>表達</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.expr*3}</span></div></div><div class="score-item"><label>結構</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.struct*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.struct*2}</span></div></div><div class="total-score-container"><span style="font-size:1.1em;">平均總分: ${total}</span><span style="font-size:2em;font-weight:bold;color:#d9534f;">${determineGrade(total)}</span></div></div><div class="grading-radar"><div class="radar-chart-container" style="height:250px;"><canvas id="${id}"></canvas></div></div></div></div></div>`;
+        return `<div class="report-section"><div class="report-category-badge ${cls}"><i class="fas fa-book"></i> ${title}</div><div class="report-radar-wrapper"><div class="grading-grid"><div class="grading-scores"><h3>班級平均表現</h3><div class="score-item"><label>內容</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.content*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.content*4}</span></div></div><div class="score-item"><label>表達</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.expr*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.expr*3}</span></div></div><div class="score-item"><label>結構</label><div class="slider-container"><div class="progress-bar-container"><div style="width:${avg.struct*10}%" class="progress-bar-fill"></div></div><span class="score-display">${avg.struct*2}</span></div></div><div class="total-score-container"><span style="font-size:1.1em;">平均總分: ${total}</span><span style="font-size:2em;font-weight:bold;color:#d9534f;">${determineGrade(total)}</span></div></div><div class="grading-radar"><div class="radar-chart-container"><canvas id="${id}"></canvas></div></div></div></div></div>`;
     }
     function renderClassChart(id, avg) {
         const ctx = document.getElementById(id); if(!ctx) return;

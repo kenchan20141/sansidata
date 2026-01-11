@@ -587,24 +587,33 @@
     </div>
 
     <!-- 新增：中三升中四 分班專用區 (預設隱藏) -->
-    <div id="s3AllocationPanel" class="box" style="display:none; border: 2px solid #ffa726; background-color: #fff8e1; margin-top: 20px;">
-        <h3 style="color: #e65100; border-left: 5px solid #e65100; margin-top:0;"><i class="fas fa-random"></i> 中三升中四：重新分班</h3>
-        <p style="color: #666;">以下學生原為中三，請勾選學生並分配至新的中四班別。</p>
-        
-        <div style="background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #ffe0b2; display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
-            <span style="font-weight: bold; color: #e65100;">將選取的學生編入：</span>
-            <select id="targetS4Class" style="padding: 8px; border:1px solid #ccc; border-radius:5px;">
-                <option value="A">中四 A 班</option>
-                <option value="B">中四 B 班</option>
-                <option value="C">中四 C 班</option>
-                <option value="D">中四 D 班</option>
-            </select>
-            <button class="btn-action" style="background-color: #fb8c00;" onclick="allocateSelectedS3()">
-                <i class="fas fa-check"></i> 確認分班
-            </button>
-        </div>
+  <!-- === [新增] 中三升中四：重新分班面板 === -->
+<div id="s3AllocationPanel" class="box" style="display:none; border: 2px solid #ffa726; background-color: #fff8e1; margin-top: 20px;">
+    <h3 style="color: #e65100; border-left: 5px solid #e65100; margin-top:0;">
+        <i class="fas fa-random"></i> 中三升中四：重新分班
+    </h3>
+    <p style="color: #666; margin-bottom: 15px;">
+        以下是原中三學生名單。請勾選學生，將他們分配至新的中四班別。
+        <br><small>(分班後，該學生的所有生成紀錄將會自動隨之轉移)</small>
+    </p>
+    
+    <!-- 操作列 -->
+    <div style="background: #fff; padding: 15px; border-radius: 8px; border: 1px solid #ffe0b2; display: flex; gap: 10px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
+        <span style="font-weight: bold; color: #e65100;">將選取的學生編入：</span>
+        <select id="targetS4Class" style="padding: 8px; border:1px solid #ccc; border-radius:5px;">
+            <option value="A">中四 A 班</option>
+            <option value="B">中四 B 班</option>
+            <option value="C">中四 C 班</option>
+            <option value="D">中四 D 班</option>
+        </select>
+        <button class="btn-action" style="background-color: #fb8c00;" onclick="allocateSelectedS3()">
+            <i class="fas fa-check"></i> 確認分班
+        </button>
+    </div>
 
-        <div id="s3PendingList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; max-height: 400px; overflow-y: auto;"></div>
+    <!-- 學生名單容器 -->
+    <div id="s3PendingList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; max-height: 500px; overflow-y: auto;">
+        <!-- JS 會在這裡生成按班號排列的名單 -->
     </div>
 </div>
 
@@ -1443,86 +1452,167 @@ let analyticsChartInstance = null;
 
 
 // === 核心：新學年過渡邏輯 (徹底清理版) ===
+// === 1. 核心：新學年過渡邏輯 (清洗舊資料 + 分流學生) ===
 async function runYearTransition() {
-    // 1. 安全驗證
-    if (prompt("請輸入密碼以確認清除舊紀錄並升班：") !== "23262036") return;
-    if (!confirm("⚠️ 高危操作警告 ⚠️\n\n1. 所有「課業」和「繳交紀錄」將被永久刪除。\n2. 中六學生將被「永久刪除」 (不再保留)。\n3. 中一、二、四、五將自動原班升級。\n4. 中三學生將進入「待分班名單」。\n\n確定要開始新學年嗎？")) return;
+    if (prompt("請輸入密碼以確認：") !== "23262036") return;
+    if (!confirm("⚠️ 確認開始新學年？\n\n1. 所有「課業」及「繳交紀錄」將被清除。\n2. 中六學生將被移除。\n3. 中三學生將進入待分班區。\n4. 其他年級自動升班。")) return;
 
     const btn = event.target;
-    const oldBtnText = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
 
     try {
+        // 讀取全校資料
         const snapshot = await db.ref('students').once('value');
         const allStudents = snapshot.val() || {};
 
-        let newStudentsMap = {}; // 存放升班後的學生 (1,2,4,5)
-        let pendingS3Map = {};   // 存放等待分班的原中三學生
+        let newStudentsMap = {}; // 存放 1,2,4,5 年級 (升班後)
+        let pendingS3Map = {};   // 存放 3 年級 (待分班)
 
-        // 2. 遍歷並分類學生
+        // 遍歷分類
         for (const grade in allStudents) {
-            const classes = allStudents[grade];
-            for (const cls in classes) {
-                const studentsInClass = classes[cls];
+            for (const cls in allStudents[grade]) {
+                const studentsInClass = allStudents[grade][cls];
                 for (const studentName in studentsInClass) {
                     const studentData = studentsInClass[studentName];
-                    const currentGrade = parseInt(grade);
+                    const g = parseInt(grade);
 
-                    // A. 中六：什麼都不做 -> 等同於刪除 (不會被寫入新 map)
-                    if (currentGrade === 6) {
-                        continue; 
-                    } 
-                    // B. 中三：移入待分班區
-                    else if (currentGrade === 3) {
-                        pendingS3Map[studentName] = studentData;
-                    } 
-                    // C. 其他年級：自動升班
-                    else {
-                        const newGrade = (currentGrade + 1).toString();
-                        if (studentData.profile) studentData.profile.grade = newGrade; // 更新資料內的年級
+                    if (g === 6) {
+                        continue; // 中六：刪除 (不寫入新名單)
+                    } else if (g === 3) {
+                        pendingS3Map[studentName] = studentData; // 中三：放入暫存區 (整包資料含 History)
+                    } else {
+                        // 其他：自動升班
+                        const newG = (g + 1).toString();
+                        if (studentData.profile) studentData.profile.grade = newG;
                         
-                        if (!newStudentsMap[newGrade]) newStudentsMap[newGrade] = {};
-                        if (!newStudentsMap[newGrade][cls]) newStudentsMap[newGrade][cls] = {};
-                        
-                        newStudentsMap[newGrade][cls][studentName] = studentData;
+                        if (!newStudentsMap[newG]) newStudentsMap[newG] = {};
+                        if (!newStudentsMap[newG][cls]) newStudentsMap[newG][cls] = {};
+                        newStudentsMap[newG][cls][studentName] = studentData;
                     }
                 }
             }
         }
 
-        // 3. 執行資料庫重置 (破壞性操作)
-        
-        // A. 清空舊功課
-        await db.ref('assignments').remove();
-        await db.ref('assignments_submissions').remove();
-        
-        // B. 寫入新的學生名單 (覆蓋舊的) - 這樣中六就消失了，中三也不見了
+        // 寫入資料庫 (原子操作，覆蓋舊資料)
         await db.ref('students').set(newStudentsMap);
+        await db.ref('assignments').remove();             // 清除功課
+        await db.ref('assignments_submissions').remove(); // 清除繳交
+        await db.ref('class_reports').remove();           // 清除班級報告
 
-        // C. 寫入待分班學生
+        // 處理中三暫存區
         if (Object.keys(pendingS3Map).length > 0) {
             await db.ref('pending_allocation').set(pendingS3Map);
         } else {
             await db.ref('pending_allocation').remove();
         }
 
-        // D. (可選) 如果您想連 class_reports (全班報告) 也刪除，可加這行：
-        // await db.ref('class_reports').remove();
-
-        alert("✅ 新學年過渡成功！\n\n- 舊功課已清除\n- 中六學生已刪除\n- 中三學生請在下方分班");
-        
-        // 4. 顯示分班介面
+        alert("✅ 新學年過渡完成！請在下方進行中四分班。");
         checkAndRenderS3AllocationPanel();
 
-    } catch (error) {
-        console.error(error);
-        alert("❌ 失敗：" + error.message);
+    } catch (e) {
+        console.error(e);
+        alert("失敗：" + e.message);
     } finally {
         btn.disabled = false;
-        btn.innerHTML = oldBtnText;
+        btn.innerHTML = '<i class="fas fa-rocket"></i> 開始新學年過渡';
     }
 }
+
+// === 2. 檢查並顯示待分班名單 (按班別及學號排序) ===
+function checkAndRenderS3AllocationPanel() {
+    const panel = document.getElementById('s3AllocationPanel');
+    const listDiv = document.getElementById('s3PendingList');
+    
+    db.ref('pending_allocation').once('value', snapshot => {
+        const data = snapshot.val();
+        if (!data) { panel.style.display = 'none'; return; }
+
+        panel.style.display = 'block';
+        listDiv.innerHTML = '';
+
+        // 分組
+        const groups = { 'A': [], 'B': [], 'C': [], 'D': [], 'Other': [] };
+        Object.entries(data).forEach(([name, d]) => {
+            const c = d.profile?.class || 'Other';
+            if (groups[c]) groups[c].push({ name, ...d });
+            else groups['Other'].push({ name, ...d });
+        });
+
+        // 排序並渲染
+        ['A', 'B', 'C', 'D', 'Other'].forEach(cls => {
+            const students = groups[cls];
+            if (students.length > 0) {
+                // 按班號排序
+                students.sort((a, b) => (parseInt(a.profile?.number)||0) - (parseInt(b.profile?.number)||0));
+
+                // 班級標題
+                const header = document.createElement('div');
+                header.style.cssText = "grid-column:1/-1; margin:15px 0 5px 0; border-bottom:2px solid #e65100; color:#e65100; font-weight:bold;";
+                header.innerText = cls === 'Other' ? '未分類' : `原中三 ${cls} 班`;
+                listDiv.appendChild(header);
+
+                // 學生卡片
+                students.forEach(s => {
+                    const item = document.createElement('label');
+                    item.style.cssText = "display:flex; align-items:center; background:#fff; padding:10px; border:1px solid #ddd; border-left:4px solid #ffcc80; border-radius:5px; cursor:pointer;";
+                    item.innerHTML = `
+                        <input type="checkbox" class="s3-checkbox" value="${s.name}" style="transform:scale(1.3); margin-right:10px;">
+                        <div>
+                            <div style="font-weight:bold;">${s.name}</div>
+                            <div style="font-size:0.8em; color:#888;">${s.profile?.number || '?'}號</div>
+                        </div>
+                    `;
+                    listDiv.appendChild(item);
+                });
+            }
+        });
+    });
+}
+
+// === 3. 執行分班動作 (確保資料完整移動) ===
+async function allocateSelectedS3() {
+    const targetClass = document.getElementById('targetS4Class').value;
+    const checkboxes = document.querySelectorAll('.s3-checkbox:checked');
+    
+    if (checkboxes.length === 0) return alert("請選擇學生");
+    if (!confirm(`確定將 ${checkboxes.length} 名學生編入 4${targetClass}？`)) return;
+
+    try {
+        const pendingSnap = await db.ref('pending_allocation').once('value');
+        const pendingData = pendingSnap.val();
+        const updates = {};
+        const removeKeys = {};
+
+        checkboxes.forEach(cb => {
+            const name = cb.value;
+            const data = pendingData[name];
+            if (data) {
+                // 更新年級與班別
+                if (!data.profile) data.profile = {};
+                data.profile.grade = "4";
+                data.profile.class = targetClass;
+                
+                // 準備移動 (整包資料包含 History 都會過去)
+                updates[`students/4/${targetClass}/${name}`] = data;
+                removeKeys[`pending_allocation/${name}`] = null;
+            }
+        });
+
+        await db.ref().update(updates);
+        await db.ref().update(removeKeys);
+        
+        alert("✅ 分班成功！");
+        checkAndRenderS3AllocationPanel(); // 刷新列表
+
+    } catch (e) {
+        console.error(e);
+        alert("錯誤：" + e.message);
+    }
+}
+
+// 初始化
+document.addEventListener('DOMContentLoaded', checkAndRenderS3AllocationPanel);
 
 // === S3 分班面板邏輯 ===
 // === S3 分班面板邏輯 (修訂版：按班別及班號分組排序) ===

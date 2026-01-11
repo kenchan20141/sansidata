@@ -375,6 +375,82 @@
         background: #fff; 
     }
 
+
+    /* === 修正 1：調整視窗 (Modal) 與上下邊緣的距離 === */
+.modal-overlay {
+    /* 增加上下留白，避免內容貼邊 */
+    padding-top: 60px !important;
+    padding-bottom: 80px !important; 
+    
+    /* 核心滾動設定 */
+    overflow-y: auto !important; 
+    display: flex !important; /* 必須為 flex 才能讓 align-items 生效 */
+    align-items: flex-start !important; /* 讓視窗從上方開始，確保長內容可以往下滾動 */
+    justify-content: center !important;
+}
+
+.modal-body {
+    /* 移除所有高度限制，讓內容自然撐開 */
+    height: auto !important;
+    max-height: none !important;
+    min-height: auto !important;
+    
+    /* 增加底部外邊距，確保滾動到底部時還有空間 */
+    margin-bottom: 50px !important; 
+    
+    /* 確保本身不產生滾動軸，交由 overlay 處理 */
+    overflow: visible !important; 
+}
+
+/* === 修正 2：去除雷達圖旁的滾動軸，使其與下方內容一體化 === */
+.grading-container, 
+.report-radar-wrapper, 
+.grading-grid {
+    /* 強制顯示所有內容，禁止出現內部滾動條 */
+    overflow: visible !important; 
+    overflow-x: visible !important;
+    overflow-y: visible !important;
+    
+    /* 高度自動，隨內容變長 */
+    height: auto !important; 
+    max-height: none !important;
+    
+    /* 清除任何邊框或背景導致的視覺阻隔 */
+    border: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+}
+
+/* 確保雷達圖區域是垂直堆疊的，不會左右擠壓 */
+.grading-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 30px !important; /* 增加圖表與下方內容的間距 */
+}
+
+/* 針對課業查看視窗 (Assignment Viewer) 的特殊處理 */
+/* 如果您希望課業詳情也是整頁滾動，而不是左右分割滾動，請加入這段： */
+.modal-content-container {
+    height: auto !important; /* 取消固定高度 */
+    flex-direction: column !important; /* 改為垂直排列 (在手機或想整頁看時) */
+    overflow: visible !important;
+}
+
+.submission-sidebar {
+    width: 100% !important; /* 側邊欄變全寬 */
+    max-height: 200px; /* 限制側邊欄高度，避免太佔位 */
+    border-right: none !important;
+    border-bottom: 1px solid #ddd;
+}
+
+.submission-detail-area {
+    padding-bottom: 100px !important; /* 確保底部按鈕看得到 */
+    overflow: visible !important; /* 讓內容自然流出 */
+    height: auto !important;
+}
     
 </style>
 </head>

@@ -1812,7 +1812,8 @@ function renderDetail(r) {
         uContent = ''; 
     } else {
         if(r.userContent) {
-            uContent = renderParsedUserContent(r.userContent, currentThemeIndex);
+            // 預設主題色為 1
+            uContent = renderParsedUserContent(r.userContent, 1);
         } else {
             uContent = `<div style="padding:20px; color:#999; text-align:center;">無使用者輸入內容</div>`;
         }
@@ -1837,18 +1838,62 @@ function renderDetail(r) {
             </div>
         </div>`;
 
-    // 2. ★★★ 核心邏輯：檢查並重繪圖表 ★★★
-    // 使用 setTimeout 確保 DOM 已經渲染完成
+    // 2. ★★★ 核心修復：強制刷新分數數據與藍色 BAR ★★★
     setTimeout(() => {
         const container = document.getElementById('aiContentContainer');
         
-        // 情況 A: 一般文章點評 (單一雷達圖)
+        // 判斷前綴 (narrative 或 argument)
+        let prefix = '';
+        if (r.category === '敘事抒情') prefix = 'narrative';
+        else if (r.category === '議論') prefix = 'argument';
+
+        // 如果有分數數據且確定了前綴，開始「填色」
+        if (prefix && r.scoreData) {
+            // (A) 還原分數文字
+            const updateText = (type, val, mult) => {
+                const el = document.getElementById(`${prefix}${type}ScoreDisplay`);
+                if(el) el.innerText = val * mult;
+            };
+            // (B) 還原藍色 BAR 寬度
+            const updateBar = (type, val, max) => {
+                const el = document.getElementById(`${prefix}${type}ScoreFill`);
+                if(el) el.style.width = (val / max * 100) + '%';
+            };
+
+            // 執行更新 (內容、表達、結構、標點、錯字)
+            const s = r.scoreData;
+            // 內容 (x4)
+            updateText('Content', s.content, 4);
+            updateBar('Content', s.content, 10);
+            // 表達 (x3)
+            updateText('Expression', s.expression, 3);
+            updateBar('Expression', s.expression, 10);
+            // 結構 (x2)
+            updateText('Structure', s.structure, 2);
+            updateBar('Structure', s.structure, 10);
+            // 標點 (固定5分)
+            updateText('Punctuation', 5, 1);
+            updateBar('Punctuation', 5, 10);
+            // 錯字 (固定1分，滿分3)
+            updateText('Typo', 1, 1);
+            updateBar('Typo', 1, 3);
+
+            // 更新總分與等級
+            const totalScore = (s.content * 4) + (s.expression * 3) + (s.structure * 2) + 5 + 1;
+            const finalGrade = determineGrade(Math.min(totalScore, 100));
+            const totalEl = document.getElementById(`${prefix}TotalScoreDisplay`);
+            const gradeEl = document.getElementById(`${prefix}FinalGrade`);
+            
+            if(totalEl) totalEl.innerText = `總分: ${Math.min(totalScore, 100)} / 100`;
+            if(gradeEl) gradeEl.innerText = `等級: ${finalGrade}`;
+        }
+
+        // (C) 繪製雷達圖 (保持不變)
         if (r.scoreData && r.scoreData.radar) {
             const canvas = container.querySelector('canvas');
             if (canvas) {
-                // 確保容器高度固定，防止重疊
                 const parent = canvas.parentNode;
-                parent.style.height = '350px'; 
+                parent.style.height = '350px'; // 強制高度
                 parent.style.position = 'relative';
 
                 new Chart(canvas.getContext('2d'), {
@@ -1858,12 +1903,8 @@ function renderDetail(r) {
                         datasets: [{
                             label: '能力分佈',
                             data: [
-                                r.scoreData.radar.立意,
-                                r.scoreData.radar.取材,
-                                r.scoreData.radar.扣題,
-                                r.scoreData.radar.詳略,
-                                r.scoreData.radar.詞彙,
-                                r.scoreData.radar.文學性
+                                r.scoreData.radar.立意, r.scoreData.radar.取材, r.scoreData.radar.扣題,
+                                r.scoreData.radar.詳略, r.scoreData.radar.詞彙, r.scoreData.radar.文學性
                             ],
                             backgroundColor: 'rgba(54, 162, 235, 0.2)',
                             borderColor: 'rgba(54, 162, 235, 1)',
@@ -1873,42 +1914,28 @@ function renderDetail(r) {
                     },
                     options: {
                         responsive: true,
-                        maintainAspectRatio: false, // 關鍵：防止高度崩塌
-                        scales: {
-                            r: {
-                                suggestedMin: 0,
-                                suggestedMax: 10,
-                                ticks: { stepSize: 2 }
-                            }
-                        },
+                        maintainAspectRatio: false,
+                        scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { stepSize: 2 } } },
                         plugins: { legend: { display: false } }
                     }
                 });
             }
         }
         
-        // 情況 B: 學習報告 (多個雷達圖)
-        // 學習報告的 scoreData 是 finalStats 物件，包含 "敘事抒情" 和 "議論" 的數據
+        // 處理學習報告的圖表 (保持不變)
         else if (r.scoreData && (r.scoreData["敘事抒情"] || r.scoreData["議論"])) {
-            
-            // 處理敘事圖表
             if (r.scoreData["敘事抒情"]) {
                 const narrCanvas = container.querySelector('#reportNarrativeChart');
-                if (narrCanvas) {
-                    drawReportChart(narrCanvas, r.scoreData["敘事抒情"].radar);
-                }
+                if (narrCanvas) drawReportChart(narrCanvas, r.scoreData["敘事抒情"].radar);
             }
-            
-            // 處理議論圖表
             if (r.scoreData["議論"]) {
                 const argCanvas = container.querySelector('#reportArgumentChart');
-                if (argCanvas) {
-                    drawReportChart(argCanvas, r.scoreData["議論"].radar);
-                }
+                if (argCanvas) drawReportChart(argCanvas, r.scoreData["議論"].radar);
             }
         }
     }, 100);
 }
+
 
 // 輔助函數：繪製報告圖表
 function drawReportChart(canvas, radarData) {

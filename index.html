@@ -460,61 +460,7 @@ canvas {
     flex-wrap: wrap;
 }
 
-/* 2. 標題 H1：微圓角玻璃牌 (Block Style) */
-.title-container h1 {
-    display: inline-block;
-    margin: 0;
-    
-    /* 字體設定 */
-    font-size: 1.8rem;       /* 比按鈕大，強調層級 */
-    color: var(--text-main);
-    font-weight: bold;
-    letter-spacing: 3px;     /* 增加字距，展現「神思」的雅緻感 */
-    
-    /* 玻璃板效果 */
-    background: rgba(255, 255, 255, 0.4); /* 稍微通透一點 */
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    
-    /* 關鍵：形狀與邊框設計 */
-    padding: 12px 30px;
-    border-radius: 8px;      /* 僅 8px 微圓角，呈現方正穩重感 */
-    border: 1px solid rgba(255, 255, 255, 0.5);
-    
-    /* 關鍵：左側裝飾線，確立「標題」地位 */
-    border-left: 6px solid var(--m-blue); 
-    
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06); /* 讓牌子浮起來 */
-}
 
-/* 3. 右側使用者資訊：簡化為文字浮動，減少視覺干擾 */
-.title-container > div[style*="float: right"] {
-    float: none !important;
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    
-    /* 讓右邊資訊弱化，不要搶標題的視覺 */
-    background: rgba(255, 255, 255, 0.25); /* 更淡的背景 */
-    padding: 8px 15px;
-    border-radius: 8px;      /* 與標題呼應的微圓角 */
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    backdrop-filter: blur(5px);
-}
-
-/* 手機版適配 */
-@media (max-width: 600px) {
-    .title-container {
-        flex-direction: column;
-        align-items: flex-start; /* 手機版靠左對齊更有層次 */
-        gap: 15px;
-    }
-    
-    .title-container > div[style*="float: right"] {
-        width: 100%;
-        justify-content: space-between;
-    }
-}
     
 
 
@@ -544,7 +490,7 @@ canvas {
             <span id="teacherNameDisplay" style="color: var(--m-blue); margin-right: 10px;"></span>
             <button onclick="logout()" style="background: none; border: 1px solid #ccc; padding: 5px 10px; border-radius: 4px; cursor: pointer; color: #666;">登出</button>
         </div>
-        <h1>神思・教師後台</h1>
+        <h1>神思・管理面板</h1>
     </div>
 
     <!-- 導航列 -->

@@ -393,78 +393,6 @@ canvas {
         .modal-body { width: 100%; border-radius: 0; margin: 0; }
         .modal-overlay { padding: 40px 0 100px 0; }
     }
-
-/* === 標題區塊優化：毛玻璃卡片效果 === */
-.title-container {
-    background: rgba(255, 255, 255, 0.75);   /* 半透明白色背景 */
-    backdrop-filter: blur(10px);             /* 背景模糊濾鏡 (關鍵效果) */
-    -webkit-backdrop-filter: blur(10px);     /* Safari 支援 */
-    border-radius: 16px;                     /* 圓角 */
-    padding: 20px 30px;
-    margin-bottom: 30px;
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05); /* 極柔和的陰影 */
-    border: 1px solid rgba(255, 255, 255, 0.6);       /* 淡淡的白邊框 */
-    
-    /* 彈性佈局，確保標題置中，按鈕靠右 */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-}
-
-.title-container h1 {
-    margin: 0; /* 移除預設邊距 */
-    color: var(--text-main);
-    font-weight: bold;
-    text-shadow: 1px 1px 0 #fff; /* 文字白邊，增加銳利度 */
-    font-size: 2rem;
-    z-index: 1;
-}
-
-/* 針對原本使用 float: right 的使用者資訊區塊進行定位修正 */
-.title-container > div[style*="float: right"] {
-    float: none !important;      /* 強制取消 float */
-    position: absolute;          /* 改用絕對定位固定在右側 */
-    right: 25px;
-    top: 50%;
-    transform: translateY(-50%); /* 垂直置中 */
-    background: rgba(255,255,255,0.6); /* 按鈕區塊也加一點底色 */
-    padding: 5px 15px;
-    border-radius: 20px;
-    z-index: 2;
-}
-
-/* === 手機版適配 === */
-@media (max-width: 600px) {
-    .title-container {
-        flex-direction: column-reverse; /* 手機上將標題放下面，按鈕放上面 */
-        padding: 15px;
-        gap: 15px;
-    }
-
-
-
-/* === 標題區塊：玻璃門牌風格 (區別於下方的膠囊按鈕) === */
-
-/* 1. 外層容器：透明、彈性排版 */
-.title-container {
-    background: transparent;
-    box-shadow: none;
-    border: none;
-    padding: 0;
-    margin-bottom: 30px; /* 拉開與下方按鈕的距離，增加呼吸感 */
-    
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-
-    
-
-
-    
 </style>
 </head>
 <body>
@@ -473,7 +401,7 @@ canvas {
 
 <div id="loginOverlay">
     <div class="login-box">
-        <h2 style="color: var(--m-blue); margin-bottom: 10px;">神思・管理面板</h2>
+        <h2 style="color: var(--m-blue); margin-bottom: 10px;">神思・教師管理面板</h2>
         <p style="color: #888; margin-bottom: 30px;">請使用學校教師帳號登入以存取資料</p>
         <button id="loginBtn" class="login-btn" onclick="teacherLogin()">
             <i class="fab fa-google"></i> Google 帳號登入
@@ -490,7 +418,7 @@ canvas {
             <span id="teacherNameDisplay" style="color: var(--m-blue); margin-right: 10px;"></span>
             <button onclick="logout()" style="background: none; border: 1px solid #ccc; padding: 5px 10px; border-radius: 4px; cursor: pointer; color: #666;">登出</button>
         </div>
-        <h1>神思・管理面板</h1>
+        <h1>神思・教師管理面板</h1>
     </div>
 
     <!-- 導航列 -->

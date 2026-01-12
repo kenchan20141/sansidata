@@ -1977,11 +1977,31 @@ function drawReportChart(canvas, radarData) {
         db.ref(`assignments/${g}/${c}`).on('value', (snapshot) => {
             const data = snapshot.val(); list.innerHTML = '';
             if (!data) { list.innerHTML = '<div style="text-align:center; padding:30px; color:#ccc;">無課業</div>'; return; }
-            Object.entries(data).sort((a, b) => b[1].timestamp - a[1].timestamp).forEach(([key, task]) => {
-                const div = document.createElement('div'); div.className = 'assignment-item';
-                div.innerHTML = `<div><div style="font-weight:bold;">${task.topic}</div><div style="font-size:0.9em;color:#888;"><span class="tag">${task.type}</span>${new Date(task.timestamp).toLocaleDateString()}</div></div><div style="display:flex;gap:10px;"><button class="btn-action btn-view" onclick="viewSubmissions('${key}', '${task.topic}', '${g}', '${c}')"><i class="fas fa-eye"></i></button><button class="btn-action btn-delete" onclick="deleteAssignment('${key}', '${g}', '${c}')"><i class="fas fa-trash-alt"></i></button></div>`;
-                list.appendChild(div);
-            });
+           Object.entries(data).sort((a, b) => b[1].timestamp - a[1].timestamp).forEach(([key, task]) => {
+    const div = document.createElement('div'); 
+    div.className = 'assignment-item';
+    
+    // ★★★ 修復重點：處理題目中的單引號，避免 onclick 失效 ★★★
+    const safeTopic = task.topic.replace(/'/g, "\\'"); 
+
+    div.innerHTML = `
+        <div>
+            <div style="font-weight:bold;">${task.topic}</div>
+            <div style="font-size:0.9em;color:#888;">
+                <span class="tag">${task.type}</span>${new Date(task.timestamp).toLocaleDateString()}
+            </div>
+        </div>
+        <div style="display:flex;gap:10px;">
+            <!-- 這裡使用 safeTopic -->
+            <button class="btn-action btn-view" onclick="viewSubmissions('${key}', '${safeTopic}', '${g}', '${c}')">
+                <i class="fas fa-eye"></i>
+            </button>
+            <button class="btn-action btn-delete" onclick="deleteAssignment('${key}', '${g}', '${c}')">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>`;
+    list.appendChild(div);
+});
         });
     }
     function publishAssignment() {
@@ -1992,22 +2012,68 @@ function drawReportChart(canvas, radarData) {
     function deleteAssignment(id, g, c) { if(confirm("確定刪除？")) db.ref(`assignments/${g}/${c}/${id}`).remove(); }
     
     async function viewSubmissions(aid, title, g, c) {
-        currentViewingAssignmentId = aid; document.getElementById('submissionTitle').innerText = title; document.getElementById('submissionViewerModal').style.display = 'flex';
-        const list = document.getElementById('submissionList'); list.innerHTML = '<li>載入中...</li>';
-        try {
-            const [stus, subs] = await Promise.all([db.ref(`students/${g}/${c}`).once('value').then(s=>s.val()||{}), db.ref(`assignments_submissions/${aid}`).once('value').then(s=>s.val()||{})]);
-            list.innerHTML = ''; let done=0, total=0;
-            Object.entries(stus).sort((a,b)=>(parseInt(a[1].profile?.number)||99)-(parseInt(b[1].profile?.number)||99)).forEach(([name, d]) => {
-                total++; const hasSub = subs[name]; if(hasSub) done++;
-                const li = document.createElement('li'); li.className = 'submission-item';
+    currentViewingAssignmentId = aid; 
+    
+    // ★★★ 修復重點：取得視窗元素 ★★★
+    const modal = document.getElementById('submissionViewerModal');
+    const titleEl = document.getElementById('submissionTitle');
+
+    if (!modal) return alert("錯誤：找不到檢閱視窗");
+
+    // ★★★ 修復重點：強制將視窗移到 body 最外層並設定最高層級 ★★★
+    document.body.appendChild(modal);
+    modal.style.zIndex = "99999";
+    
+    // 設定標題並顯示
+    titleEl.innerText = title; 
+    modal.style.display = 'flex';
+    
+    const list = document.getElementById('submissionList'); 
+    list.innerHTML = '<li>載入中...</li>';
+    
+    // 清空詳情區域
+    document.getElementById('submissionDetailArea').innerHTML = `
+        <div style="text-align:center; color:#ccc; margin-top:100px;">
+            <i class="far fa-file-alt" style="font-size:48px;"></i>
+            <p>請從左側選擇學生以檢閱作業</p>
+        </div>`;
+
+    try {
+        const [stus, subs] = await Promise.all([
+            db.ref(`students/${g}/${c}`).once('value').then(s=>s.val()||{}), 
+            db.ref(`assignments_submissions/${aid}`).once('value').then(s=>s.val()||{})
+        ]);
+        
+        list.innerHTML = ''; 
+        let done=0, total=0;
+        
+        Object.entries(stus)
+            .sort((a,b)=>(parseInt(a[1].profile?.number)||99)-(parseInt(b[1].profile?.number)||99))
+            .forEach(([name, d]) => {
+                total++; 
+                const hasSub = subs[name]; 
+                if(hasSub) done++;
+                
+                const li = document.createElement('li'); 
+                li.className = 'submission-item';
                 li.innerHTML = `<span>${d.profile?.number||'??'}. ${name}</span> ${hasSub ? '<span class="status-badge status-done">已繳交</span>' : '<span class="status-badge status-pending">未繳交</span>'}`;
-                li.onclick = () => { document.querySelectorAll('.submission-item').forEach(i=>i.classList.remove('active')); li.classList.add('active'); if(hasSub) showSubDetail(hasSub); else document.getElementById('submissionDetailArea').innerHTML = `<div style="text-align:center;margin-top:50px; color:#a67069;"><p>${name} 未繳交</p></div>`; };
+                
+                li.onclick = () => { 
+                    document.querySelectorAll('.submission-item').forEach(i=>i.classList.remove('active')); 
+                    li.classList.add('active'); 
+                    if(hasSub) showSubDetail(hasSub); 
+                    else document.getElementById('submissionDetailArea').innerHTML = `<div style="text-align:center;margin-top:50px; color:#a67069;"><p>${name} 尚未繳交作業</p></div>`; 
+                };
                 list.appendChild(li);
             });
-            document.getElementById('submitCount').innerText = done; document.getElementById('pendingCount').innerText = total - done;
-        } catch(e) { console.error(e); }
+            
+        document.getElementById('submitCount').innerText = done; 
+        document.getElementById('pendingCount').innerText = total - done;
+    } catch(e) { 
+        console.error(e); 
+        alert("載入失敗：" + e.message);
     }
-
+}
     // 課業詳情檢閱 (修訂：確保與歷史紀錄顯示一致)
     function showSubDetail(sub) {
         const fb = sub.teacherFeedback || {};

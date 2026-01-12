@@ -1760,35 +1760,46 @@ function openHistoryModal(name, h) {
         });
     }
     
-    // 共用解析函式
+   // 共用解析函式 (修正版：保留學生分段空行)
     function renderParsedUserContent(userContent, themeIndex = 1) {
         if (!userContent) return '<div style="padding:20px; color:#999; text-align:center;">無使用者輸入內容</div>';
+        
         const lines = userContent.split('\n');
         let html = `<div class="history-parsed-container history-theme-context-${themeIndex}">`;
         let currentLabel = '輸入內容'; 
         let currentContent = []; 
         const labelRegex = /^(.{2,10}?)[：:](.*)$/;
+        
         lines.forEach((line) => {
             const match = line.match(labelRegex);
             if (match) {
+                // 如果遇到新標籤，先輸出上一段累積的內容
                 if (currentContent.length > 0) {
+                    // ★ 這裡使用 trim() 去除頭尾多餘空白，但中間的換行會因為 join('\n') 與 CSS pre-wrap 被保留
                     html += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${currentContent.join('\n')}</div></div>`;
                 }
                 currentLabel = match[1].trim(); 
                 const rest = match[2].trim(); 
+                // 如果標籤後有內容，直接放入；如果沒有，陣列保持空
                 currentContent = rest ? [rest] : [];
-            } else if (line.trim() !== "") {
+            } else {
+                // ★★★ 關鍵修改處 ★★★
+                // 原本是： else if (line.trim() !== "") { currentContent.push(line); }
+                // 修改為： 直接 push(line)，不再過濾空行
+                // 這樣學生按 Enter 產生的空字串才會被保留下來，形成分段
                 currentContent.push(line);
             }
         });
+
+        // 處理最後一段
         if (currentContent.length > 0 || lines.length === 0) {
              const finalContent = currentContent.length > 0 ? currentContent.join('\n') : userContent;
              html += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${finalContent}</div></div>`;
         }
+        
         html += `</div>`;
         return `<div style="background:#fff;padding:20px;border:1px solid #eee;border-radius:12px;margin-bottom:25px; box-shadow:0 2px 10px rgba(0,0,0,0.03);">${html}</div>`;
     }
-
     // 歷史紀錄詳情
 // 歷史紀錄詳情 (修訂版：支援動態繪製 Canvas)
 function renderDetail(r) {

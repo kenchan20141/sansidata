@@ -1802,303 +1802,140 @@ function openHistoryModal(name, h) {
     }
     // 歷史紀錄詳情
 // 歷史紀錄詳情 (修訂版：支援動態繪製 Canvas)
-// ==========================================
-// === [老師端] 詳情檢閱渲染函式 (完整版) ===
-// ==========================================
 function renderDetail(r) {
-    // 1. 隱藏列表，顯示詳情容器
-    ['historyLevel1','historyLevel2','historyLevel3'].forEach(id => {
-        const el = document.getElementById(id);
-        if(el) el.style.display = 'none';
-    });
-    const detailDiv = document.getElementById('historyDetail');
-    detailDiv.style.display = 'block';
+    ['historyLevel1','historyLevel2','historyLevel3'].forEach(id=>document.getElementById(id).style.display='none');
+    document.getElementById('historyDetail').style.display='block';
+    document.getElementById('teacherBreadcrumb').style.display='none';
     
-    // 隱藏麵包屑
-    const bread = document.getElementById('teacherBreadcrumb');
-    if(bread) bread.style.display = 'none';
-    
-    // 2. 處理使用者輸入 (使用共用解析器，如果老師端沒有 renderParsedUserContent，請確保已複製過去)
     let uContent = '';
     if (r.category === "學習報告") {
         uContent = ''; 
     } else {
         if(r.userContent) {
+            // 預設主題色為 1
             uContent = renderParsedUserContent(r.userContent, 1);
         } else {
             uContent = `<div style="padding:20px; color:#999; text-align:center;">無使用者輸入內容</div>`;
         }
     }
 
-    // 3. 處理 AI 分析結果 (核心修訂：JSON vs HTML)
-    let aiDisplayHTML = "";
-    
-    if (r.aiContent) {
-        if (typeof r.aiContent === 'object') {
-            // === 情況 A: 新版 JSON 數據 ===
-            // 使用共用渲染器生成漂亮的評分表和雷達圖
-            // uniqueId 使用 teacher_view_ + ID 防止衝突
-            aiDisplayHTML = renderAssessmentUI(r.aiContent, "teacher_view_" + (r.id || Date.now()));
-        } else {
-            // === 情況 B: 舊版 HTML 字串 ===
-            aiDisplayHTML = r.aiContent;
-        }
-    } else {
-        aiDisplayHTML = "<p style='color:#ccc;'>無 AI 分析紀錄</p>";
-    }
-
-    // 4. 組合最終 HTML 並注入
-    detailDiv.innerHTML = `
+    // 1. 渲染 HTML 結構
+    document.getElementById('historyDetail').innerHTML = `
         <div style="margin-bottom:15px;">
-            <button class="nav-btn" onclick="renderLevel3('${currentSubFunction}',${currentThemeIndex})" style="padding:5px 15px; font-size:0.9em;">
+            <button class="nav-btn" onclick="renderLevel3('${currentSubFunction}',${currentThemeIndex})" style="padding:5px 15px;font-size:0.9em;">
                 <i class="fas fa-arrow-left"></i> 返回列表
             </button>
         </div>
-        <div class="detail-view" style="background:#fff; padding:30px; border-radius:15px; box-shadow:0 5px 20px rgba(0,0,0,0.05);">
+        <div class="detail-view">
             <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:20px;">
-                <h2 style="text-align:left; margin:0; color:#333; font-weight:bold;">${r.title || '無標題'}</h2>
-                <div style="color:#888; margin-top:8px; font-size:0.9em; display:flex; gap:15px;">
-                    <span><i class="far fa-calendar-alt"></i> ${r.dateStr || '未知日期'}</span>
-                    <span style="background:var(--m-blue); color:#fff; padding:2px 8px; border-radius:4px; font-size:0.8em;">${r.category}</span>
-                </div>
+                <h2 style="text-align:left; margin:0; color:#333;">${r.title}</h2>
+                <p style="color:#888; margin-top:5px;">${r.dateStr}</p>
             </div>
-            
-            <!-- 學生輸入區塊 -->
             ${uContent}
-            
-            <!-- AI 分析結果區塊 -->
-            <div class="detail-ai-box" style="margin-top:30px; border-top:2px dashed #eee; padding-top:20px;">
-                <h4 style="color:var(--m-green); margin-bottom:15px; font-size:1.2em;">
-                    <i class="fas fa-robot"></i> AI 分析結果：
-                </h4>
-                ${aiDisplayHTML}
+            <div class="detail-ai-box" style="margin-top:20px;" id="aiContentContainer">
+                <h4 style="color:var(--m-green); margin-bottom:10px;">AI 生成結果：</h4>
+                ${r.aiContent}
             </div>
         </div>`;
 
-    // 5. ★★★ 延遲觸發繪圖 (關鍵) ★★★
+    // 2. ★★★ 核心修復：強制刷新分數數據與藍色 BAR ★★★
     setTimeout(() => {
-        // A. 執行新版繪圖器 (它會自動尋找所有 class="dynamic-radar-canvas" 的畫布並繪圖)
-        // 請確保老師端 HTML 也引入了 Chart.js
-        if (typeof initDynamicCharts === 'function') {
-            initDynamicCharts();
+        const container = document.getElementById('aiContentContainer');
+        
+        // 判斷前綴 (narrative 或 argument)
+        let prefix = '';
+        if (r.category === '敘事抒情') prefix = 'narrative';
+        else if (r.category === '議論') prefix = 'argument';
+
+        // 如果有分數數據且確定了前綴，開始「填色」
+        if (prefix && r.scoreData) {
+            // (A) 還原分數文字
+            const updateText = (type, val, mult) => {
+                const el = document.getElementById(`${prefix}${type}ScoreDisplay`);
+                if(el) el.innerText = val * mult;
+            };
+            // (B) 還原藍色 BAR 寬度
+            const updateBar = (type, val, max) => {
+                const el = document.getElementById(`${prefix}${type}ScoreFill`);
+                if(el) el.style.width = (val / max * 100) + '%';
+            };
+
+            // 執行更新 (內容、表達、結構、標點、錯字)
+            const s = r.scoreData;
+            // 內容 (x4)
+            updateText('Content', s.content, 4);
+            updateBar('Content', s.content, 10);
+            // 表達 (x3)
+            updateText('Expression', s.expression, 3);
+            updateBar('Expression', s.expression, 10);
+            // 結構 (x2)
+            updateText('Structure', s.structure, 2);
+            updateBar('Structure', s.structure, 10);
+            // 標點 (固定5分)
+            updateText('Punctuation', 5, 1);
+            updateBar('Punctuation', 5, 10);
+            // 錯字 (固定1分，滿分3)
+            updateText('Typo', 1, 1);
+            updateBar('Typo', 1, 3);
+
+            // 更新總分與等級
+            const totalScore = (s.content * 4) + (s.expression * 3) + (s.structure * 2) + 5 + 1;
+            const finalGrade = determineGrade(Math.min(totalScore, 100));
+            const totalEl = document.getElementById(`${prefix}TotalScoreDisplay`);
+            const gradeEl = document.getElementById(`${prefix}FinalGrade`);
+            
+            if(totalEl) totalEl.innerText = `總分: ${Math.min(totalScore, 100)} / 100`;
+            if(gradeEl) gradeEl.innerText = `等級: ${finalGrade}`;
         }
 
-        // B. 舊版兼容邏輯 (針對舊的 HTML string)
-        // 如果是舊 HTML，畫布可能還沒被畫出來，需要手動補救
-        if (typeof r.aiContent === 'string' && r.scoreData) {
-            // 嘗試在 detailDiv 裡找尋舊版 canvas
-            // 舊版代碼通常沒有 specific class，所以我們找 canvas 標籤
-            const canvases = detailDiv.querySelectorAll('canvas:not(.dynamic-radar-canvas)');
-            
-            canvases.forEach(canvas => {
-                // 如果已經有圖表實例就不畫
-                if (canvas.chartInstance) return; 
-                
-                // 嘗試從 scoreData 獲取數據
-                let radarData = null;
-                if (r.scoreData.radar) {
-                    radarData = [
-                        r.scoreData.radar.立意 || 0, r.scoreData.radar.取材 || 0, r.scoreData.radar.扣題 || 0,
-                        r.scoreData.radar.詳略 || 0, r.scoreData.radar.詞彙 || 0, r.scoreData.radar.文學性 || 0
-                    ];
-                } else if (r.scoreData["敘事抒情"] && r.scoreData["敘事抒情"].radar) {
-                    radarData = r.scoreData["敘事抒情"].radar;
-                }
+        // (C) 繪製雷達圖 (保持不變)
+        if (r.scoreData && r.scoreData.radar) {
+            const canvas = container.querySelector('canvas');
+            if (canvas) {
+                const parent = canvas.parentNode;
+                parent.style.height = '350px'; // 強制高度
+                parent.style.position = 'relative';
 
-                if (radarData) {
-                    // 繪製舊版圖表
-                    new Chart(canvas.getContext('2d'), {
-                        type: 'radar',
-                        data: {
-                            labels: ['立意', '取材', '扣題', '詳略', '詞彙', '文學性'],
-                            datasets: [{
-                                label: '能力評估',
-                                data: radarData,
-                                backgroundColor: 'rgba(148, 167, 181, 0.4)', // 老師端用藍灰色
-                                borderColor: '#94a7b5',
-                                borderWidth: 2,
-                                pointBackgroundColor: '#94a7b5'
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } },
-                            plugins: { legend: { display: false } }
-                        }
-                    });
-                }
-            });
+                new Chart(canvas.getContext('2d'), {
+                    type: 'radar',
+                    data: {
+                        labels: ['立意', '取材', '扣題', '詳略', '詞彙', '文學性'],
+                        datasets: [{
+                            label: '能力分佈',
+                            data: [
+                                r.scoreData.radar.立意, r.scoreData.radar.取材, r.scoreData.radar.扣題,
+                                r.scoreData.radar.詳略, r.scoreData.radar.詞彙, r.scoreData.radar.文學性
+                            ],
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 2,
+                            pointBackgroundColor: 'rgba(54, 162, 235, 1)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { stepSize: 2 } } },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
         }
         
-        // C. 補救分數條 (舊版 HTML 的分數條寬度有時會跑掉)
-        // 如果是舊版 HTML，分數條的 style="width:XX%" 已經在 HTML 裡了，通常不需要額外 JS。
-        // 但如果是 JSON 渲染出來的 (renderAssessmentUI)，HTML 已經包含正確寬度，亦無需額外 JS。
-
-    }, 150); // 給予 150ms 讓 DOM 渲染完成
-}
-
-// ==========================================
-// === [共用核心] JSON 數據渲染引擎 ===
-// ==========================================
-
-/**
- * 1. 將 JSON 數據轉換為 HTML (評分表 + 雷達圖容器)
- * @param {object} data - 包含 scores, radar, critique 等的 JSON 物件
- * @param {string} uniqueId - 用於區分 Canvas ID 的唯一標識
- */
-function renderAssessmentUI(data, uniqueId) {
-    if (!data || !data.scores) return "<div style='padding:20px; color:#999;'>（此紀錄無結構化數據）</div>";
-
-    const s = data.scores;
-    // 計算顯示分數 (權重：內容x4, 表達x3, 結構x2, 標點x1, 錯字+1)
-    const c_disp = (s.content || 0) * 4;
-    const e_disp = (s.expression || 0) * 3;
-    const s_disp = (s.structure || 0) * 2;
-    // 假設標點和錯字在 JSON 裡沒有存，則用預設值 (你可根據需要調整)
-    const p_disp = s.punctuation !== undefined ? s.punctuation * 1 : 5; 
-    const t_disp = s.typo !== undefined ? s.typo : 1;
-    
-    const totalScore = Math.min(c_disp + e_disp + s_disp + p_disp + t_disp, 100);
-    
-    // 這裡需要你的 determineGrade 函式 (確保兩端都有定義這個函式)
-    const grade = (typeof determineGrade === 'function') ? determineGrade(totalScore) : "?";
-
-    // 1. 構建評分表 HTML
-    let html = `
-    <div class="grading-container" style="margin-top:0; border:none; padding:0;">
-        <div class="grading-grid">
-            <!-- 左側：評分條 -->
-            <div class="grading-scores" style="padding:15px;">
-                <h3 style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:10px;">評等詳情</h3>
-                ${renderScoreItem("內容 (40)", s.content, 10, c_disp)}
-                ${renderScoreItem("表達 (30)", s.expression, 10, e_disp)}
-                ${renderScoreItem("結構 (20)", s.structure, 10, s_disp)}
-                ${renderScoreItem("標點 (10)", p_disp, 10, p_disp)}
-                ${renderScoreItem("錯別字 (+3)", t_disp, 3, t_disp)}
-                
-                <div class="total-score-container" style="margin-top:15px; padding-top:10px; border-top:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-size:1.1em; color:#555;">總分: ${totalScore} / 100</span>
-                    <span style="font-size:2em; font-weight:bold; color:#d9534f;">${grade}</span>
-                </div>
-            </div>
-
-            <!-- 右側：雷達圖容器 -->
-            <div class="grading-radar" style="padding:15px; display:flex; flex-direction:column; align-items:center;">
-                <h3 style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:10px; width:100%;">能力分佈</h3>
-                <!-- 關鍵：這裡不寫死 ID，而是給 class 和 data 屬性 -->
-                <div class="radar-chart-container" style="position:relative; width:100%; height:300px;">
-                    <canvas id="radar_${uniqueId}" class="dynamic-radar-canvas" 
-                            data-radar='${JSON.stringify(data.radar || {})}'></canvas>
-                </div>
-            </div>
-        </div>
-    </div>`;
-
-    // 2. 構建文字點評 HTML (使用既有的 createBulletedListHTML，如果老師端沒有此函式需補上)
-    const renderList = (title, content) => {
-        if (!content) return "";
-        // 簡單的 HTML 生成，確保老師端也能用
-        return `
-        <div class="rewrite-explanation-container" style="margin-top:20px;">
-            <div class="rewrite-explanation-card" style="background:#fff; border:1px solid #eee; padding:15px; border-radius:8px;">
-                <h3 style="margin-top:0; color:#2A9689;">${title}</h3>
-                <div style="line-height:1.6; color:#444;">${Array.isArray(content) ? content.join('<br>') : content.replace(/\n/g, '<br>')}</div>
-            </div>
-        </div>`;
-    };
-
-    if (data.critique) html += renderList("點評", data.critique);
-    if (data.suggestion) html += renderList("建議", data.suggestion);
-    
-    if (data.rewrite) {
-        html += `
-        <div class="rewrite-explanation-container" style="margin-top:20px;">
-            <div class="rewrite-explanation-card" style="background:#fff; border:1px solid #eee; padding:15px; border-radius:8px;">
-                <h3 style="margin-top:0; color:#2A9689;">改寫範例</h3>
-                <div class="rewrite-content" style="background:#f9f9f9; padding:10px; border-radius:5px; line-height:1.8;">
-                    ${data.rewrite.replace(/\n/g, '<br>').replace(/\*/g, '')}
-                </div>
-            </div>
-        </div>`;
-    }
-
-    return html;
-}
-
-// 2. 輔助：渲染單條分數 Bar
-function renderScoreItem(label, val, max, displayVal) {
-    const pct = (val / max) * 100;
-    return `
-    <div class="score-item" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-        <label style="font-weight:bold; color:#666;">${label}</label>
-        <div class="slider-container" style="flex-grow:1; display:flex; align-items:center; gap:8px; margin-left:10px;">
-            <div class="progress-bar-container" style="flex-grow:1; height:8px; background:#eee; border-radius:4px; overflow:hidden;">
-                <div class="progress-bar-fill" style="width: ${pct}%; height:100%; background:#007bff;"></div>
-            </div>
-            <span class="score-display" style="font-weight:bold; color:#007bff; width:25px; text-align:right;">${displayVal}</span>
-        </div>
-    </div>`;
-}
-
-/**
- * 3. [核心] 自動繪製頁面上所有的動態雷達圖
- * 無論是老師端還是學生端，只要呼叫這個函式，圖表就會出來
- */
-function initDynamicCharts() {
-    const canvases = document.querySelectorAll('.dynamic-radar-canvas');
-    canvases.forEach(canvas => {
-        // 防止重複繪製
-        if (canvas.getAttribute('data-drawn') === 'true') return;
-
-        const rawData = canvas.getAttribute('data-radar');
-        if (!rawData) return;
-
-        try {
-            const radarData = JSON.parse(rawData);
-            const dataValues = [
-                radarData.立意 || 0, radarData.取材 || 0, radarData.扣題 || 0,
-                radarData.詳略 || 0, radarData.詞彙 || 0, radarData.文學性 || 0
-            ];
-
-            const ctx = canvas.getContext('2d');
-            new Chart(ctx, {
-                type: 'radar',
-                data: {
-                    labels: ['立意', '取材', '扣題', '詳略', '詞彙', '文學性'],
-                    datasets: [{
-                        label: '能力評估',
-                        data: dataValues,
-                        backgroundColor: 'rgba(94, 112, 103, 0.4)', // 莫蘭迪綠半透明
-                        borderColor: '#5e7067',
-                        borderWidth: 2,
-                        pointBackgroundColor: '#5e7067',
-                        pointBorderColor: '#fff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false, // 關鍵：自適應高度
-                    scales: {
-                        r: {
-                            angleLines: { display: true },
-                            suggestedMin: 0, suggestedMax: 10,
-                            pointLabels: { font: { size: 12, family: "'Noto Serif TC', serif" } },
-                            ticks: { stepSize: 2, display: false } // 簡約風格
-                        }
-                    },
-                    plugins: { legend: { display: false } }
-                }
-            });
-            // 標記已繪製
-            canvas.setAttribute('data-drawn', 'true');
-        } catch (e) {
-            console.error("圖表繪製失敗:", e);
+        // 處理學習報告的圖表 (保持不變)
+        else if (r.scoreData && (r.scoreData["敘事抒情"] || r.scoreData["議論"])) {
+            if (r.scoreData["敘事抒情"]) {
+                const narrCanvas = container.querySelector('#reportNarrativeChart');
+                if (narrCanvas) drawReportChart(narrCanvas, r.scoreData["敘事抒情"].radar);
+            }
+            if (r.scoreData["議論"]) {
+                const argCanvas = container.querySelector('#reportArgumentChart');
+                if (argCanvas) drawReportChart(argCanvas, r.scoreData["議論"].radar);
+            }
         }
-    });
+    }, 100);
 }
 
-    
 
 // 輔助函數：繪製報告圖表
 function drawReportChart(canvas, radarData) {

@@ -393,6 +393,97 @@ canvas {
         .modal-body { width: 100%; border-radius: 0; margin: 0; }
         .modal-overlay { padding: 40px 0 100px 0; }
     }
+
+
+
+
+
+
+/* === 標題區塊優化：浮雕文字風格 (移除背景框) === */
+    .title-container {
+        /* 1. 清除所有背景與邊框，讓它完全透明 */
+        background: transparent !important;
+        box-shadow: none !important;
+        border: none !important;
+        backdrop-filter: none !important;
+        
+        /* 2. 排版設定 */
+        padding: 20px 0;
+        margin-bottom: 40px; /* 拉大與下方按鈕的距離 */
+        display: flex;
+        justify-content: center; /* 標題置中 */
+        align-items: center;
+        position: relative;      /* 讓右側按鈕可以絕對定位 */
+    }
+
+    .title-container h1 {
+        margin: 0;
+        /* 3. 字體強化 */
+        font-size: 3rem;        /* 大幅放大字體 */
+        font-weight: 900;       /* 極粗體 */
+        letter-spacing: 8px;    /* 寬字距，增加大氣感 */
+        color: #5e7067;         /* 使用深莫蘭迪綠 (比灰色更有質感) */
+        
+        /* 4. 核心魔法：文字多重陰影 (Text Shadow) */
+        text-shadow: 
+            /* 第一層：白色描邊 (讓文字與複雜背景分離) */
+            2px 2px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff, 1px 1px 0 #fff,
+            /* 第二層：柔和的長投影 (營造浮空立體感) */
+            0 10px 20px rgba(94, 112, 103, 0.3);
+            
+        z-index: 1;
+        transition: transform 0.3s ease;
+    }
+    
+    /* 增加一點互動感：滑鼠移過時輕微上浮 */
+    .title-container h1:hover {
+        transform: translateY(-2px);
+    }
+
+    /* 5. 右側使用者資訊：改為「懸浮膠囊」樣式 (不影響標題的通透感) */
+    .title-container > div[style*="float: right"] {
+        float: none !important;
+        position: absolute;          /* 固定在右側 */
+        right: 10px;
+        top: 50%;
+        transform: translateY(-50%); /* 垂直置中 */
+        
+        background: rgba(255, 255, 255, 0.95); /* 純白膠囊 */
+        padding: 8px 20px;
+        border-radius: 50px;         /* 圓潤膠囊狀 */
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08); /* 輕微陰影 */
+        border: 1px solid #fff;
+        
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        z-index: 2;
+    }
+
+    /* 手機版適配：標題縮小，膠囊移到底部 */
+    @media (max-width: 768px) {
+        .title-container {
+            flex-direction: column;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .title-container h1 {
+            font-size: 2rem;
+            letter-spacing: 4px;
+        }
+        
+        .title-container > div[style*="float: right"] {
+            position: relative; /* 手機版不絕對定位 */
+            right: auto;
+            top: auto;
+            transform: none;
+            background: rgba(255, 255, 255, 0.6); /* 手機版稍微透明一點 */
+        }
+    }
+
+
+    
 </style>
 </head>
 <body>
@@ -401,7 +492,7 @@ canvas {
 
 <div id="loginOverlay">
     <div class="login-box">
-        <h2 style="color: var(--m-blue); margin-bottom: 10px;">神思・教師管理面板</h2>
+        <h2 style="color: var(--m-blue); margin-bottom: 10px;">神思・管理面板</h2>
         <p style="color: #888; margin-bottom: 30px;">請使用學校教師帳號登入以存取資料</p>
         <button id="loginBtn" class="login-btn" onclick="teacherLogin()">
             <i class="fab fa-google"></i> Google 帳號登入
@@ -418,7 +509,7 @@ canvas {
             <span id="teacherNameDisplay" style="color: var(--m-blue); margin-right: 10px;"></span>
             <button onclick="logout()" style="background: none; border: 1px solid #ccc; padding: 5px 10px; border-radius: 4px; cursor: pointer; color: #666;">登出</button>
         </div>
-        <h1>神思・教師管理面板</h1>
+        <h1>神思・管理面板</h1>
     </div>
 
     <!-- 導航列 -->

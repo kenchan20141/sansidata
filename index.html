@@ -1686,71 +1686,40 @@ function openHistoryModal(name, h) {
     }
 
     // 歷史紀錄詳情
-function renderDetail(r) {
-    ['historyLevel1','historyLevel2','historyLevel3'].forEach(id=>document.getElementById(id).style.display='none');
-    document.getElementById('historyDetail').style.display='block';
-    document.getElementById('teacherBreadcrumb').style.display='none';
-   
-    let uContent = '';
-    if (r.category === "學習報告") {
-        uContent = '';
-    } else {
-        if(r.userContent) {
-            uContent = renderParsedUserContent(r.userContent, currentThemeIndex);
-        } else {
-            uContent = `<div style="padding:20px; color:#999; text-align:center;">無使用者輸入內容</div>`;
-        }
-    }
-    document.getElementById('historyDetail').innerHTML = `
-        <div style="margin-bottom:15px;">
-            <button class="nav-btn" onclick="renderLevel3('${currentSubFunction}',${currentThemeIndex})" style="padding:5px 15px;font-size:0.9em;">
-                <i class="fas fa-arrow-left"></i> 返回列表
-            </button>
-        </div>
-        <div class="detail-view">
-            <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:20px;">
-                <h2 style="text-align:left; margin:0; color:#333;">${r.title}</h2>
-                <p style="color:#888; margin-top:5px;">${r.dateStr}</p>
-            </div>
-            ${uContent}
-            <div class="detail-ai-box" style="margin-top:20px;">
-                <h4 style="color:var(--m-green); margin-bottom:10px;">AI 生成結果：</h4>
-                ${r.aiContent}
-            </div>
-        </div>`;
-    // 修訂：如果為學習報告，則將雷達圖改為縮圖，並綁定點擊放大事件
-    if (r.category === "學習報告") {
-        const sections = document.querySelectorAll('#historyDetail .report-section');
-        sections.forEach(sec => {
-            const badge = sec.querySelector('.report-category-badge');
-            if (badge && (badge.classList.contains('badge-narrative') || badge.classList.contains('badge-argument'))) {
-                const type = badge.classList.contains('badge-narrative') ? 'narrative' : 'argument';
-                const title = badge.innerText.trim();
-                // 找到右側雷達圖容器 (根據結構匹配)
-                const radarContainer = sec.querySelector('[style*="flex: 1; min-width: 320px; background:#fff;"]') || sec.querySelector('.report-radar-wrapper');
-                if (radarContainer) {
-                    // 應用縮圖樣式 (重用 .grading-radar-thumbnail 的 CSS)
-                    radarContainer.classList.add('grading-radar-thumbnail');
-                    // 綁定點擊事件
-                    radarContainer.onclick = () => {
-                        // 提取 avg 值 (從 .score-display 反推原始 0-10 分)
-                        const scores = sec.querySelectorAll('.score-display');
-                        if (scores.length >= 3) {
-                            const content = parseFloat(scores[0].innerText) / 4;
-                            const expr = parseFloat(scores[1].innerText) / 3;
-                            const struct = parseFloat(scores[2].innerText) / 2;
-                            const avg = { content, expr, struct };
-                            // 開啟放大圖表 (重用 openEnlargedChart)
-                            openEnlargedChart(title, avg);
-                        } else {
-                            alert("無法提取分數數據，請檢查報告結構。");
-                        }
-                    };
+  function renderDetail(r) {
+            ['historyLevel1','historyLevel2','historyLevel3'].forEach(id=>document.getElementById(id).style.display='none');
+            document.getElementById('historyDetail').style.display='block';
+            document.getElementById('teacherBreadcrumb').style.display='none';
+            
+            let uContent = '';
+            if (r.category === "學習報告") {
+                uContent = ''; 
+            } else {
+                if(r.userContent) {
+                    uContent = renderParsedUserContent(r.userContent, currentThemeIndex);
+                } else {
+                    uContent = `<div style="padding:20px; color:#999; text-align:center;">無使用者輸入內容</div>`;
                 }
             }
-        });
-    }
-}
+
+            document.getElementById('historyDetail').innerHTML = `
+                <div style="margin-bottom:15px;">
+                    <button class="nav-btn" onclick="renderLevel3('${currentSubFunction}',${currentThemeIndex})" style="padding:5px 15px;font-size:0.9em;">
+                        <i class="fas fa-arrow-left"></i> 返回列表
+                    </button>
+                </div>
+                <div class="detail-view">
+                    <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:20px;">
+                        <h2 style="text-align:left; margin:0; color:#333;">${r.title}</h2>
+                        <p style="color:#888; margin-top:5px;">${r.dateStr}</p>
+                    </div>
+                    ${uContent}
+                    <div class="detail-ai-box" style="margin-top:20px;">
+                        <h4 style="color:var(--m-green); margin-bottom:10px;">AI 生成結果：</h4>
+                        ${r.aiContent}
+                    </div>
+                </div>`;
+        }
 
     
     function updateBreadcrumb(c,s) { const b=document.getElementById('teacherBreadcrumb'); b.style.display='flex'; document.getElementById('breadCategory').innerText=c; document.getElementById('breadSub').innerText=s||''; document.getElementById('breadSep2').style.display=s?'inline':'none'; }

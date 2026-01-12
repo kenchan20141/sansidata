@@ -2009,7 +2009,20 @@ function drawReportChart(canvas, radarData) {
         if (!topic) return alert("請輸入題目");
         db.ref(`assignments/${g}/${c}`).push().set({ topic, type, timestamp: Date.now() }, e => { if(e) alert("失敗"); else { sendClassNotification(g, c, "新課業發佈", `老師發佈了：${topic}`); alert("發佈成功"); document.getElementById('assignTopic').value=''; } });
     }
-    function deleteAssignment(id, g, c) { if(confirm("確定刪除？")) db.ref(`assignments/${g}/${c}/${id}`).remove(); }
+   // === 修改後的刪除函式 ===
+    function deleteAssignment(id, g, c) { 
+        if(confirm("確定刪除此課業？\n警告：這將一併刪除所有學生的提交紀錄且無法復原。")) { 
+            const updates = {};
+            // 1. 刪除課業本身的設定檔
+            updates[`assignments/${g}/${c}/${id}`] = null;
+            // 2. 同步刪除該課業的所有提交紀錄
+            updates[`assignments_submissions/${id}`] = null;
+            
+            db.ref().update(updates)
+              .then(() => console.log("刪除成功"))
+              .catch(e => alert("刪除失敗：" + e.message));
+        } 
+    }
     
     async function viewSubmissions(aid, title, g, c) {
     currentViewingAssignmentId = aid; 

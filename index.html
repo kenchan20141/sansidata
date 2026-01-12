@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>神思 - 後台</title>
+    <title>神思 - 管理面板</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
 
@@ -393,6 +393,69 @@ canvas {
         .modal-body { width: 100%; border-radius: 0; margin: 0; }
         .modal-overlay { padding: 40px 0 100px 0; }
     }
+
+/* === 標題區塊優化：毛玻璃卡片效果 === */
+.title-container {
+    background: rgba(255, 255, 255, 0.75);   /* 半透明白色背景 */
+    backdrop-filter: blur(10px);             /* 背景模糊濾鏡 (關鍵效果) */
+    -webkit-backdrop-filter: blur(10px);     /* Safari 支援 */
+    border-radius: 16px;                     /* 圓角 */
+    padding: 20px 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.05); /* 極柔和的陰影 */
+    border: 1px solid rgba(255, 255, 255, 0.6);       /* 淡淡的白邊框 */
+    
+    /* 彈性佈局，確保標題置中，按鈕靠右 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.title-container h1 {
+    margin: 0; /* 移除預設邊距 */
+    color: var(--text-main);
+    font-weight: bold;
+    text-shadow: 1px 1px 0 #fff; /* 文字白邊，增加銳利度 */
+    font-size: 2rem;
+    z-index: 1;
+}
+
+/* 針對原本使用 float: right 的使用者資訊區塊進行定位修正 */
+.title-container > div[style*="float: right"] {
+    float: none !important;      /* 強制取消 float */
+    position: absolute;          /* 改用絕對定位固定在右側 */
+    right: 25px;
+    top: 50%;
+    transform: translateY(-50%); /* 垂直置中 */
+    background: rgba(255,255,255,0.6); /* 按鈕區塊也加一點底色 */
+    padding: 5px 15px;
+    border-radius: 20px;
+    z-index: 2;
+}
+
+/* === 手機版適配 === */
+@media (max-width: 600px) {
+    .title-container {
+        flex-direction: column-reverse; /* 手機上將標題放下面，按鈕放上面 */
+        padding: 15px;
+        gap: 15px;
+    }
+    
+    .title-container > div[style*="float: right"] {
+        position: static; /* 手機版取消絕對定位，改為自然流動 */
+        transform: none;
+        width: 100%;
+        text-align: center;
+        background: none;
+    }
+
+    .title-container h1 {
+        font-size: 1.6rem;
+    }
+}
+
+    
 </style>
 </head>
 <body>
@@ -423,7 +486,7 @@ canvas {
 
     <!-- 導航列 -->
     <div class="nav-bar">
-        <button class="nav-btn active" onclick="switchTab('students')"><i class="fas fa-user-graduate"></i> 學生管理</button>
+        <button class="nav-btn active" onclick="switchTab('students')"><i class="fas fa-user-graduate"></i> 歷程檢閱</button>
         <button class="nav-btn" onclick="switchTab('reports')"><i class="fas fa-chart-pie"></i> 學生報告</button>
         <button class="nav-btn" onclick="switchTab('assignments')"><i class="fas fa-edit"></i> 課業管理</button>
         <button class="nav-btn" onclick="switchTab('analytics')"><i class="fas fa-chart-bar"></i> 數據統計</button>

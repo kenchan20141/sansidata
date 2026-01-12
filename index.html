@@ -2075,32 +2075,111 @@ function drawReportChart(canvas, radarData) {
     }
 }
     // 課業詳情檢閱 (修訂：確保與歷史紀錄顯示一致)
-    function showSubDetail(sub) {
-        const fb = sub.teacherFeedback || {};
-        
-        // 使用共用解析函式，確保 100% 一致 (預設傳入主題色 1)
-        let uContent = renderParsedUserContent(sub.userContent, 1);
+ // === 修正後的課業詳情檢閱函式 (修復雷達圖顯示) ===
+function showSubDetail(sub) {
+    const fb = sub.teacherFeedback || {};
+    
+    // 1. 解析使用者輸入內容 (保持原有邏輯)
+    let uContent = renderParsedUserContent(sub.userContent, 1);
 
-        document.getElementById('submissionDetailArea').innerHTML = `
-            <div class="detail-view">
-                <h2>${sub.studentName}</h2>
-                <div style="font-size:0.9em; color:#888; margin-bottom:10px;">提交時間：${sub.submittedAt}</div>
-                ${uContent}
-                <div class="detail-ai-box" style="margin-top:20px;">${sub.aiContent}</div>
-                <div class="teacher-feedback-section">
-                    <h3><i class="fas fa-pen-alt"></i> 老師批改</h3>
-                    <div style="margin-bottom:15px;">
-                        <label style="font-weight:bold; color:#8d6e63;">分數：</label>
-                        <input id="ts" value="${fb.score||''}" placeholder="例如：5**" type="text">
-                    </div>
-                    <div style="margin-bottom:15px;">
-                        <label style="font-weight:bold; color:#8d6e63;">評語：</label>
-                        <textarea id="tc" rows="3" placeholder="請輸入評語...">${fb.comment||''}</textarea>
-                    </div>
-                    <button class="btn-action btn-manage" onclick="sendFb('${sub.studentName}')">發還給學生</button>
+    // 2. 渲染基本 HTML 結構 (特別加入 ID: subAiContentBox 以便後續抓取)
+    document.getElementById('submissionDetailArea').innerHTML = `
+        <div class="detail-view">
+            <h2>${sub.studentName}</h2>
+            <div style="font-size:0.9em; color:#888; margin-bottom:10px;">提交時間：${sub.submittedAt}</div>
+            ${uContent}
+            
+            <div class="detail-ai-box" style="margin-top:20px;" id="subAiContentBox">
+                <h4 style="color:var(--m-green); margin-bottom:10px;">AI 分析結果：</h4>
+                ${sub.aiContent}
+            </div>
+
+            <div class="teacher-feedback-section">
+                <h3><i class="fas fa-pen-alt"></i> 老師批改</h3>
+                <div style="margin-bottom:15px;">
+                    <label style="font-weight:bold; color:#8d6e63;">分數：</label>
+                    <input id="ts" value="${fb.score||''}" placeholder="例如：5**" type="text">
                 </div>
-            </div>`;
-    }
+                <div style="margin-bottom:15px;">
+                    <label style="font-weight:bold; color:#8d6e63;">評語：</label>
+                    <textarea id="tc" rows="3" placeholder="請輸入評語...">${fb.comment||''}</textarea>
+                </div>
+                <button class="btn-action btn-manage" onclick="sendFb('${sub.studentName}')">發還給學生</button>
+            </div>
+        </div>`;
+
+    // 3. ★★★ 關鍵修復：延遲執行繪圖邏輯 (與 renderDetail 保持一致) ★★★
+    setTimeout(() => {
+        const container = document.getElementById('subAiContentBox');
+        if (!container || !sub.scoreData) return;
+
+        // A. 準備 Canvas 元素
+        // 先嘗試在 aiContent 裡找 canvas，如果找不到 (有些舊資料沒存 canvas 標籤)，就自己創一個
+        let canvas = container.querySelector('canvas');
+        if (!canvas) {
+            const chartWrapper = document.createElement('div');
+            chartWrapper.style.height = '350px';
+            chartWrapper.style.position = 'relative';
+            chartWrapper.style.marginTop = '20px';
+            chartWrapper.style.marginBottom = '20px';
+            // 加入 canvas
+            chartWrapper.innerHTML = '<canvas id="assignmentRadarCanvas"></canvas>';
+            // 將圖表容器插入到 aiContent 的最上方或最下方 (這裡選擇最上方比較顯眼)
+            container.insertBefore(chartWrapper, container.firstChild.nextSibling); 
+            canvas = chartWrapper.querySelector('canvas');
+        } else {
+            // 如果原本就有 canvas，確保它的父容器有高度
+            canvas.parentNode.style.height = '350px';
+            canvas.parentNode.style.position = 'relative';
+        }
+
+        // B. 取得數據 (相容不同格式)
+        let radarData = null;
+        if (sub.scoreData.radar) {
+            // 標準格式
+            radarData = [
+                sub.scoreData.radar.立意, sub.scoreData.radar.取材, sub.scoreData.radar.扣題,
+                sub.scoreData.radar.詳略, sub.scoreData.radar.詞彙, sub.scoreData.radar.文學性
+            ];
+        } else if (sub.scoreData["敘事抒情"] && sub.scoreData["敘事抒情"].radar) {
+            // 報告格式 (敘事)
+            radarData = sub.scoreData["敘事抒情"].radar;
+        } else if (sub.scoreData["議論"] && sub.scoreData["議論"].radar) {
+            // 報告格式 (議論)
+            radarData = sub.scoreData["議論"].radar;
+        }
+
+        // C. 執行 Chart.js 繪圖
+        if (radarData && canvas) {
+            new Chart(canvas.getContext('2d'), {
+                type: 'radar',
+                data: {
+                    labels: ['立意', '取材', '扣題', '詳略', '詞彙', '文學性'],
+                    datasets: [{
+                        label: '能力分佈',
+                        data: radarData,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(54, 162, 235, 1)'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { 
+                        r: { 
+                            suggestedMin: 0, 
+                            suggestedMax: 10, 
+                            ticks: { stepSize: 2 } 
+                        } 
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+    }, 100);
+}
     
     function sendFb(name) { db.ref(`assignments_submissions/${currentViewingAssignmentId}/${name}/teacherFeedback`).set({score:document.getElementById('ts').value, comment:document.getElementById('tc').value, timestamp:Date.now(), status:'returned'}, e=>alert(e?'失敗':'成功')); }
 

@@ -1686,40 +1686,144 @@ function openHistoryModal(name, h) {
     }
 
     // 歷史紀錄詳情
-  function renderDetail(r) {
-            ['historyLevel1','historyLevel2','historyLevel3'].forEach(id=>document.getElementById(id).style.display='none');
-            document.getElementById('historyDetail').style.display='block';
-            document.getElementById('teacherBreadcrumb').style.display='none';
+// 歷史紀錄詳情 (修訂版：支援動態繪製 Canvas)
+function renderDetail(r) {
+    ['historyLevel1','historyLevel2','historyLevel3'].forEach(id=>document.getElementById(id).style.display='none');
+    document.getElementById('historyDetail').style.display='block';
+    document.getElementById('teacherBreadcrumb').style.display='none';
+    
+    let uContent = '';
+    if (r.category === "學習報告") {
+        uContent = ''; 
+    } else {
+        if(r.userContent) {
+            uContent = renderParsedUserContent(r.userContent, currentThemeIndex);
+        } else {
+            uContent = `<div style="padding:20px; color:#999; text-align:center;">無使用者輸入內容</div>`;
+        }
+    }
+
+    // 1. 渲染 HTML 結構
+    document.getElementById('historyDetail').innerHTML = `
+        <div style="margin-bottom:15px;">
+            <button class="nav-btn" onclick="renderLevel3('${currentSubFunction}',${currentThemeIndex})" style="padding:5px 15px;font-size:0.9em;">
+                <i class="fas fa-arrow-left"></i> 返回列表
+            </button>
+        </div>
+        <div class="detail-view">
+            <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:20px;">
+                <h2 style="text-align:left; margin:0; color:#333;">${r.title}</h2>
+                <p style="color:#888; margin-top:5px;">${r.dateStr}</p>
+            </div>
+            ${uContent}
+            <div class="detail-ai-box" style="margin-top:20px;" id="aiContentContainer">
+                <h4 style="color:var(--m-green); margin-bottom:10px;">AI 生成結果：</h4>
+                ${r.aiContent}
+            </div>
+        </div>`;
+
+    // 2. ★★★ 核心邏輯：檢查並重繪圖表 ★★★
+    // 使用 setTimeout 確保 DOM 已經渲染完成
+    setTimeout(() => {
+        const container = document.getElementById('aiContentContainer');
+        
+        // 情況 A: 一般文章點評 (單一雷達圖)
+        if (r.scoreData && r.scoreData.radar) {
+            const canvas = container.querySelector('canvas');
+            if (canvas) {
+                // 確保容器高度固定，防止重疊
+                const parent = canvas.parentNode;
+                parent.style.height = '350px'; 
+                parent.style.position = 'relative';
+
+                new Chart(canvas.getContext('2d'), {
+                    type: 'radar',
+                    data: {
+                        labels: ['立意', '取材', '扣題', '詳略', '詞彙', '文學性'],
+                        datasets: [{
+                            label: '能力分佈',
+                            data: [
+                                r.scoreData.radar.立意,
+                                r.scoreData.radar.取材,
+                                r.scoreData.radar.扣題,
+                                r.scoreData.radar.詳略,
+                                r.scoreData.radar.詞彙,
+                                r.scoreData.radar.文學性
+                            ],
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 2,
+                            pointBackgroundColor: 'rgba(54, 162, 235, 1)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false, // 關鍵：防止高度崩塌
+                        scales: {
+                            r: {
+                                suggestedMin: 0,
+                                suggestedMax: 10,
+                                ticks: { stepSize: 2 }
+                            }
+                        },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+        }
+        
+        // 情況 B: 學習報告 (多個雷達圖)
+        // 學習報告的 scoreData 是 finalStats 物件，包含 "敘事抒情" 和 "議論" 的數據
+        else if (r.scoreData && (r.scoreData["敘事抒情"] || r.scoreData["議論"])) {
             
-            let uContent = '';
-            if (r.category === "學習報告") {
-                uContent = ''; 
-            } else {
-                if(r.userContent) {
-                    uContent = renderParsedUserContent(r.userContent, currentThemeIndex);
-                } else {
-                    uContent = `<div style="padding:20px; color:#999; text-align:center;">無使用者輸入內容</div>`;
+            // 處理敘事圖表
+            if (r.scoreData["敘事抒情"]) {
+                const narrCanvas = container.querySelector('#reportNarrativeChart');
+                if (narrCanvas) {
+                    drawReportChart(narrCanvas, r.scoreData["敘事抒情"].radar);
                 }
             }
-
-            document.getElementById('historyDetail').innerHTML = `
-                <div style="margin-bottom:15px;">
-                    <button class="nav-btn" onclick="renderLevel3('${currentSubFunction}',${currentThemeIndex})" style="padding:5px 15px;font-size:0.9em;">
-                        <i class="fas fa-arrow-left"></i> 返回列表
-                    </button>
-                </div>
-                <div class="detail-view">
-                    <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:20px;">
-                        <h2 style="text-align:left; margin:0; color:#333;">${r.title}</h2>
-                        <p style="color:#888; margin-top:5px;">${r.dateStr}</p>
-                    </div>
-                    ${uContent}
-                    <div class="detail-ai-box" style="margin-top:20px;">
-                        <h4 style="color:var(--m-green); margin-bottom:10px;">AI 生成結果：</h4>
-                        ${r.aiContent}
-                    </div>
-                </div>`;
+            
+            // 處理議論圖表
+            if (r.scoreData["議論"]) {
+                const argCanvas = container.querySelector('#reportArgumentChart');
+                if (argCanvas) {
+                    drawReportChart(argCanvas, r.scoreData["議論"].radar);
+                }
+            }
         }
+    }, 100);
+}
+
+// 輔助函數：繪製報告圖表
+function drawReportChart(canvas, radarData) {
+    const parent = canvas.parentNode;
+    parent.style.height = '300px'; // 報告圖表稍微小一點
+    parent.style.position = 'relative';
+
+    new Chart(canvas.getContext('2d'), {
+        type: 'radar',
+        data: {
+            labels: ['立意', '取材', '扣題', '詳略', '詞彙', '文學性'],
+            datasets: [{
+                label: '平均能力',
+                data: radarData, // 報告的 radar 數據已經是 array 格式
+                backgroundColor: 'rgba(94, 112, 103, 0.4)',
+                borderColor: '#5e7067',
+                borderWidth: 2,
+                pointBackgroundColor: '#5e7067'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+}
 
     
     function updateBreadcrumb(c,s) { const b=document.getElementById('teacherBreadcrumb'); b.style.display='flex'; document.getElementById('breadCategory').innerText=c; document.getElementById('breadSub').innerText=s||''; document.getElementById('breadSep2').style.display=s?'inline':'none'; }

@@ -445,6 +445,46 @@ canvas {
     padding: 25px !important;
 }
 
+    /* 確保雷達圖區塊有固定高度且不會溢出 */
+.report-radar-wrapper {
+    margin-bottom: 60px !important; /* 強制底部間距 */
+    min-height: 400px; /* 最小高度 */
+    clear: both; /* 清除浮動 */
+}
+
+/* 在 grading-side-by-side 後強制換行 */
+.grading-side-by-side {
+    margin-bottom: 80px !important; /* 加大底部間距 */
+}
+
+/* 強制黃色文字區塊在新的一行開始 */
+.report-text-card {
+    clear: both !important;
+    margin-top: 40px !important;
+    display: block !important;
+}
+
+    /* === 2025 緊急修復:防止雷達圖與文字重疊 === */
+.grading-side-by-side {
+    margin-bottom: 80px !important;
+}
+
+.report-text-card {
+    clear: both !important;
+    margin-top: 50px !important;
+}
+
+.report-radar-wrapper {
+    clear: both !important;
+    margin-bottom: 60px !important;
+}
+
+/* 手機版加強 */
+@media (max-width: 768px) {
+    .report-text-card {
+        margin-top: 80px !important;
+    }
+}
     
 </style>
 </head>
@@ -1302,38 +1342,31 @@ function generateClassChartHTML(type, avg, count) {
             `<!-- 右側：雷達圖區塊（改為縮圖） -->
 <div style="
     flex: 1;
-    min-width: 280px;
-    background: #fff;
-    border: 1px solid #eee;
-    border-radius: 12px;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    position: relative;
-" onclick="openEnlargedChart('${title}', ${JSON.stringify(avg).replace(/"/g, "'")})"
-onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.1)';"
-onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 10px rgba(0,0,0,0.05)';">
+    min-width: 320px;
+    max-width: 400px; /* 限制最大寬度 */
+    background:#fff;
+    border:1px solid #eee;
+    border-radius:12px;
+    padding:25px;
+    cursor: pointer; /* 顯示手型游標 */
+    transition: transform 0.2s, box-shadow 0.2s;
+" onclick="openEnlargedChart('${title}', ${JSON.stringify(avg)})">
+    <h3 style="margin:0 0 20px 0; text-align:center; color:#555;">
+        能力分佈 
+        <small style="color:#999; font-size:0.8em;">(點擊放大)</small>
+    </h3>
     
-    <h3 style="
-        margin:0 0 15px 0;
-        text-align:center;
-        color:#555;
-        font-size: 1em;
-    "><i class="fas fa-search-plus"></i> 點擊放大圖表</h3>
-    
-    <!-- 縮圖容器 -->
+    <!-- 縮小圖表容器 -->
     <div style="
         position: relative;
-        width: 200px;
-        height: 200px;
-        margin: 0 auto 15px;
+        width: 100%;
+        max-width: 250px;
+        height: 250px !important;
+        margin: 0 auto 20px;
     ">
         <canvas id="${id}"></canvas>
     </div>
+</div>
     
     <small style="color:#999; text-align:center; font-size:0.85em; max-width: 90%;">
         點擊圖表可查看詳細分析
@@ -1341,8 +1374,13 @@ onmouseout="this.style.transform=''; this.style.boxShadow='0 4px 10px rgba(0,0,0
 </div>`
         </div>
 
-        <!-- 最後一道保險墊片 -->
-        <div style="height: 40px; width: 100%; clear: both;"></div>
+    <!-- 最後加入強制間隔墊片 -->
+        <div style="
+            height: 100px; 
+            width: 100%; 
+            clear: both; 
+            display: block;
+        "></div>
     </div>`;
 }
 

@@ -441,6 +441,80 @@ canvas {
         padding: 15px;
         gap: 15px;
     }
+
+
+
+/* === 標題區塊：玻璃門牌風格 (區別於下方的膠囊按鈕) === */
+
+/* 1. 外層容器：透明、彈性排版 */
+.title-container {
+    background: transparent;
+    box-shadow: none;
+    border: none;
+    padding: 0;
+    margin-bottom: 30px; /* 拉開與下方按鈕的距離，增加呼吸感 */
+    
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* 2. 標題 H1：微圓角玻璃牌 (Block Style) */
+.title-container h1 {
+    display: inline-block;
+    margin: 0;
+    
+    /* 字體設定 */
+    font-size: 1.8rem;       /* 比按鈕大，強調層級 */
+    color: var(--text-main);
+    font-weight: bold;
+    letter-spacing: 3px;     /* 增加字距，展現「神思」的雅緻感 */
+    
+    /* 玻璃板效果 */
+    background: rgba(255, 255, 255, 0.4); /* 稍微通透一點 */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    
+    /* 關鍵：形狀與邊框設計 */
+    padding: 12px 30px;
+    border-radius: 8px;      /* 僅 8px 微圓角，呈現方正穩重感 */
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    
+    /* 關鍵：左側裝飾線，確立「標題」地位 */
+    border-left: 6px solid var(--m-blue); 
+    
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06); /* 讓牌子浮起來 */
+}
+
+/* 3. 右側使用者資訊：簡化為文字浮動，減少視覺干擾 */
+.title-container > div[style*="float: right"] {
+    float: none !important;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    
+    /* 讓右邊資訊弱化，不要搶標題的視覺 */
+    background: rgba(255, 255, 255, 0.25); /* 更淡的背景 */
+    padding: 8px 15px;
+    border-radius: 8px;      /* 與標題呼應的微圓角 */
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    backdrop-filter: blur(5px);
+}
+
+/* 手機版適配 */
+@media (max-width: 600px) {
+    .title-container {
+        flex-direction: column;
+        align-items: flex-start; /* 手機版靠左對齊更有層次 */
+        gap: 15px;
+    }
+    
+    .title-container > div[style*="float: right"] {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
     
 
 
@@ -453,7 +527,7 @@ canvas {
 
 <div id="loginOverlay">
     <div class="login-box">
-        <h2 style="color: var(--m-blue); margin-bottom: 10px;">神思・教師後台</h2>
+        <h2 style="color: var(--m-blue); margin-bottom: 10px;">神思・管理面板</h2>
         <p style="color: #888; margin-bottom: 30px;">請使用學校教師帳號登入以存取資料</p>
         <button id="loginBtn" class="login-btn" onclick="teacherLogin()">
             <i class="fab fa-google"></i> Google 帳號登入
@@ -484,7 +558,7 @@ canvas {
 
     <!-- 1. 學生管理頁面 -->
     <div id="tab-students" class="box">
-        <h2>學生紀錄檢閱</h2>
+        <h2>學生歷程檔案檢閱</h2>
         <div class="filter-group">
             <label><i class="fas fa-filter" style="color:var(--m-blue);"></i> 篩選：</label>
             <select id="viewGrade" onchange="loadStudentList()">

@@ -289,51 +289,116 @@
         margin: 0 auto;
     }
 
-    /* 報告樣式 */
-    .report-section { display: block; margin-bottom: 50px; clear: both; } /* 確保不與上方浮動元素重疊 */
-    .report-category-badge { display: inline-flex; align-items: center; gap: 10px; padding: 10px 25px; border-radius: 50px; color: white; font-weight: bold; font-size: 1.3rem; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); letter-spacing: 1px; }
-    .badge-narrative { background-color: #7da3c0; } .badge-argument { background-color: #a692c2; } .badge-reading { background-color: #8da399; } .badge-expand { background-color: #d69a92; }
-    .badge-general { width: 100%; max-width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; margin-bottom: 10px; background: linear-gradient(135deg, #C5B4A1 0%, #A99885 100%); box-shadow: 0 8px 20px rgba(169, 152, 133, 0.35); color: white; border-radius: 12px; position: relative; overflow: hidden; }
-    .badge-general-title { font-size: 1.6rem; font-weight: bold; letter-spacing: 2px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-    .overall-grade-tag { background-color: #fff; color: #d9534f; padding: 5px 25px; border-radius: 50px; font-size: 1.4rem; font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 2px solid #d69a92; display: flex; align-items: center; gap: 8px; }
-    .overall-grade-label { font-size: 0.8rem; color: #888; font-weight: normal; text-transform: uppercase; letter-spacing: 1px; }
-    .report-category-badge:not(.badge-general) { display: inline-flex; align-items: center; gap: 10px; padding: 10px 25px; border-radius: 50px; color: white; font-weight: bold; font-size: 1.3rem; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); letter-spacing: 1px; }
-    .report-text-card { background-color: #fdfcf8; border: 1px solid #e0ddd7; border-radius: 12px; padding: 25px; line-height: 1.9; color: #4a4a4a; font-size: 1.05rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); text-align: justify; margin-top: 10px; display: block; }
-    /* 請確保您的 CSS 中，canvas 沒有被強制設為 absolute */
-canvas {
-    max-width: 100%;
-    /* 不要加 position: absolute; 除非父容器有嚴格控制 */
-}
+  /* === 學生報告區塊優化 === */
 
-/* 確保報告文字卡片是 block 且有間距 */
-.report-text-card {
-    display: block; 
-    clear: both; /* 這行很重要，確保它不會擠到浮動元素旁邊 */
-    margin-top: 20px;
-}
-    .report-quote-card { position: relative; background-color: #fffefb; border: 1px solid #e0ddd7; border-radius: 8px; padding: 30px 30px 30px 65px; margin-top: 40px; box-shadow: 4px 4px 0px rgba(0,0,0,0.05); text-align: left; background-image: linear-gradient(to right, transparent 49px, #eebdbd 50px, transparent 51px), radial-gradient(circle at 25px 50%, #d1cdc5 8px, transparent 9px); background-size: 100% 100%, 100% 40px; background-repeat: no-repeat, repeat-y; background-position: 0 0, 0 15px; }
-    .report-quote-content { font-family: 'Noto Serif TC', serif; font-size: 1.2rem; font-weight: bold; color: #5d4037; font-style: italic; line-height: 1.6; }
-    .report-quote-author { margin-top: 10px; font-size: 0.9rem; color: #888; text-align: right; font-style: normal; }
-    .report-separator { position: relative; height: 1px; border: 0; border-top: 3px dashed #b6a6ca; margin: 40px 0 50px 0; opacity: 0.6; }
-    .report-separator::after { content: '▼'; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #fdfcf8; padding: 0 10px; color: #b6a6ca; font-size: 12px; }
-    
-    .report-radar-wrapper { margin-bottom: 30px; background: #fff; padding: 0 20px; border-radius: 0; border: none; display: block; }
-
-/* === 報告雷達圖專用修復樣式 === */
-
-/* 確保雷達圖容器有固定高度，不會無限延伸或縮小 */
-.report-radar-wrapper .radar-chart-container {
+/* 確保報告區塊有足夠的底部間距 */
+.report-section {
+    display: block;
+    margin-bottom: 80px !important; /* 增加底部間距 */
+    clear: both;
     position: relative;
-    height: 320px !important; /* 強制高度，防止重疊 */
     width: 100%;
-    margin-bottom: 15px;
 }
 
-/* 手機版適配 */
+/* 雷達圖容器 - 確保固定高度和正確的堆疊順序 */
+.report-radar-wrapper {
+    position: relative;
+    width: 100%;
+    margin: 30px 0;
+    padding: 20px;
+    background: #fff;
+    border: 1px solid #e0ddd7;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    z-index: 1;
+    overflow: hidden; /* 防止內容溢出 */
+}
+
+/* 雷達圖容器內的canvas包裹器 */
+.report-radar-wrapper .radar-chart-container {
+    position: relative !important;
+    height: 320px !important;
+    width: 100% !important;
+    margin: 0 auto 20px auto !important;
+    z-index: 2;
+}
+
+/* 黃色敘事抒情描述區 - 確保在雷達圖下方 */
+.report-text-card {
+    display: block;
+    clear: both; /* 強制清除浮動 */
+    margin-top: 40px !important; /* 增加上邊距，確保在雷達圖下方 */
+    background-color: #fffaf0 !important; /* 淺黃色背景 */
+    border: 1px solid #ffeaa7 !important; /* 黃色邊框 */
+    border-radius: 12px;
+    padding: 30px !important;
+    line-height: 1.9;
+    color: #5d4037 !important; /* 深棕色文字 */
+    font-size: 1.05rem;
+    box-shadow: 0 4px 15px rgba(255, 234, 167, 0.2);
+    position: relative;
+    z-index: 3; /* 確保在雷達圖上方 */
+}
+
+/* 徽章區塊調整 */
+.report-category-badge {
+    margin-bottom: 25px;
+    z-index: 4;
+    position: relative;
+}
+
+/* 響應式調整 - 手機版 */
 @media (max-width: 768px) {
-    .report-radar-wrapper .radar-chart-container {
-        height: 300px !important;
+    .report-radar-wrapper {
+        margin: 20px 0;
+        padding: 15px;
     }
+    
+    .report-radar-wrapper .radar-chart-container {
+        height: 280px !important;
+    }
+    
+    .report-text-card {
+        margin-top: 30px !important;
+        padding: 20px !important;
+    }
+    
+    .report-section {
+        margin-bottom: 60px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .report-radar-wrapper .radar-chart-container {
+        height: 250px !important;
+    }
+    
+    .report-text-card {
+        margin-top: 25px !important;
+        padding: 15px !important;
+    }
+}
+
+/* 針對敘事抒情報告的特定樣式 */
+.badge-narrative + .report-text-card {
+    background-color: #fffaf0 !important;
+    border-left: 5px solid #ffd54f !important;
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
+/* 防止浮動元素影響佈局 */
+.report-section:after {
+    content: "";
+    display: table;
+    clear: both;
+}
+
+/* 確保報告區塊內的canvas不會絕對定位導致重疊 */
+.report-section canvas {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
 }
 
     

@@ -578,21 +578,33 @@ canvas {
         }
     }
 
-    /* === 底部使用者資訊膠囊 (莫蘭迪風格) === */
+/* === 底部使用者資訊膠囊 (頁尾置中版) === */
 .user-footer-capsule {
+    /* 1. 設定為彈性區塊，讓內容排列整齊 */
     display: flex;
     justify-content: center;
     align-items: center;
     gap: 15px;
-    background-color: var(--m-blue); /* 莫蘭迪藍 */
+
+    /* 2. 關鍵定位：利用 margin 自動置中 */
+    margin: 60px auto 80px auto; /* 上方留 60px，下方留 80px (避免被版權宣告擋住)，左右置中 */
+    
+    /* 3. 外觀設定 */
+    background-color: var(--m-blue);
     color: white;
     padding: 12px 30px;
     border-radius: 50px;
-    width: fit-content;
-    margin: 40px auto 20px auto; /* 上距40, 下距20, 左右置中 */
+    
+    /* 4. 寬度設定為「內容多寬就多寬」 */
+    width: fit-content; 
+    
     box-shadow: 0 4px 15px rgba(148, 167, 181, 0.4);
     font-size: 1rem;
-    transition: transform 0.2s;
+    
+    /* 確保不會被上方浮動元素影響 */
+    clear: both; 
+    position: relative;
+    z-index: 10;
 }
 
 .user-footer-capsule:hover {
@@ -618,7 +630,6 @@ canvas {
 .user-footer-capsule button:hover {
     background: rgba(255, 255, 255, 0.4);
 }
-
 
     /* === 優化後的導航欄：島嶼式控制面板 === */
     .nav-bar {
@@ -1033,6 +1044,14 @@ canvas {
 
     </div>
 
+
+
+    
+</div>
+
+    </div>
+
+
 <!-- ★★★ 請貼在這裡 (所有分頁框框的外面) ★★★ -->
 <div class="user-footer-capsule">
     <i class="fas fa-user-circle" style="font-size: 1.2em;"></i>
@@ -1040,10 +1059,8 @@ canvas {
     <button onclick="logout()"><i class="fas fa-sign-out-alt"></i> 登出</button>
 </div>
 
-    
-</div>
 
-    </div>
+        </div>
 <!-- Modals -->
 
 <!-- 歷史檢閱視窗 -->

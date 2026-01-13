@@ -577,6 +577,47 @@ canvas {
             padding: 12px;
         }
     }
+
+    /* === 底部使用者資訊膠囊 (莫蘭迪風格) === */
+.user-footer-capsule {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    background-color: var(--m-blue); /* 莫蘭迪藍 */
+    color: white;
+    padding: 12px 30px;
+    border-radius: 50px;
+    width: fit-content;
+    margin: 40px auto 20px auto; /* 上距40, 下距20, 左右置中 */
+    box-shadow: 0 4px 15px rgba(148, 167, 181, 0.4);
+    font-size: 1rem;
+    transition: transform 0.2s;
+}
+
+.user-footer-capsule:hover {
+    transform: translateY(-2px);
+}
+
+.user-footer-capsule span {
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+.user-footer-capsule button {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    padding: 5px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    color: white;
+    transition: background 0.2s;
+    font-size: 0.9em;
+}
+
+.user-footer-capsule button:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
     
 </style>
 </head>
@@ -599,10 +640,7 @@ canvas {
 
 <div id="mainApp">
     <div class="title-container">
-        <div style="float: right; font-size: 0.9rem;">
-            <span id="teacherNameDisplay" style="color: var(--m-blue); margin-right: 10px;"></span>
-            <button onclick="logout()" style="background: none; border: 1px solid #ccc; padding: 5px 10px; border-radius: 4px; cursor: pointer; color: #666;">登出</button>
-        </div>
+       
         <h1>神思・管理面板</h1>
     </div>
 
@@ -809,6 +847,16 @@ canvas {
                 </div>
             </div>
         </div>
+
+
+  <!-- === 新增：底部使用者資訊膠囊 === -->
+    <div class="user-footer-capsule">
+        <i class="fas fa-user-circle" style="font-size: 1.2em;"></i>
+        <span id="teacherNameDisplay"></span>
+        <button onclick="logout()"><i class="fas fa-sign-out-alt"></i> 登出</button>
+    </div>
+
+        
     </div>
 
 
@@ -1905,20 +1953,34 @@ function openHistoryModal(name, h) {
 }
     
     // 渲染主範疇 (已修訂：隱藏學習報告)
-    function renderLevel1() {
-        ['historyLevel2','historyLevel3','historyDetail'].forEach(id=>document.getElementById(id).style.display='none');
-        document.getElementById('historyLevel1').style.display='flex'; document.getElementById('teacherBreadcrumb').style.display='none';
-        const c = document.getElementById('historyLevel1'); c.innerHTML='';
-        Object.keys(HISTORY_STRUCTURE).forEach(cat => {
-            // 修訂：隱藏學習報告
-            if (cat === '學習報告') return;
+  // === 修訂後的 renderLevel1 (移除黑白濾鏡) ===
+function renderLevel1() {
+    ['historyLevel2','historyLevel3','historyDetail'].forEach(id=>document.getElementById(id).style.display='none');
+    document.getElementById('historyLevel1').style.display='flex'; 
+    document.getElementById('teacherBreadcrumb').style.display='none';
+    
+    const c = document.getElementById('historyLevel1'); 
+    c.innerHTML='';
+    
+    Object.keys(HISTORY_STRUCTURE).forEach(cat => {
+        // 隱藏學習報告 (保持原本邏輯)
+        if (cat === '學習報告') return;
 
-            const count = currentStudentHistory.filter(r => r.category === cat).length;
-            const asset = CATEGORY_ASSETS[cat] || { img: '背景.png', en: 'RECORD' };
-            const style = count===0 ? 'filter: grayscale(100%); opacity: 0.6;' : '';
-            c.innerHTML += `<div class="anime-card" style="--bg-img: url('${asset.img}'); ${style}" onclick="renderLevel2('${cat}')"><div class="card-overlay"></div><div class="card-content"><span class="card-zh">${cat}</span><span class="card-en">${count} 筆</span></div></div>`;
-        });
-    }
+        const count = currentStudentHistory.filter(r => r.category === cat).length;
+        const asset = CATEGORY_ASSETS[cat] || { img: '背景.png', en: 'RECORD' };
+        
+        // ★ 修改處：直接移除 style 變數，或者只保留透明度但不變黑白
+        // 這裡我將 style 設為空字串，這樣圖片永遠是彩色的
+        const style = ''; 
+
+        // 如果你希望沒資料時稍微半透明，但保持彩色，可以用下面這行取代上面那行：
+        // const style = count === 0 ? 'opacity: 0.8;' : '';
+
+        c.innerHTML += `<div class="anime-card" style="--bg-img: url('${asset.img}'); ${style}" onclick="renderLevel2('${cat}')"><div class="card-overlay"></div><div class="card-content"><span class="card-zh">${cat}</span><span class="card-en">${count} 筆</span></div></div>`;
+    });
+}
+
+    
     function renderLevel2(cat) {
         currentCategory=cat; ['historyLevel1','historyLevel3','historyDetail'].forEach(id=>document.getElementById(id).style.display='none');
         document.getElementById('historyLevel2').style.display='grid'; updateBreadcrumb(cat);

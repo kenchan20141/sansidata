@@ -618,6 +618,87 @@ canvas {
 .user-footer-capsule button:hover {
     background: rgba(255, 255, 255, 0.4);
 }
+
+
+    /* === 優化後的導航欄：島嶼式控制面板 === */
+    .nav-bar {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap; /* 手機版自動換行 */
+        gap: 8px; /* 按鈕之間的微小間距 */
+        
+        /* 核心改變：統一的背景容器 */
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(10px); /* 磨砂玻璃質感 */
+        padding: 8px 10px;
+        border-radius: 16px; /* 整體圓角 */
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06); /* 讓導航欄浮起來 */
+        
+        /* 寬度控制 */
+        width: fit-content;
+        max-width: 95%;
+        margin: 0 auto 30px auto;
+    }
+
+    .nav-btn {
+        /* 移除原本的獨立膠囊樣式 */
+        background: transparent;
+        color: #666;
+        border: none;
+        box-shadow: none;
+        
+        /* 新樣式：方圓型按鈕 */
+        padding: 10px 20px;
+        border-radius: 10px;
+        font-size: 1rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        position: relative;
+    }
+
+    /* 滑鼠移過時的效果 (輕微灰色背景) */
+    .nav-btn:hover:not(.active) {
+        background: rgba(0, 0, 0, 0.04);
+        color: var(--text-main);
+        transform: none; /* 移除原本的位移 */
+    }
+
+    /* 激活狀態：莫蘭迪藍色塊，強調選中感 */
+    .nav-btn.active {
+        background-color: var(--m-blue);
+        color: white;
+        box-shadow: 0 4px 12px rgba(148, 167, 181, 0.3); /* 柔和陰影 */
+        transform: translateY(-1px);
+    }
+    
+    /* 手機版適配：讓按鈕稍微緊湊一點 */
+    @media (max-width: 600px) {
+        .nav-bar {
+            width: 90%;
+            padding: 8px;
+            gap: 5px;
+            border-radius: 20px;
+        }
+        
+        .nav-btn {
+            flex: 1 1 auto; /* 讓按鈕自動填滿空間 */
+            justify-content: center;
+            padding: 10px 12px;
+            font-size: 0.9rem;
+            white-space: nowrap; /* 防止文字換行 */
+        }
+        
+        .nav-btn i {
+            font-size: 1.1em;
+        }
+    }
     
 </style>
 </head>
@@ -848,15 +929,6 @@ canvas {
             </div>
         </div>
 
-
-  <!-- === 新增：底部使用者資訊膠囊 === -->
-    <div class="user-footer-capsule">
-        <i class="fas fa-user-circle" style="font-size: 1.2em;"></i>
-        <span id="teacherNameDisplay"></span>
-        <button onclick="logout()"><i class="fas fa-sign-out-alt"></i> 登出</button>
-    </div>
-
-        
     </div>
 
 
@@ -960,6 +1032,15 @@ canvas {
         </div>
 
     </div>
+
+<!-- ★★★ 請貼在這裡 (所有分頁框框的外面) ★★★ -->
+<div class="user-footer-capsule">
+    <i class="fas fa-user-circle" style="font-size: 1.2em;"></i>
+    <span id="teacherNameDisplay"></span>
+    <button onclick="logout()"><i class="fas fa-sign-out-alt"></i> 登出</button>
+</div>
+
+    
 </div>
 <!-- Modals -->
 

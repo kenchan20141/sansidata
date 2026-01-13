@@ -710,6 +710,37 @@ canvas {
             font-size: 1.1em;
         }
     }
+
+/* 修改導航按鈕的 active 狀態樣式，每個按鈕使用不同的莫蘭迪色 */
+.nav-btn[data-tab="students"].active {
+  background-color: var(--m-green);
+  box-shadow: 0 4px 12px rgba(143, 163, 152, 0.3);
+}
+
+.nav-btn[data-tab="reports"].active {
+  background-color: var(--m-purple);
+  box-shadow: 0 4px 12px rgba(182, 166, 202, 0.3);
+}
+
+.nav-btn[data-tab="assignments"].active {
+  background-color: var(--m-red);
+  box-shadow: 0 4px 12px rgba(214, 154, 146, 0.3);
+}
+
+.nav-btn[data-tab="analytics"].active {
+  background-color: var(--m-brown);
+  box-shadow: 0 4px 12px rgba(199, 178, 153, 0.3);
+}
+
+/* 保留一個備用色彩，避免與底部的藍色重複 */
+.nav-btn[data-tab="management"].active {
+  background: linear-gradient(135deg, var(--m-color-3) 0%, #9e8fb0 100%);
+  box-shadow: 0 4px 12px rgba(182, 166, 202, 0.3);
+}
+
+
+
+    
     
 </style>
 </head>
@@ -737,13 +768,13 @@ canvas {
     </div>
 
     <!-- 導航列 -->
-    <div class="nav-bar">
-        <button class="nav-btn active" onclick="switchTab('students')"><i class="fas fa-user-graduate"></i> 歷程檢閱</button>
-        <button class="nav-btn" onclick="switchTab('reports')"><i class="fas fa-chart-pie"></i> 學生報告</button>
-        <button class="nav-btn" onclick="switchTab('assignments')"><i class="fas fa-edit"></i> 課業管理</button>
-        <button class="nav-btn" onclick="switchTab('analytics')"><i class="fas fa-chart-bar"></i> 數據統計</button>
-        <button class="nav-btn" onclick="switchTab('management')"><i class="fas fa-calendar-alt"></i> 學年管理</button>
-    </div>
+   <div class="nav-bar">
+  <button class="nav-btn active" data-tab="students" onclick="switchTab('students')"><i class="fas fa-user-graduate"></i> 歷程檢閱</button>
+  <button class="nav-btn" data-tab="reports" onclick="switchTab('reports')"><i class="fas fa-chart-pie"></i> 學生報告</button>
+  <button class="nav-btn" data-tab="assignments" onclick="switchTab('assignments')"><i class="fas fa-edit"></i> 課業管理</button>
+  <button class="nav-btn" data-tab="analytics" onclick="switchTab('analytics')"><i class="fas fa-chart-bar"></i> 數據統計</button>
+  <button class="nav-btn" data-tab="management" onclick="switchTab('management')"><i class="fas fa-calendar-alt"></i> 學年管理</button>
+</div>
 
     <!-- 1. 學生管理頁面 -->
     <div id="tab-students" class="box">
@@ -1198,20 +1229,26 @@ canvas {
 });
 
     // === Tab 切換 ===
-    function switchTab(tabId) {
-        document.querySelectorAll('.box').forEach(b => b.style.display = 'none');
-        document.getElementById('tab-' + tabId).style.display = 'block';
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-        event.currentTarget.classList.add('active');
-        
-        if(tabId === 'students') loadStudentList();
-        if(tabId === 'assignments') loadAssignmentHistory();
-        if(tabId === 'reports') loadReportStudentList();
-        if(tabId === 'analytics') {
-            if(document.getElementById('statMonth').options.length === 0) initStatUI();
-            loadAnalyticsClassList();
-        }
-    }
+   function switchTab(tabId) {
+  // 移除所有按鈕的 active 類
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  // 為當前選中的按鈕添加 active 類
+  document.querySelector(`.nav-btn[data-tab="${tabId}"]`).classList.add('active');
+  
+  // 隱藏所有標籤頁
+  document.querySelectorAll('.box').forEach(b => b.style.display = 'none');
+  // 顯示選中的標籤頁
+  document.getElementById('tab-' + tabId).style.display = 'block';
+  
+  // 其他頁面加載邏輯保持不變
+  if(tabId === 'students') loadStudentList();
+  if(tabId === 'assignments') loadAssignmentHistory();
+  if(tabId === 'reports') loadReportStudentList();
+  if(tabId === 'analytics') {
+    if(document.getElementById('statMonth').options.length === 0) initStatUI();
+    loadAnalyticsClassList();
+  }
+}
 
     // === 歷史檢閱 ===
     let currentStudentHistory = [], currentCategory = '', currentSubFunction = '', currentThemeIndex = 1, currentViewingAssignmentId = ''; 

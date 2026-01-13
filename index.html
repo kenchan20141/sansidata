@@ -526,13 +526,17 @@ canvas {
         <h2>學生歷程檔案檢閱</h2>
         <div class="filter-group">
             <label><i class="fas fa-filter" style="color:var(--m-blue);"></i> 篩選：</label>
-            <select id="viewGrade" onchange="loadStudentList()">
-                <option value="1">中一</option><option value="2">中二</option><option value="3">中三</option>
-                <option value="4">中四</option><option value="5">中五</option><option value="6" selected>中六</option>
-            </select>
-            <select id="viewClass" onchange="loadStudentList()">
-                <option value="A">A 班</option><option value="B">B 班</option><option value="C">C 班</option><option value="D">D 班</option>
-            </select>
+           <select id="viewGrade" onchange="loadStudentList()">
+    <option value="1">中一</option><option value="2">中二</option><option value="3">中三</option>
+    <option value="4">中四</option><option value="5">中五</option><option value="6" selected>中六</option>
+    <!-- 新增 -->
+    <option value="System" style="color:red; font-weight:bold;">系統測試</option> 
+</select>
+<select id="viewClass" onchange="loadStudentList()">
+    <option value="A">A 班</option><option value="B">B 班</option><option value="C">C 班</option><option value="D">D 班</option>
+    <!-- 新增 -->
+    <option value="Test" style="color:red; font-weight:bold;">測試班</option>
+</select>
             <button class="btn-action btn-view" onclick="loadStudentList()"><i class="fas fa-sync-alt"></i> 刷新列表</button>
         </div>
         <div id="studentListContainer" class="student-grid">
@@ -545,13 +549,17 @@ canvas {
         <h2>學生學習報告管理</h2>
         <div class="filter-group">
             <label><i class="fas fa-filter" style="color:var(--m-blue);"></i> 篩選：</label>
-            <select id="reportGrade" onchange="loadReportStudentList()">
-                <option value="1">中一</option><option value="2">中二</option><option value="3">中三</option>
-                <option value="4">中四</option><option value="5">中五</option><option value="6" selected>中六</option>
-            </select>
-            <select id="reportClass" onchange="loadReportStudentList()">
-                <option value="A">A 班</option><option value="B">B 班</option><option value="C">C 班</option><option value="D">D 班</option>
-            </select>
+           <select id="reportGrade" onchange="loadReportStudentList()">
+    <!-- ... 原有選項 ... -->
+    <option value="1">中一</option><option value="2">中二</option><option value="3">中三</option>
+    <option value="4">中四</option><option value="5">中五</option><option value="6" selected>中六</option>
+    <option value="System" style="color:red; font-weight:bold;">系統測試</option>
+</select>
+<select id="reportClass" onchange="loadReportStudentList()">
+    <!-- ... 原有選項 ... -->
+    <option value="A">A 班</option><option value="B">B 班</option><option value="C">C 班</option><option value="D">D 班</option>
+    <option value="Test" style="color:red; font-weight:bold;">測試班</option>
+</select>
             <button id="btnClassReport" class="btn-action btn-manage" style="background: linear-gradient(135deg, #7da3c0 0%, #5e7067 100%); margin-left: auto; box-shadow: 0 4px 10px rgba(94, 112, 103, 0.4);" onclick="generateClassReport()">
                 <i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)
             </button>
@@ -574,12 +582,16 @@ canvas {
         <div class="filter-group">
             <label><i class="fas fa-users" style="color:var(--m-blue);"></i> 對象：</label>
             <select id="assignGrade" onchange="loadAssignmentHistory()">
-                <option value="1">中一</option><option value="2">中二</option><option value="3">中三</option>
-                <option value="4">中四</option><option value="5">中五</option><option value="6" selected>中六</option>
-            </select>
-            <select id="assignClass" onchange="loadAssignmentHistory()">
-                <option value="A">A 班</option><option value="B">B 班</option><option value="C">C 班</option><option value="D">D 班</option>
-            </select>
+    <!-- ... 原有選項 ... -->
+    <option value="1">中一</option><option value="2">中二</option><option value="3">中三</option>
+    <option value="4">中四</option><option value="5">中五</option><option value="6" selected>中六</option>
+    <option value="System" style="color:red; font-weight:bold;">系統測試</option>
+</select>
+<select id="assignClass" onchange="loadAssignmentHistory()">
+    <!-- ... 原有選項 ... -->
+    <option value="A">A 班</option><option value="B">B 班</option><option value="C">C 班</option><option value="D">D 班</option>
+    <option value="Test" style="color:red; font-weight:bold;">測試班</option>
+</select>
         </div>
         <div class="publish-area">
             <div style="font-weight:bold; color:var(--m-green); margin-bottom:5px; font-size:1.1em;"><i class="fas fa-pen-fancy"></i> 創建新任務</div>
@@ -606,8 +618,17 @@ canvas {
             </select>
 
             <span id="statClassInput" style="display:none;">
-                <select id="statGrade" onchange="loadAnalyticsClassList()"><option value="1">中一</option><option value="2">中二</option><option value="3">中三</option><option value="4">中四</option><option value="5">中五</option><option value="6">中六</option></select>
-                <select id="statClass" onchange="loadAnalyticsClassList()"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
+               <select id="statGrade" onchange="loadAnalyticsClassList()">
+    <!-- ... 原有選項 ... -->
+    <option value="1">中一</option><option value="2">中二</option><option value="3">中三</option>
+    <option value="4">中四</option><option value="5">中五</option><option value="6">中六</option>
+    <option value="System">系統測試</option>
+</select>
+<select id="statClass" onchange="loadAnalyticsClassList()">
+    <!-- ... 原有選項 ... -->
+    <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+    <option value="Test">測試班</option>
+</select>
             </span>
 
             <label style="margin-left:15px;"><i class="far fa-clock" style="color:var(--m-brown);"></i> 時間：</label>

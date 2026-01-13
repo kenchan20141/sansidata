@@ -979,9 +979,22 @@ canvas {
     const SUB_ICONS = { "文章點評": "fa-file-alt", "大綱點評": "fa-list-ol", "綜合分析": "fa-chart-pie", "敘事物象": "fa-tree", "解題指引": "fa-compass", "指引": "fa-lightbulb", "點評": "fa-comment-dots", "討論紀錄": "fa-comments" };
 
     // === 1. 修訂：學生列表載入 (加入點擊偵測除錯) ===
+// === 1. 修訂：學生列表載入 (自動鎖定班別 + 優化顯示) ===
 function loadStudentList() {
-    const g = document.getElementById('viewGrade').value;
-    const c = document.getElementById('viewClass').value;
+    const gradeSelect = document.getElementById('viewGrade');
+    const classSelect = document.getElementById('viewClass');
+    
+    // ★ 自動化邏輯：選 System 自動跳 Test 並鎖定 ★
+    if (gradeSelect.value === 'System') {
+        classSelect.value = 'Test';
+        classSelect.disabled = true; // 鎖定不讓改
+    } else {
+        classSelect.disabled = false; // 解鎖
+        if (classSelect.value === 'Test') classSelect.value = 'A'; // 如果從 System 切回來，自動歸位到 A
+    }
+
+    const g = gradeSelect.value;
+    const c = classSelect.value;
     const container = document.getElementById('studentListContainer');
     
     container.innerHTML = '<p style="text-align:center; padding:20px; width:100%; color:#888;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
@@ -993,60 +1006,102 @@ function loadStudentList() {
             return; 
         }
         
-        container.innerHTML = ''; // 清空載入圖示
+        container.innerHTML = '';
         
-        // 排序並產生卡片
         Object.entries(data)
             .sort(([,a], [,b]) => (parseInt(a.profile?.number)||99) - (parseInt(b.profile?.number)||99))
             .forEach(([name, d]) => {
-                // 確保歷史紀錄是陣列
                 const h = d.history ? (Array.isArray(d.history) ? d.history : Object.values(d.history)) : [];
                 
+                // ★ 顯示邏輯優化 ★
+                let displayNameHtml = '';
+                if (g === 'System') {
+                    displayNameHtml = `<span style="color:var(--m-blue); font-weight:bold;">系統測試</span> - ${name}`;
+                } else {
+                    displayNameHtml = `${name} <small>(${d.profile?.number||''})</small>`;
+                }
+
                 const div = document.createElement('div'); 
                 div.className = 'student-card';
                 div.innerHTML = `
-                    <div class="student-name">${name} <small>(${d.profile?.number||''})</small></div>
+                    <div class="student-name">${displayNameHtml}</div>
                     <div class="last-sync"><i class="fas fa-history"></i> 紀錄: ${h.length} 筆</div>
                 `;
                 
-                // ★★★ 關鍵修改：明確的點擊監聽器與除錯訊息 ★★★
                 div.addEventListener('click', function() {
-                    console.log(`[點擊測試] 點擊了學生: ${name}`); // F12 應該要看到這行
-                    try {
-                        openHistoryModal(name, h);
-                    } catch (err) {
-                        console.error("開啟視窗失敗:", err);
-                        alert("開啟視窗失敗，請查看 F12 Console 錯誤訊息。\n" + err.message);
-                    }
+                    try { openHistoryModal(name, h); } catch (err) { console.error(err); }
                 });
                 
                 container.appendChild(div);
             });
     });
 }
+    
 
     // === 報告管理 ===
-    function loadReportStudentList() {
-        const g = document.getElementById('reportGrade').value, c = document.getElementById('reportClass').value;
-        const container = document.getElementById('reportStudentListContainer');
-        container.innerHTML = '<p style="text-align:center; padding:20px; width:100%; color:#888;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
-        loadClassReportHistory();
-        db.ref(`students/${g}/${c}`).once('value', snapshot => {
-            const data = snapshot.val();
-            if (!data) { container.innerHTML = '<p style="text-align:center; width:100%; color:#aaa;">暫無資料。</p>'; return; }
-            container.innerHTML = '';
-            Object.entries(data).sort(([,a], [,b]) => (parseInt(a.profile?.number)||99) - (parseInt(b.profile?.number)||99)).forEach(([name, d]) => {
-                const h = d.history ? (Array.isArray(d.history) ? d.history : Object.values(d.history)) : [];
-                const reports = h.filter(r => r.category === "學習報告");
-                const div = document.createElement('div'); div.className = 'student-card';
-                const style = reports.length > 0 ? '' : 'opacity: 0.6; filter: grayscale(100%);';
-                div.style.cssText = style;
-                div.innerHTML = `<div class="student-name">${name} <small>(${d.profile?.number||''})</small></div><div class="last-sync" style="color:${reports.length>0?'var(--m-red)':'#ccc'}; font-weight:bold;"><i class="fas fa-chart-pie"></i> 已生成報告: ${reports.length} 份</div>`;
-                if (reports.length > 0) { div.onclick = () => { openHistoryModal(name, h); setTimeout(() => { renderLevel2('學習報告'); setTimeout(() => renderLevel3('綜合分析', 5), 100); }, 300); }; }
-                container.appendChild(div);
-            });
-        });
+  // === 報告管理列表載入 (自動鎖定 + 優化顯示) ===
+function loadReportStudentList() {
+    const gradeSelect = document.getElementById('reportGrade');
+    const classSelect = document.getElementById('reportClass');
+
+    // ★ 自動化邏輯 ★
+    if (gradeSelect.value === 'System') {
+        classSelect.value = 'Test';
+        classSelect.disabled = true;
+    } else {
+        classSelect.disabled = false;
+        if (classSelect.value === 'Test') classSelect.value = 'A';
     }
+
+    const g = gradeSelect.value;
+    const c = classSelect.value;
+    const container = document.getElementById('reportStudentListContainer');
+    
+    container.innerHTML = '<p style="text-align:center; padding:20px; width:100%; color:#888;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
+    
+    loadClassReportHistory(); // 同時載入班級報告紀錄
+
+    db.ref(`students/${g}/${c}`).once('value', snapshot => {
+        const data = snapshot.val();
+        if (!data) { container.innerHTML = '<p style="text-align:center; width:100%; color:#aaa;">暫無資料。</p>'; return; }
+        
+        container.innerHTML = '';
+        Object.entries(data).sort(([,a], [,b]) => (parseInt(a.profile?.number)||99) - (parseInt(b.profile?.number)||99)).forEach(([name, d]) => {
+            const h = d.history ? (Array.isArray(d.history) ? d.history : Object.values(d.history)) : [];
+            const reports = h.filter(r => r.category === "學習報告");
+            
+            // ★ 顯示邏輯優化 ★
+            let displayNameHtml = '';
+            if (g === 'System') {
+                displayNameHtml = `<span style="color:var(--m-blue); font-weight:bold;">系統測試</span> - ${name}`;
+            } else {
+                displayNameHtml = `${name} <small>(${d.profile?.number||''})</small>`;
+            }
+
+            const div = document.createElement('div'); 
+            div.className = 'student-card';
+            const style = reports.length > 0 ? '' : 'opacity: 0.6; filter: grayscale(100%);';
+            div.style.cssText = style;
+            
+            div.innerHTML = `
+                <div class="student-name">${displayNameHtml}</div>
+                <div class="last-sync" style="color:${reports.length>0?'var(--m-red)':'#ccc'}; font-weight:bold;">
+                    <i class="fas fa-chart-pie"></i> 已生成報告: ${reports.length} 份
+                </div>`;
+            
+            if (reports.length > 0) { 
+                div.onclick = () => { 
+                    openHistoryModal(name, h); 
+                    setTimeout(() => { 
+                        renderLevel2('學習報告'); 
+                        setTimeout(() => renderLevel3('綜合分析', 5), 100); 
+                    }, 300); 
+                }; 
+            }
+            container.appendChild(div);
+        });
+    });
+}
 
    async function generateClassReport() {
     const btn = document.getElementById('btnClassReport');
@@ -1465,36 +1520,59 @@ function renderClassChart(id, avg) {
     }
     function updateTimeInputs() { const m=document.getElementById('statTimeMode').value; document.getElementById('statDate').style.display=(m==='day')?'inline-block':'none'; document.getElementById('statMonth').style.display=(m==='month')?'inline-block':'none'; document.getElementById('statYear').style.display=(m==='month'||m==='year')?'inline-block':'none'; }
     
-    function loadAnalyticsClassList() {
-        const g = document.getElementById('statGrade').value;
-        const c = document.getElementById('statClass').value;
-        const list = document.getElementById('analyticsStudentList');
-        selectedAnalyticsStudent = null; 
-        list.innerHTML = '載入學生中...';
-        
-        db.ref(`students/${g}/${c}`).once('value', s => {
-            const data = s.val();
-            list.innerHTML = '';
-            if(!data) { list.innerHTML = '此班級無學生'; return; }
-            const sorted = Object.entries(data).sort(([,a], [,b]) => (parseInt(a.profile?.number)||99) - (parseInt(b.profile?.number)||99));
-            sorted.forEach(([name, d]) => {
-                const chip = document.createElement('div');
-                chip.className = 'student-chip';
-                chip.innerText = `${d.profile?.number||''}. ${name}`;
-                chip.onclick = () => {
-                    if (selectedAnalyticsStudent === name) {
-                        selectedAnalyticsStudent = null; 
-                        document.querySelectorAll('.student-chip').forEach(el => el.classList.remove('active'));
-                    } else {
-                        selectedAnalyticsStudent = name;
-                        document.querySelectorAll('.student-chip').forEach(el => el.classList.remove('active'));
-                        chip.classList.add('active');
-                    }
-                };
-                list.appendChild(chip);
-            });
-        });
+  // === 數據統計學生列表 (自動鎖定 + 優化顯示) ===
+function loadAnalyticsClassList() {
+    const gradeSelect = document.getElementById('statGrade');
+    const classSelect = document.getElementById('statClass');
+
+    // ★ 自動化邏輯 ★
+    if (gradeSelect.value === 'System') {
+        classSelect.value = 'Test';
+        classSelect.disabled = true;
+    } else {
+        classSelect.disabled = false;
+        if (classSelect.value === 'Test') classSelect.value = 'A';
     }
+
+    const g = gradeSelect.value;
+    const c = classSelect.value;
+    const list = document.getElementById('analyticsStudentList');
+    selectedAnalyticsStudent = null; 
+    
+    list.innerHTML = '載入學生中...';
+    
+    db.ref(`students/${g}/${c}`).once('value', s => {
+        const data = s.val();
+        list.innerHTML = '';
+        if(!data) { list.innerHTML = '此班級無學生'; return; }
+        
+        const sorted = Object.entries(data).sort(([,a], [,b]) => (parseInt(a.profile?.number)||99) - (parseInt(b.profile?.number)||99));
+        
+        sorted.forEach(([name, d]) => {
+            const chip = document.createElement('div');
+            chip.className = 'student-chip';
+            
+            // ★ 顯示邏輯優化 ★
+            if (g === 'System') {
+                chip.innerHTML = `<i class="fas fa-user-tie"></i> ${name}`; // 老師加個圖示
+            } else {
+                chip.innerText = `${d.profile?.number||''}. ${name}`;
+            }
+            
+            chip.onclick = () => {
+                if (selectedAnalyticsStudent === name) {
+                    selectedAnalyticsStudent = null; 
+                    document.querySelectorAll('.student-chip').forEach(el => el.classList.remove('active'));
+                } else {
+                    selectedAnalyticsStudent = name;
+                    document.querySelectorAll('.student-chip').forEach(el => el.classList.remove('active'));
+                    chip.classList.add('active');
+                }
+            };
+            list.appendChild(chip);
+        });
+    });
+}
 
 let analyticsChartInstance = null;
 
@@ -1992,39 +2070,57 @@ function drawReportChart(canvas, radarData) {
     function updateBreadcrumb(c,s) { const b=document.getElementById('teacherBreadcrumb'); b.style.display='flex'; document.getElementById('breadCategory').innerText=c; document.getElementById('breadSub').innerText=s||''; document.getElementById('breadSep2').style.display=s?'inline':'none'; }
     
     // === 課業管理 ===
-    function loadAssignmentHistory() {
-        const g = document.getElementById('assignGrade').value, c = document.getElementById('assignClass').value, list = document.getElementById('assignmentHistoryList');
-        list.innerHTML = '<p style="text-align:center; padding:20px; color:#999;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
-        db.ref(`assignments/${g}/${c}`).on('value', (snapshot) => {
-            const data = snapshot.val(); list.innerHTML = '';
-            if (!data) { list.innerHTML = '<div style="text-align:center; padding:30px; color:#ccc;">無課業</div>'; return; }
-           Object.entries(data).sort((a, b) => b[1].timestamp - a[1].timestamp).forEach(([key, task]) => {
-    const div = document.createElement('div'); 
-    div.className = 'assignment-item';
-    
-    // ★★★ 修復重點：處理題目中的單引號，避免 onclick 失效 ★★★
-    const safeTopic = task.topic.replace(/'/g, "\\'"); 
+   // === 課業管理列表 (自動鎖定) ===
+function loadAssignmentHistory() {
+    const gradeSelect = document.getElementById('assignGrade');
+    const classSelect = document.getElementById('assignClass');
 
-    div.innerHTML = `
-        <div>
-            <div style="font-weight:bold;">${task.topic}</div>
-            <div style="font-size:0.9em;color:#888;">
-                <span class="tag">${task.type}</span>${new Date(task.timestamp).toLocaleDateString()}
-            </div>
-        </div>
-        <div style="display:flex;gap:10px;">
-            <!-- 這裡使用 safeTopic -->
-            <button class="btn-action btn-view" onclick="viewSubmissions('${key}', '${safeTopic}', '${g}', '${c}')">
-                <i class="fas fa-eye"></i>
-            </button>
-            <button class="btn-action btn-delete" onclick="deleteAssignment('${key}', '${g}', '${c}')">
-                <i class="fas fa-trash-alt"></i>
-            </button>
-        </div>`;
-    list.appendChild(div);
-});
-        });
+    // ★ 自動化邏輯 ★
+    if (gradeSelect.value === 'System') {
+        classSelect.value = 'Test';
+        classSelect.disabled = true;
+    } else {
+        classSelect.disabled = false;
+        if (classSelect.value === 'Test') classSelect.value = 'A';
     }
+
+    const g = gradeSelect.value;
+    const c = classSelect.value;
+    const list = document.getElementById('assignmentHistoryList');
+    
+    list.innerHTML = '<p style="text-align:center; padding:20px; color:#999;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
+    
+    db.ref(`assignments/${g}/${c}`).on('value', (snapshot) => {
+        const data = snapshot.val(); 
+        list.innerHTML = '';
+        if (!data) { list.innerHTML = '<div style="text-align:center; padding:30px; color:#ccc;">無課業</div>'; return; }
+        
+        Object.entries(data).sort((a, b) => b[1].timestamp - a[1].timestamp).forEach(([key, task]) => {
+            const div = document.createElement('div'); 
+            div.className = 'assignment-item';
+            const safeTopic = task.topic.replace(/'/g, "\\'"); 
+
+            div.innerHTML = `
+                <div>
+                    <div style="font-weight:bold;">${task.topic}</div>
+                    <div style="font-size:0.9em;color:#888;">
+                        <span class="tag">${task.type}</span>${new Date(task.timestamp).toLocaleDateString()}
+                    </div>
+                </div>
+                <div style="display:flex;gap:10px;">
+                    <button class="btn-action btn-view" onclick="viewSubmissions('${key}', '${safeTopic}', '${g}', '${c}')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                    <button class="btn-action btn-delete" onclick="deleteAssignment('${key}', '${g}', '${c}')">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>`;
+            list.appendChild(div);
+        });
+    });
+}
+
+    
     function publishAssignment() {
         const g = document.getElementById('assignGrade').value, c = document.getElementById('assignClass').value, topic = document.getElementById('assignTopic').value.trim(), type = document.getElementById('assignType').value;
         if (!topic) return alert("請輸入題目");

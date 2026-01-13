@@ -482,7 +482,101 @@ canvas {
         }
     }
 
+/* === 手機版響應式優化 (請貼在 style 標籤最後面) === */
+    @media (max-width: 768px) {
+        
+        /* --- 1. 標題與使用者資訊位置調整 --- */
+        
+        /* 標題容器改為直向，並為底部預留空間 */
+        .title-container {
+            flex-direction: column;
+            margin-bottom: 20px;
+            padding-bottom: 0;
+        }
 
+        /* 將「使用者資訊/登出」膠囊固定在螢幕左下角 */
+        .title-container > div[style*="float: right"] {
+            position: fixed !important;  /* 強制固定定位 */
+            bottom: 15px;                /* 距離底部 */
+            left: 15px;                  /* 距離左側 */
+            top: auto !important;        /* 清除原本的定位 */
+            right: auto !important;      /* 清除原本的靠右 */
+            transform: none !important;  /* 清除垂直置中位移 */
+            z-index: 10000;              /* 確保浮在最上層 */
+            
+            /* 手機版樣式優化 */
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(5px);
+            border: 1px solid #ccc;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            width: auto;
+            max-width: 200px;
+            font-size: 0.85rem;
+        }
+
+        /* 確保標題文字不會被切到 */
+        .title-container h1 {
+            font-size: 1.8rem;
+            width: 100%;
+            text-align: center;
+            order: 1; /* 確保標題在視覺流的上方 */
+        }
+
+        /* 避免版權宣告與使用者膠囊重疊 (版權在右下，膠囊在左下) */
+        .copyright-footer {
+            background: rgba(241, 241, 241, 0.9);
+            padding-left: 10px;
+        }
+
+
+        /* --- 2. 學年管理 (個別調動) 響應式修復 --- */
+
+        /* 將原本左右並排的 Grid 改為上下堆疊 */
+        .transfer-grid {
+            flex-direction: column; /* 垂直排列 */
+            gap: 15px;
+            padding: 15px 10px;     /* 縮小內距 */
+            align-items: center;    /* 置中對齊 */
+        }
+
+        /* 讓左右兩個區塊佔滿 100% 寬度 */
+        .transfer-column {
+            width: 100%;
+            min-width: 0; /* 防止 Flex 子元素溢出 */
+        }
+
+        /* 將中間的箭頭轉向向下 */
+        .transfer-arrow-icon {
+            transform: rotate(90deg);
+            margin: 5px 0;
+            font-size: 1.2em;
+        }
+
+        /* --- 強制修復目標設定框內溢出的問題 --- */
+        
+        /* 針對目標設定區塊內的 Flex 容器 (原本是左右選單) */
+        .transfer-column div[style*="display:flex"] {
+            flex-direction: column !important; /* 強制變成垂直排列 */
+            gap: 10px !important;
+        }
+
+        /* 強制所有下拉選單和輸入框佔滿 100% 寬度 */
+        .transfer-column select, 
+        .transfer-column input {
+            width: 100% !important;
+            flex: none !important; /* 取消 flex 伸縮 */
+            margin: 0 0 10px 0;    /* 增加下方間距 */
+            box-sizing: border-box; /* 確保 padding 不會撐破寬度 */
+        }
+
+        /* 調整按鈕區域，讓按鈕好按一點 */
+        .transfer-column .btn-action {
+            width: 100%;
+            justify-content: center;
+            margin-top: 5px;
+            padding: 12px;
+        }
+    }
     
 </style>
 </head>

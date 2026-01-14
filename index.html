@@ -1195,28 +1195,68 @@ canvas {
         if (score >= 57) return "4"; if (score >= 50) return "3"; if (score >= 45) return "2"; return "1";
     }
 
+   // 定義特殊管理員電郵常量
+    const SPECIAL_ADMIN_EMAIL = 's21109@ms.ccckyc.edu.hk';
+
     function teacherLogin() {
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
         document.getElementById('loginMsg').innerText = "驗證中...";
 
- const debugUser = atob('a2VuY2hhbjIwMTQxQGdtYWlsLmNvbQ==');
+        const debugUser = atob('a2VuY2hhbjIwMTQxQGdtYWlsLmNvbQ==');
 
-        
         auth.signInWithPopup(provider).then((result) => {
             const user = result.user;
-            if (user.email.endsWith('@ccckyc.edu.hk') || user.email === debugUser) { 
-            showApp(user); 
-        }
+            // ★★★ 修訂：加入 SPECIAL_ADMIN_EMAIL 的判斷 ★★★
+            if (user.email.endsWith('@ccckyc.edu.hk') || user.email === debugUser || user.email === SPECIAL_ADMIN_EMAIL) { 
+                showApp(user); 
+            }
             else { auth.signOut(); document.getElementById('loginMsg').innerText = "非授權帳號"; }
         }).catch((error) => { document.getElementById('loginMsg').innerText = "登入失敗：" + error.message; });
     }
+
+    // 監聽器也要修改
+    auth.onAuthStateChanged(user => { 
+        const debugUser = atob('a2VuY2hhbjIwMTQxQGdtYWlsLmNvbQ==');
+        // ★★★ 修訂：加入 SPECIAL_ADMIN_EMAIL 的判斷 ★★★
+        if (user && (user.email.endsWith('@ccckyc.edu.hk') || user.email === debugUser || user.email === SPECIAL_ADMIN_EMAIL)) {
+            showApp(user);
+        }
+    });
     function logout() { auth.signOut().then(() => location.reload()); }
-    function showApp(user) {
+   function showApp(user) {
         document.getElementById('loginOverlay').style.display = 'none';
         document.getElementById('mainApp').style.display = 'block';
         document.getElementById('teacherNameDisplay').innerText = user.displayName || user.email;
         db.ref('config/currentYear').once('value', s => { if(s.exists()) document.getElementById('currentYearInput').value = s.val(); });
+        
+        // ★★★ 新增：特殊管理員的 UI 限制邏輯 ★★★
+        if (user.email === SPECIAL_ADMIN_EMAIL) {
+            // 1. 隱藏導航列中除了「數據統計」以外的所有按鈕
+            const navBtns = document.querySelectorAll('.nav-btn');
+            navBtns.forEach(btn => {
+                if (btn.getAttribute('data-tab') !== 'analytics') {
+                    btn.style.display = 'none';
+                }
+            });
+
+            // 2. 強制切換到數據統計頁籤
+            switchTab('analytics');
+
+            // 3. 移除「對象」下拉選單中的「個別班級」選項
+            const scopeSelect = document.getElementById('statScope');
+            for (let i = 0; i < scopeSelect.options.length; i++) {
+                if (scopeSelect.options[i].value === 'class') {
+                    scopeSelect.remove(i);
+                    break;
+                }
+            }
+            
+            // 4. 確保預設選中 Global
+            scopeSelect.value = 'global';
+            updateStatInputs(); // 觸發 UI 更新以隱藏班級選擇器
+        }
+
         populateTransferStudentList();
     }
    auth.onAuthStateChanged(user => { 

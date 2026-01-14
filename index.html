@@ -3020,12 +3020,12 @@ async function moveSelectedToPending() {
 // === 2. 一鍵升級邏輯 (核心修訂) ===
 
 // === 核心邏輯更新：學年過渡 ===
-// (runYearTransition 內容基本不變，只需確保最後呼叫的是新函式)
+// === 核心邏輯更新：學年過渡 (修復 NaN 與特殊帳號問題) ===
+// === 核心邏輯更新：學年過渡 (修復 NaN 與特殊帳號問題) ===
 async function runYearTransition() {
     if (prompt("請輸入密碼以確認清除舊紀錄並升班：") !== "23262036") return;
     
-    // ... (確認訊息保持不變) ...
-    if (!confirm("確定執行？")) return;
+    if (!confirm("確定執行？\n警告：\n1. 中六學生將被移除\n2. 中三學生移至待分班\n3. 其他學生升級\n4. 特殊帳號 (System/Special) 將保留")) return;
 
     const btn = event.target;
     btn.disabled = true;
@@ -3038,30 +3038,47 @@ async function runYearTransition() {
         let newStudentsMap = {}; 
         let pendingMap = {};
         
-        // 讀取現有的 pending (包含我們剛剛手動移進去的留班生)
+        // 讀取現有的 pending
         const existingPendingSnap = await db.ref('pending_allocation').once('value');
         if (existingPendingSnap.exists()) {
             pendingMap = existingPendingSnap.val();
         }
 
         for (const grade in allStudents) {
+            // ★★★ 修復重點 1：檢查是否為特殊非數字年級 (System, Special) ★★★
+            const g = parseInt(grade);
+
+            if (isNaN(g)) {
+                // 如果是 System 或 Special，直接原封不動保留到新名單
+                console.log(`保留特殊組別: ${grade}`);
+                newStudentsMap[grade] = allStudents[grade];
+                continue; // 跳過後面的升班邏輯
+            }
+
+            // --- 以下為正常學生的升班邏輯 ---
             for (const cls in allStudents[grade]) {
                 const studentsInClass = allStudents[grade][cls];
                 for (const studentName in studentsInClass) {
                     const studentData = studentsInClass[studentName];
-                    const g = parseInt(grade);
 
                     // 清空班號
                     if (studentData.profile) studentData.profile.number = ""; 
 
-                    if (g === 6) { continue; } // 中六刪除
+                    if (g === 6) { 
+                        // 中六畢業 (刪除，不加入新名單)
+                        // 可選擇性：移入 graduates 節點 (這裡暫不實作，依您原意刪除)
+                    } 
                     else if (g === 3) {
                         pendingMap[studentName] = studentData; // 中三移入 pending
                     } 
                     else {
-                        // 其他自動升班
+                        // 其他自動升班 (1->2, 2->3, 4->5, 5->6)
                         const newG = (g + 1).toString();
+                        
+                        // 更新 profile 內的年級資料
                         if (studentData.profile) studentData.profile.grade = newG;
+                        
+                        // 建構新結構
                         if (!newStudentsMap[newG]) newStudentsMap[newG] = {};
                         if (!newStudentsMap[newG][cls]) newStudentsMap[newG][cls] = {};
                         newStudentsMap[newG][cls][studentName] = studentData;
@@ -3070,15 +3087,17 @@ async function runYearTransition() {
             }
         }
 
+        // 寫入資料庫
         await db.ref('students').set(newStudentsMap);
         await db.ref('pending_allocation').set(pendingMap);
+        
+        // 清除舊資料
         await db.ref('assignments').remove();
         await db.ref('assignments_submissions').remove();
         await db.ref('class_reports').remove();
 
-        alert("✅ 新學年過渡成功！請在下方處理分班。");
+        alert("✅ 新學年過渡成功！\n特殊帳號已保留，學生已升班。");
         
-        // ★★★ 呼叫新的渲染函式 ★★★
         checkAndRenderPendingPanel();
 
     } catch (e) {

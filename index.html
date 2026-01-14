@@ -894,6 +894,8 @@ canvas {
     <option value="4">中四</option><option value="5">中五</option><option value="6" selected>中六</option>
     <!-- 新增 -->
     <option value="System" style="color:red; font-weight:bold;">系統測試</option> 
+               <!-- ★★★ 新增這行 ★★★ -->
+<option value="Special" style="color:blue; font-weight:bold;">特許用家</option>
 </select>
 <select id="viewClass" onchange="loadStudentList()">
     <option value="A">A 班</option><option value="B">B 班</option><option value="C">C 班</option><option value="D">D 班</option>
@@ -922,6 +924,8 @@ canvas {
     <!-- ... 原有選項 ... -->
     <option value="A">A 班</option><option value="B">B 班</option><option value="C">C 班</option><option value="D">D 班</option>
     <option value="Test" style="color:red; font-weight:bold;">測試班</option>
+    <!-- ★★★ 新增這行 ★★★ -->
+<option value="User" style="color:blue; font-weight:bold;">用家班</option>
 </select>
             <button id="btnClassReport" class="btn-action btn-manage" style="background: linear-gradient(135deg, #7da3c0 0%, #5e7067 100%); margin-left: auto; box-shadow: 0 4px 10px rgba(94, 112, 103, 0.4);" onclick="generateClassReport()">
                 <i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)

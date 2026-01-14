@@ -848,7 +848,120 @@ canvas {
 .step-2 { background-color: var(--m-brown); }
 .step-3 { background-color: #ffa726; }
 
-    
+
+    /* ========================================= */
+/* === [移植] 解題指引專用樣式 (確保與學生端一致) === */
+/* ========================================= */
+
+/* 1. 標題區塊 */
+.guide-section-header {
+    padding: 10px 15px;
+    margin-bottom: 15px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border-radius: 0 8px 8px 0;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    border-left-width: 5px; 
+    border-left-style: solid;
+}
+.guide-section-header h3 {
+    margin: 0;
+    border: none; /* 移除教師端預設的 h3 邊框 */
+    padding: 0;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: transparent;
+}
+
+/* 2. 介紹卡片 (Intro) */
+.guide-intro-card {
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    margin-bottom: 25px;
+    line-height: 1.8;
+    color: #444;
+    font-size: 1.05rem;
+    border: 1px solid #eee;
+    text-align: justify;
+}
+
+/* 3. 三欄網格佈局 (核心排版) */
+.guide-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 強制三欄 */
+    gap: 25px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* 4. 卡片本體 */
+.guide-card {
+    display: flex !important;
+    flex-direction: column !important;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+    box-sizing: border-box;
+}
+
+/* 5. 卡片標題 */
+.card-title, .seed-header {
+    flex-shrink: 0;
+    width: 100%;
+    padding: 15px;
+    font-size: 1.1rem;
+    font-weight: bold;
+    text-align: center;
+    box-sizing: border-box;
+}
+
+/* 6. 卡片內容 */
+.card-content, .seed-body {
+    flex-grow: 1;
+    padding: 20px;
+    font-size: 1rem;
+    line-height: 1.8;
+    color: #444;
+    text-align: justify;
+    white-space: normal !important;
+    word-wrap: break-word !important;
+}
+
+/* 7. 配色方案 */
+/* 藍色卡片 (心情/題眼) */
+.emotion-card { border-top: 5px solid #4A90E2; }
+.emotion-card .card-title { background-color: #f0f7ff; color: #0056b3; }
+
+/* 綠色卡片 (種子/寫作方向) */
+.seed-card { border-top: 5px solid #28a745; }
+.seed-card .seed-header { background-color: #f0fff4; color: #155724; }
+
+/* 8. 內容強調樣式 */
+.seed-body strong {
+    color: #155724 !important;
+    display: inline-block;
+    margin-bottom: 5px;
+    font-size: 1.05rem;
+    border-bottom: 2px solid rgba(40, 167, 69, 0.4) !important;
+}
+
+/* 9. 手機版適配 (教師用手機看時變單欄) */
+@media (max-width: 768px) {
+    .guide-grid-3 {
+        grid-template-columns: 1fr !important;
+        gap: 20px;
+    }
+    .guide-card {
+        margin-bottom: 15px;
+        height: auto !important;
+    }
+}
     
 </style>
 </head>

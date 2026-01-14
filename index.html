@@ -369,6 +369,53 @@ canvas {
     .teacher-feedback-section input, .teacher-feedback-section textarea { width: 100%; padding: 10px; border: 1px solid #e6dace; border-radius: 8px; font-family: 'Noto Serif TC', serif; box-sizing: border-box; margin-top: 5px; background: #fff; font-size: 1rem; color: #555; outline: none; }
     .teacher-feedback-section input:focus, .teacher-feedback-section textarea:focus { border-color: var(--m-brown); box-shadow: 0 0 5px rgba(199, 178, 153, 0.3); }
 
+
+/* === 優化後的工具區標題 === */
+.section-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    
+    /* 字體設定 */
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: #5e5e5e; /* 深灰主色 */
+    
+    /* 關鍵修訂：拉開與下方的距離 */
+    margin-bottom: 30px; 
+    padding-bottom: 15px;
+    
+    /* 增加底線，讓區塊感更明顯 */
+    border-bottom: 1px solid #eee;
+}
+
+/* 圓形圖示裝飾 */
+.section-icon-box {
+    width: 38px;
+    height: 38px;
+    background-color: #f5f0e6; /* 莫蘭迪淺米色背景 */
+    color: #c7b299;            /* 莫蘭迪褐圖示 */
+    border-radius: 50%;        /* 圓形 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1rem;
+}
+
+/* 適用時機的標籤 (讓語意更清晰) */
+.usage-tag {
+    font-size: 0.75rem;
+    background-color: #eceff1; /* 淺藍灰 */
+    color: #78909c;            /* 深藍灰字 */
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-weight: normal;
+    letter-spacing: 0.5px;
+    margin-left: 5px;
+}
+
+
+    
     .management-section { background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 25px; margin-bottom: 30px; }
     .transfer-grid { display: flex; gap: 20px; background: #f9f9f9; padding: 20px; border-radius: 10px; align-items: flex-start; }
     .transfer-column { flex: 1; display: flex; flex-direction: column; gap: 15px; }
@@ -1002,7 +1049,11 @@ canvas {
     
     <!-- 個別學生調動 (手動工具) - 整合到上方作為一般工具 -->
     <div class="management-section">
-        <div class="section-title"><i class="fas fa-tools"></i> 個別手動調動工具 (學期中適用)</div>
+       <div class="section-title">
+    <div class="section-icon-box"><i class="fas fa-user-edit"></i></div>
+    <span>個別學生轉班／調動</span>
+    <span class="usage-tag">僅限學期中途使用</span>
+</div>
         <div class="transfer-grid">
             <div class="transfer-column">
                 <div style="display:flex; gap:10px; align-items:center;">
@@ -1047,7 +1098,7 @@ canvas {
         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom: 15px;">
             <select id="exceptionGrade" onchange="loadExceptionList()">
                 <option value="1">中一</option><option value="2">中二</option><option value="3">中三</option>
-                <option value="4">中四</option><option value="5">中五</option>
+                <option value="4">中四</option><option value="5">中五</option><option value="6">中六</option>
             </select>
             <select id="exceptionClass" onchange="loadExceptionList()">
                 <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>

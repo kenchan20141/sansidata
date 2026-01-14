@@ -897,10 +897,13 @@ canvas {
                <!-- ★★★ 新增這行 ★★★ -->
 <option value="Special" style="color:blue; font-weight:bold;">特許用家</option>
 </select>
+<!-- 找到這段 -->
 <select id="viewClass" onchange="loadStudentList()">
     <option value="A">A 班</option><option value="B">B 班</option><option value="C">C 班</option><option value="D">D 班</option>
-    <!-- 新增 -->
     <option value="Test" style="color:red; font-weight:bold;">測試班</option>
+    
+    <!-- ★★★ 新增這行：必須加入用家班選項，否則 JS 無法自動跳轉 ★★★ -->
+    <option value="User" style="color:blue; font-weight:bold;">用家班</option>
 </select>
             <button class="btn-action btn-view" onclick="loadStudentList()"><i class="fas fa-sync-alt"></i> 刷新列表</button>
         </div>
@@ -1435,19 +1438,29 @@ function loadStudentList() {
     const gradeSelect = document.getElementById('viewGrade');
     const classSelect = document.getElementById('viewClass');
     
-    // ★ 自動化邏輯：選 System 自動跳 Test 並鎖定 ★
+    // ★ 自動化邏輯：System -> Test / Special -> User ★
     if (gradeSelect.value === 'System') {
         classSelect.value = 'Test';
-        classSelect.disabled = true; // 鎖定不讓改
-    } else {
+        classSelect.disabled = true; // 鎖定
+    } 
+    else if (gradeSelect.value === 'Special') {
+        // ★ 新增這段：選特許用家自動跳「用家班」並鎖定
+        classSelect.value = 'User';
+        classSelect.disabled = true; 
+    } 
+    else {
         classSelect.disabled = false; // 解鎖
-        if (classSelect.value === 'Test') classSelect.value = 'A'; // 如果從 System 切回來，自動歸位到 A
+        // 如果從 System 或 Special 切換回來，自動歸位到 A
+        if (classSelect.value === 'Test' || classSelect.value === 'User') {
+            classSelect.value = 'A'; 
+        }
     }
 
     const g = gradeSelect.value;
     const c = classSelect.value;
     const container = document.getElementById('studentListContainer');
     
+    // ... (以下程式碼保持不變) ...
     container.innerHTML = '<p style="text-align:center; padding:20px; width:100%; color:#888;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
     
     db.ref(`students/${g}/${c}`).once('value', snapshot => {
@@ -1468,6 +1481,9 @@ function loadStudentList() {
                 let displayNameHtml = '';
                 if (g === 'System') {
                     displayNameHtml = `<span style="color:var(--m-blue); font-weight:bold;">系統測試</span> - ${name}`;
+                } else if (g === 'Special') {
+                    // ★ 新增這段：特許用家的顯示方式
+                    displayNameHtml = `<span style="color:var(--m-purple); font-weight:bold;">特許用家</span> - ${name}`;
                 } else {
                     displayNameHtml = `${name} <small>(${d.profile?.number||''})</small>`;
                 }

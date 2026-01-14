@@ -576,9 +576,40 @@ canvas {
             margin-top: 5px;
             padding: 12px;
         }
+
+        /* --- 2026 新增：選單防插行與重疊修復 --- */
+        
+        /* 針對篩選群組的優化 */
+        .filter-group {
+            gap: 10px; /* 縮小間距 */
+            padding: 15px;
+            justify-content: space-between; /* 讓內容自動分配 */
+        }
+
+        /* 強制標籤獨佔一行 */
+        .filter-group label {
+            width: 100%; 
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        /* 強制選單 (Select) 並排顯示，不換行 */
+        .filter-group select {
+            width: 48% !important; /* 強制兩個各佔一半 */
+            min-width: 0 !important; /* 允許縮小 */
+            margin-bottom: 10px;
+            flex: 0 0 auto !important; /* 禁止 flex 自動計算 */
+        }
+
+        /* 按鈕則佔滿一行 */
+        .filter-group .btn-action {
+            width: 100%;
+            justify-content: center;
+            margin-left: 0 !important; /* 移除可能的左邊距 */
+        }
     }
 
-/* === 底部使用者資訊膠囊 (頁尾置中版) === */
+/* === 底部使用者資訊膠囊 (頁尾置中版) - 全新莫蘭迪配色 === */
 .user-footer-capsule {
     /* 1. 設定為彈性區塊，讓內容排列整齊 */
     display: flex;
@@ -589,8 +620,8 @@ canvas {
     /* 2. 關鍵定位：利用 margin 自動置中 */
     margin: 60px auto 80px auto; /* 上方留 60px，下方留 80px (避免被版權宣告擋住)，左右置中 */
     
-    /* 3. 外觀設定 */
-    background-color: var(--m-blue);
+    /* 3. 外觀設定 - 新顏色：莫蘭迪深岩灰 */
+    background-color: #6c7b8b; /* Morandi Slate */
     color: white;
     padding: 12px 30px;
     border-radius: 50px;
@@ -598,7 +629,7 @@ canvas {
     /* 4. 寬度設定為「內容多寬就多寬」 */
     width: fit-content; 
     
-    box-shadow: 0 4px 15px rgba(148, 167, 181, 0.4);
+    box-shadow: 0 4px 15px rgba(108, 123, 139, 0.4);
     font-size: 1rem;
     
     /* 確保不會被上方浮動元素影響 */
@@ -616,19 +647,22 @@ canvas {
     letter-spacing: 1px;
 }
 
+/* 登出按鈕 - 新顏色：莫蘭迪芥末黃 */
 .user-footer-capsule button {
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    padding: 5px 15px;
+    background: #d5c59f; /* Morandi Mustard/Ochre */
+    border: none;
+    padding: 6px 18px;
     border-radius: 20px;
     cursor: pointer;
-    color: white;
+    color: #5e4b35; /* 深棕色字體增加對比 */
     transition: background 0.2s;
     font-size: 0.9em;
+    font-weight: bold;
 }
 
 .user-footer-capsule button:hover {
-    background: rgba(255, 255, 255, 0.4);
+    background: #e6d8b5;
+    transform: translateY(-1px);
 }
 
     /* === 優化後的導航欄：島嶼式控制面板 === */
@@ -738,7 +772,20 @@ canvas {
   box-shadow: 0 4px 12px rgba(182, 166, 202, 0.3);
 }
 
-
+/* 步驟標籤樣式 */
+.step-badge {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: 20px;
+    color: white;
+    font-weight: bold;
+    font-size: 0.9em;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.step-1 { background-color: var(--m-red); }
+.step-2 { background-color: var(--m-brown); }
+.step-3 { background-color: #ffa726; }
 
     
     
@@ -939,9 +986,9 @@ canvas {
 <div id="tab-management" class="box" style="display:none;">
     <h2>學年過渡管理</h2>
     
-    <!-- 個別學生調動 (保留) -->
+    <!-- 個別學生調動 (手動工具) - 整合到上方作為一般工具 -->
     <div class="management-section">
-        <div class="section-title"><i class="fas fa-user-cog"></i> 個別學生調動 / 刪除</div>
+        <div class="section-title"><i class="fas fa-tools"></i> 個別手動調動工具 (學期中適用)</div>
         <div class="transfer-grid">
             <div class="transfer-column">
                 <div style="display:flex; gap:10px; align-items:center;">
@@ -970,116 +1017,113 @@ canvas {
                 </div>
             </div>
         </div>
+    </div>
 
+    <!-- 步驟區塊：新學年過渡 -->
+    <h3 style="margin-bottom: 20px;">新學年升班流程</h3>
+
+    <!-- 步驟一：例外處理 -->
+    <div style="padding: 25px; border-radius: 15px; border: 2px dashed #d9534f; background-color: #fff5f5; margin-bottom: 30px;">
+        <span class="step-badge step-1">步驟一</span>
+        <h3 style="color: #d9534f; margin-top:0; border:none; padding:0;"><i class="fas fa-user-clock"></i> 留班生／特殊個案</h3>
+        <p style="color: #666; font-size: 0.9em;">
+            在執行「一鍵升級」前，請先將<b>留班生</b>或<b>需要特殊處理</b>的學生移至「待分班區」。
+        </p>
+        
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom: 15px;">
+            <select id="exceptionGrade" onchange="loadExceptionList()">
+                <option value="1">中一</option><option value="2">中二</option><option value="3">中三</option>
+                <option value="4">中四</option><option value="5">中五</option>
+            </select>
+            <select id="exceptionClass" onchange="loadExceptionList()">
+                <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+            </select>
+            <button class="btn-action btn-delete" onclick="moveSelectedToPending()">
+                <i class="fas fa-sign-out-alt"></i> 移至待分班區
+            </button>
+        </div>
+        
+        <!-- 學生勾選列表 -->
+        <div id="exceptionList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; max-height: 200px; overflow-y: auto; background: #fff; padding: 10px; border: 1px solid #ddd; border-radius: 8px;">
+            <div style="color:#999; text-align:center;">請選擇班級載入名單...</div>
+        </div>
     </div>
 
 
-<!-- 新增：例外學生處理區 (留班/特殊轉班用) -->
-<div style="padding: 25px; border-radius: 15px; border: 2px dashed #d9534f; background-color: #fff5f5; margin-bottom: 20px;">
-    <h3 style="color: #d9534f; margin-top:0;"><i class="fas fa-user-clock"></i> 步驟一：處理留班生 / 特殊個案</h3>
-    <p style="color: #666; font-size: 0.9em;">
-        在執行「一鍵升級」前，請先將<b>留班生</b>或<b>需要特殊處理</b>的學生移至「待分班區」。
-    </p>
-    
-    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom: 15px;">
-        <select id="exceptionGrade" onchange="loadExceptionList()">
-            <option value="1">中一</option><option value="2">中二</option><option value="3">中三</option>
-            <option value="4">中四</option><option value="5">中五</option>
-        </select>
-        <select id="exceptionClass" onchange="loadExceptionList()">
-            <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
-        </select>
-        <button class="btn-action btn-delete" onclick="moveSelectedToPending()">
-            <i class="fas fa-sign-out-alt"></i> 移至待分班區
-        </button>
-    </div>
-    
-    <!-- 學生勾選列表 -->
-    <div id="exceptionList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; max-height: 200px; overflow-y: auto; background: #fff; padding: 10px; border: 1px solid #ddd; border-radius: 8px;">
-        <div style="color:#999; text-align:center;">請選擇班級載入名單...</div>
-    </div>
-</div>
-
-
-    
-
-    <!-- 一鍵過渡卡片 -->
-    <div class="year-transition-card">
-        <div style="font-size:1.3em; font-weight:bold; color:#555;">一鍵全校升班</div>
+    <!-- 步驟二：一鍵全校升班 -->
+    <div class="year-transition-card" style="margin-bottom: 30px;">
+        <span class="step-badge step-2">步驟二</span>
+        <div style="font-size:1.3em; font-weight:bold; color:#555;"><i class="fas fa-rocket"></i> 全校升班</div>
         <p style="color: #d9534f; font-size: 0.9em; margin: 10px 0;">
             <i class="fas fa-exclamation-triangle"></i> 注意：此操作將清除所有舊功課、刪除中六學生，並將中三學生移至待分班區。
         </p>
         <div class="year-arrow"><i class="fas fa-chevron-down"></i></div>
-        <button class="btn-action btn-manage" style="padding:15px 40px; font-size:1.1em; width:100%;" onclick="runYearTransition()"><i class="fas fa-rocket"></i> 開始新學年過渡</button>
+        <button class="btn-action btn-manage" style="padding:15px 40px; font-size:1.1em; width:100%;" onclick="runYearTransition()">開始新學年過渡</button>
     </div>
 
-<!-- === 雙軌制待分班面板 (取代原本的 s3AllocationPanel) === -->
-<div id="pendingAllocationPanel" class="box" style="display:none; border-top: 5px solid #ffa726; background-color: #fff8e1; margin-top: 30px;">
-    <h2 style="color: #e65100; margin-top:0;"><i class="fas fa-random"></i> 待分班學生管理</h2>
-    <p style="color: #666; margin-bottom: 20px;">此處包含「原中三升中四」的學生，以及您手動移入的「留班/轉班」學生。</p>
+    <!-- 步驟三：待分班區 -->
+    <div id="pendingAllocationPanel" class="box" style="display:none; border-top: 5px solid #ffa726; background-color: #fff8e1; margin-top: 30px;">
+        <span class="step-badge step-3">步驟三</span>
+        <h2 style="color: #e65100; margin-top:0;"><i class="fas fa-random"></i> 待分班區</h2>
+        <p style="color: #666; margin-bottom: 20px;">此處包含「原中三升中四」的學生，以及您手動移入的「留班/轉班」學生。</p>
 
-    <!-- 佈局容器：左右兩欄 -->
-    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-        
-        <!-- 左欄：中三升中四專用 (標準升班) -->
-        <div style="flex: 1; min-width: 300px; background: #fff; border: 1px solid #ffcc80; border-radius: 10px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
-            <h3 style="color: #e65100; border-bottom: 2px solid #ffe0b2; padding-bottom: 10px; margin-top: 0;">
-                <i class="fas fa-level-up-alt"></i> 中三 <i class="fas fa-arrow-right"></i> 中四 (分流)
-            </h3>
+        <!-- 佈局容器：左右兩欄 -->
+        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
             
-            <div style="background: #fff3e0; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
-                <span style="font-weight: bold; color: #ef6c00;">目標班別 (中四)：</span>
-                <div style="display: flex; gap: 5px; margin-top: 5px;">
-                    <select id="targetS4Class" style="flex: 1; padding: 8px; border:1px solid #ef6c00; border-radius:5px;">
-                        <option value="A">4A 班</option>
-                        <option value="B">4B 班</option>
-                        <option value="C">4C 班</option>
-                        <option value="D">4D 班</option>
-                    </select>
-                    <button class="btn-action" style="background-color: #ef6c00; padding: 8px 15px;" onclick="allocateS3Students()">
-                        確認
-                    </button>
+            <!-- 左欄：中三升中四專用 (標準升班) -->
+            <div style="flex: 1; min-width: 300px; background: #fff; border: 1px solid #ffcc80; border-radius: 10px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                <h3 style="color: #e65100; border-bottom: 2px solid #ffe0b2; padding-bottom: 10px; margin-top: 0;">
+                    <i class="fas fa-level-up-alt"></i> 中三 <i class="fas fa-arrow-right"></i> 中四 (分流)
+                </h3>
+                
+                <div style="background: #fff3e0; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+                    <span style="font-weight: bold; color: #ef6c00;">目標班別 (中四)：</span>
+                    <div style="display: flex; gap: 5px; margin-top: 5px;">
+                        <select id="targetS4Class" style="flex: 1; padding: 8px; border:1px solid #ef6c00; border-radius:5px;">
+                            <option value="A">4A 班</option>
+                            <option value="B">4B 班</option>
+                            <option value="C">4C 班</option>
+                            <option value="D">4D 班</option>
+                        </select>
+                        <button class="btn-action" style="background-color: #ef6c00; padding: 8px 15px;" onclick="allocateS3Students()">
+                            確認
+                        </button>
+                    </div>
                 </div>
+
+                <!-- S3 學生列表容器 -->
+                <div id="listS3Students" style="display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto;"></div>
             </div>
 
-            <!-- S3 學生列表容器 -->
-            <div id="listS3Students" style="display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto;"></div>
-        </div>
-
-        <!-- 右欄：留班/特殊轉班專用 (例外處理) -->
-        <div style="flex: 1; min-width: 300px; background: #fff; border: 1px solid #90a4ae; border-radius: 10px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
-            <h3 style="color: #455a64; border-bottom: 2px solid #cfd8dc; padding-bottom: 10px; margin-top: 0;">
-                <i class="fas fa-user-cog"></i> 留班 / 轉班處理 (其他年級)
-            </h3>
-            
-            <div style="background: #eceff1; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
-                <span style="font-weight: bold; color: #455a64;">分配至新位置：</span>
-                <div style="display: flex; gap: 5px; margin-top: 5px;">
-                    <select id="targetRetainGrade" style="width: 70px; padding: 8px; border:1px solid #78909c; border-radius:5px;">
-                        <option value="1">中一</option><option value="2">中二</option><option value="3">中三</option>
-                        <option value="4">中四</option><option value="5">中五</option><option value="6">中六</option>
-                    </select>
-                    <select id="targetRetainClass" style="width: 70px; padding: 8px; border:1px solid #78909c; border-radius:5px;">
-                        <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
-                    </select>
-                    <button class="btn-action" style="background-color: #546e7a; padding: 8px 15px; flex: 1;" onclick="allocateRetainStudents()">
-                        確認調動
-                    </button>
+            <!-- 右欄：留班/特殊轉班專用 (例外處理) -->
+            <div style="flex: 1; min-width: 300px; background: #fff; border: 1px solid #90a4ae; border-radius: 10px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+                <h3 style="color: #455a64; border-bottom: 2px solid #cfd8dc; padding-bottom: 10px; margin-top: 0;">
+                    <i class="fas fa-user-cog"></i> 留班 / 轉班處理 (其他年級)
+                </h3>
+                
+                <div style="background: #eceff1; padding: 10px; border-radius: 8px; margin-bottom: 15px;">
+                    <span style="font-weight: bold; color: #455a64;">分配至新位置：</span>
+                    <div style="display: flex; gap: 5px; margin-top: 5px;">
+                        <select id="targetRetainGrade" style="width: 70px; padding: 8px; border:1px solid #78909c; border-radius:5px;">
+                            <option value="1">中一</option><option value="2">中二</option><option value="3">中三</option>
+                            <option value="4">中四</option><option value="5">中五</option><option value="6">中六</option>
+                        </select>
+                        <select id="targetRetainClass" style="width: 70px; padding: 8px; border:1px solid #78909c; border-radius:5px;">
+                            <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+                        </select>
+                        <button class="btn-action" style="background-color: #546e7a; padding: 8px 15px; flex: 1;" onclick="allocateRetainStudents()">
+                            確認調動
+                        </button>
+                    </div>
                 </div>
+
+                <!-- 留班生列表容器 -->
+                <div id="listRetainStudents" style="display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto;"></div>
             </div>
-
-            <!-- 留班生列表容器 -->
-            <div id="listRetainStudents" style="display: flex; flex-direction: column; gap: 8px; max-height: 400px; overflow-y: auto;"></div>
         </div>
-
     </div>
 
-
-
-    
 </div>
-
-    </div>
 
 
 <!-- ★★★ 請貼在這裡 (所有分頁框框的外面) ★★★ -->

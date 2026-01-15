@@ -2952,7 +2952,7 @@ function showSubDetail(sub) {
                 db.ref(newPath).set(d, e => {
                     if (!e) {
                         db.ref(oldPath).remove();
-                        alert("轉班成功！(班號已重置，學生登入時需自行輸入)");
+                        alert("轉班成功！");
                         populateTransferStudentList();
                     }
                 });

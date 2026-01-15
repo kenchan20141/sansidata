@@ -1184,23 +1184,23 @@ canvas {
                 <div id="transferStudentListBox" class="transfer-list-box"><div style="padding:20px; text-align:center; color:#999;">請先選擇班級...</div></div>
             </div>
             <div class="transfer-arrow-icon" style="align-self:center; color:#ccc; font-size:1.5em;"><i class="fas fa-arrow-right"></i></div>
-            <div class="transfer-column" style="justify-content:center;">
-                <div style="background:#fff; border:1px solid #eee; padding:20px; border-radius:10px;">
-                    <div style="font-weight:bold; color:var(--m-green); margin-bottom:10px;">目標設定：</div>
-                    <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
-                        <select id="indivToGrade" style="flex:1;"><option value="6">中六</option><option value="5">中五</option><option value="4">中四</option><option value="3">中三</option><option value="2">中二</option><option value="1">中一</option></select>
-                        <select id="indivToClass" style="flex:1;"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
-                    </div>
-                    <div style="margin-bottom:20px;">
-                        <label style="font-size:0.9em; color:#666;">分配新班號：</label>
-                        <input type="number" id="indivNewNumber" placeholder="例如：25" style="width:100%; margin-top:5px; text-align:center; box-sizing:border-box;">
-                    </div>
-                    <div style="display:flex; flex-direction:column; gap:10px;">
-                        <button class="btn-action btn-manage" style="justify-content:center;" onclick="moveIndividualStudent()"><i class="fas fa-exchange-alt"></i> 確認調動</button>
-                        <button class="btn-action btn-delete" style="justify-content:center;" onclick="deleteStudent()"><i class="fas fa-trash-alt"></i> 刪除此學生</button>
-                    </div>
-                </div>
-            </div>
+           <div class="transfer-column" style="justify-content:center;">
+    <div style="background:#fff; border:1px solid #eee; padding:20px; border-radius:10px;">
+        <div style="font-weight:bold; color:var(--m-green); margin-bottom:10px;">目標設定：</div>
+        
+        <div style="display:flex; gap:10px; margin-bottom:15px; flex-wrap:wrap;">
+            <select id="indivToGrade" style="flex:1;"><option value="6">中六</option><option value="5">中五</option><option value="4">中四</option><option value="3">中三</option><option value="2">中二</option><option value="1">中一</option></select>
+            <select id="indivToClass" style="flex:1;"><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
+        </div>
+ 
+        <!-- ★★★ 已刪除：原本在這裡的「分配新班號」輸入框 ★★★ -->
+ 
+        <div style="display:flex; flex-direction:column; gap:10px;">
+            <button class="btn-action btn-manage" style="justify-content:center;" onclick="moveIndividualStudent()"><i class="fas fa-exchange-alt"></i> 確認調動</button>
+            <button class="btn-action btn-delete" style="justify-content:center;" onclick="deleteStudent()"><i class="fas fa-trash-alt"></i> 刪除此學生</button>
+        </div>
+    </div>
+</div>
         </div>
     </div>
 
@@ -2915,17 +2915,16 @@ function showSubDetail(sub) {
             Object.entries(d).sort((a,b)=>(parseInt(a[1].profile?.number)||99)-(parseInt(b[1].profile?.number)||99)).forEach(([n,i])=>{ b.innerHTML+=`<label class="student-select-item"><input type="radio" name="ts" value="${n}"> ${i.profile?.number||'??'}. ${n}</label>`; });
         });
     }
-    function moveIndividualStudent() {
+  function moveIndividualStudent() {
         const n = document.querySelector('input[name="ts"]:checked')?.value;
         if (!n) return alert("請選擇學生");
         
         const fg = document.getElementById('indivFromGrade').value,
               fc = document.getElementById('indivFromClass').value,
               tg = document.getElementById('indivToGrade').value,
-              tc = document.getElementById('indivToClass').value,
-              nn = document.getElementById('indivNewNumber').value;
+              tc = document.getElementById('indivToClass').value;
               
-        if (!nn) return alert("請輸入新班號");
+        // ★★★ 修改：不再檢查 nn (新班號) ★★★
         
         const oldPath = `students/${fg}/${fc}/${n}`;
         const newPath = `students/${tg}/${tc}/${n}`;
@@ -2937,21 +2936,23 @@ function showSubDetail(sub) {
             d.profile = d.profile || {};
             d.profile.grade = tg;
             d.profile.class = tc;
-            d.profile.number = nn;
+            
+            // ★★★ 關鍵修改：強制清空班號，讓學生自己填 ★★★
+            d.profile.number = "";
             
             if (oldPath === newPath) {
-                // 同班更新 (僅改班號)，保留歷史紀錄
+                // 如果是同班操作 (雖然現在沒了班號輸入，這邏輯可能較少用到，但保留無妨)
                 db.ref(newPath).update(d, e => {
                     if (!e) { alert("更新成功"); populateTransferStudentList(); }
                 });
             } else {
-                // ★★★ 轉班操作：強制刪除歷史紀錄，與其他升班學生保持一致 ★★★
+                // 轉班操作：刪除歷史紀錄
                 if (d.history) delete d.history;
  
                 db.ref(newPath).set(d, e => {
                     if (!e) {
                         db.ref(oldPath).remove();
-                        alert("轉班成功 (舊有的歷史紀錄已清除)");
+                        alert("轉班成功！(班號已重置，學生登入時需自行輸入)");
                         populateTransferStudentList();
                     }
                 });

@@ -3019,132 +3019,90 @@ async function moveSelectedToPending() {
 
 // === 2. 一鍵升級邏輯 (核心修訂) ===
 
-// === 核心邏輯更新：學年過渡 (分佈式遷移版) ===
-// 特點：老師只移動 Profile (極省流量)，歷史紀錄由學生登入時自行搬運
+// === 核心邏輯更新：學年過渡 ===
+// === 核心邏輯更新：學年過渡 (修復 NaN 與特殊帳號問題) ===
+// === 核心邏輯更新：學年過渡 (修復 NaN 與特殊帳號問題) ===
 async function runYearTransition() {
     if (prompt("請輸入密碼以確認清除舊紀錄並升班：") !== "23262036") return;
     
-    if (!confirm("確定執行？\n警告：\n1. 中六學生將被移除\n2. 中三學生移至待分班\n3. 其他學生升級\n4. 歷史紀錄將暫留原處，待學生登入時自動同步")) return;
+    if (!confirm("確定執行？\n警告：\n1. 中六學生將被移除\n2. 中三學生移至待分班\n3. 其他學生升級\n4. 特殊帳號 (System/Special) 將保留")) return;
 
     const btn = event.target;
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在規劃遷移路線...';
-
-    // 獲取當前用戶 Token 與資料庫 URL (用於 REST API)
-    const user = firebase.auth().currentUser;
-    if (!user) return alert("請先登入");
-    const token = await user.getIdToken();
-    const DB_URL = "https://sansidata-default-rtdb.firebaseio.com"; 
-
-    // 輔助：只抓取 Key (不下載內容)
-    async function getShallowKeys(path) {
-        try {
-            const res = await fetch(`${DB_URL}/${path}.json?shallow=true&auth=${token}`);
-            const data = await res.json();
-            return data ? Object.keys(data) : [];
-        } catch (e) {
-            console.error(e);
-            return [];
-        }
-    }
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
 
     try {
-        // 1. 準備原子更新包 (Atomic Updates)
-        let updates = {}; 
+        const snapshot = await db.ref('students').once('value');
+        const allStudents = snapshot.val() || {};
+
+        let newStudentsMap = {}; 
         let pendingMap = {};
         
-        // 讀取現有的 pending (量不大，可直接讀)
+        // 讀取現有的 pending
         const existingPendingSnap = await db.ref('pending_allocation').once('value');
-        if (existingPendingSnap.exists()) pendingMap = existingPendingSnap.val();
+        if (existingPendingSnap.exists()) {
+            pendingMap = existingPendingSnap.val();
+        }
 
-        // 2. 掃描架構
-        const grades = await getShallowKeys('students');
-        
-        // 3. 逐層處理
-        for (const grade of grades) {
-            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> 處理中: ${grade} 年級...`;
-            
-            // 跳過特殊帳號
-            if (isNaN(parseInt(grade))) continue;
-
+        for (const grade in allStudents) {
+            // ★★★ 修復重點 1：檢查是否為特殊非數字年級 (System, Special) ★★★
             const g = parseInt(grade);
-            const classes = await getShallowKeys(`students/${grade}`);
 
-            for (const cls of classes) {
-                const studentNames = await getShallowKeys(`students/${grade}/${cls}`);
-                
-                // 只下載 Profile (並行處理)
-                const profilePromises = studentNames.map(async (name) => {
-                    const snap = await db.ref(`students/${grade}/${cls}/${name}/profile`).once('value');
-                    return { name: name, profile: snap.val() };
-                });
+            if (isNaN(g)) {
+                // 如果是 System 或 Special，直接原封不動保留到新名單
+                console.log(`保留特殊組別: ${grade}`);
+                newStudentsMap[grade] = allStudents[grade];
+                continue; // 跳過後面的升班邏輯
+            }
 
-                const studentsData = await Promise.all(profilePromises);
-
-                for (const student of studentsData) {
-                    const name = student.name;
-                    const profile = student.profile;
-                    if (!profile) continue;
+            // --- 以下為正常學生的升班邏輯 ---
+            for (const cls in allStudents[grade]) {
+                const studentsInClass = allStudents[grade][cls];
+                for (const studentName in studentsInClass) {
+                    const studentData = studentsInClass[studentName];
 
                     // 清空班號
-                    profile.number = "";
-                    
-                    // 定義舊路徑 (用於學生端回頭抓取歷史)
-                    const oldHistoryPath = `students/${grade}/${cls}/${name}/history`;
+                    if (studentData.profile) studentData.profile.number = ""; 
 
-                    if (g === 6) {
-                        // 中六：直接刪除 Profile (歷史紀錄暫留或可選刪除，這裡選擇僅移除名單)
-                        updates[`students/${grade}/${cls}/${name}`] = null;
+                    if (g === 6) { 
+                        // 中六畢業 (刪除，不加入新名單)
+                        // 可選擇性：移入 graduates 節點 (這裡暫不實作，依您原意刪除)
                     } 
                     else if (g === 3) {
-                        // 中三：移入 Pending，並帶上歷史紀錄標記
-                        profile.migration_source = oldHistoryPath;
-                        pendingMap[name] = { profile: profile }; // Pending 區暫存 Profile
-                        
-                        // 從原班級移除 Profile
-                        updates[`students/${grade}/${cls}/${name}/profile`] = null;
-                        // 注意：我們不刪除 students/.../history，讓它留在原地
+                        pendingMap[studentName] = studentData; // 中三移入 pending
                     } 
                     else {
-                        // 其他年級：升班
+                        // 其他自動升班 (1->2, 2->3, 4->5, 5->6)
                         const newG = (g + 1).toString();
-                        profile.grade = newG;
                         
-                        // ★ 關鍵：在新 Profile 中加入標記，告訴學生端去哪裡找舊歷史
-                        profile.migration_source = oldHistoryPath;
-
-                        // 1. 寫入新位置 (只寫 Profile)
-                        updates[`students/${newG}/${cls}/${name}/profile`] = profile;
+                        // 更新 profile 內的年級資料
+                        if (studentData.profile) studentData.profile.grade = newG;
                         
-                        // 2. 刪除舊位置的 Profile (這樣他在舊班級名單就會消失)
-                        updates[`students/${grade}/${cls}/${name}/profile`] = null;
-                        
-                        // ★ 3. 舊位置的 History 保持不動，等待學生「搬運」
+                        // 建構新結構
+                        if (!newStudentsMap[newG]) newStudentsMap[newG] = {};
+                        if (!newStudentsMap[newG][cls]) newStudentsMap[newG][cls] = {};
+                        newStudentsMap[newG][cls][studentName] = studentData;
                     }
                 }
             }
         }
 
-        // 4. 清除大型公共數據 (課業、報告)
-        updates['assignments'] = null;
-        updates['assignments_submissions'] = null;
-        updates['class_reports'] = null;
+        // 寫入資料庫
+        await db.ref('students').set(newStudentsMap);
+        await db.ref('pending_allocation').set(pendingMap);
         
-        // 寫入 Pending 區
-        updates['pending_allocation'] = pendingMap;
+        // 清除舊資料
+        await db.ref('assignments').remove();
+        await db.ref('assignments_submissions').remove();
+        await db.ref('class_reports').remove();
 
-        btn.innerHTML = '<i class="fas fa-save"></i> 正在寫入變更...';
+        alert("✅ 新學年過渡成功！\n特殊帳號已保留，學生已升班。");
         
-        // 5. 執行更新 (極快，因為只包含 Profile 文字)
-        await db.ref().update(updates);
-
-        alert("✅ 新學年過渡成功！\n\n1. 學生已升班 (Profile 已移動)\n2. 歷史紀錄已標記 (將由學生登入時自動搬運)\n3. 舊課業已清除");
-        
-        if (typeof checkAndRenderPendingPanel === 'function') checkAndRenderPendingPanel();
+        checkAndRenderPendingPanel();
 
     } catch (e) {
         console.error(e);
-        alert("處理失敗：" + e.message);
+        alert("失敗：" + e.message);
     } finally {
         btn.disabled = false;
         btn.innerHTML = '開始新學年過渡';

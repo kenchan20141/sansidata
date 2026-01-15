@@ -3064,6 +3064,10 @@ async function runYearTransition() {
                     // 清空班號
                     if (studentData.profile) studentData.profile.number = ""; 
 
+
+                      // ★★★ 新增這行：強制刪除該學生的歷史紀錄 ★★★
+    if (studentData.history) delete studentData.history;
+
                     if (g === 6) { 
                         // 中六畢業 (刪除，不加入新名單)
                         // 可選擇性：移入 graduates 節點 (這裡暫不實作，依您原意刪除)

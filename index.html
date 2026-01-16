@@ -2797,191 +2797,214 @@ function renderParsedUserContent(userContent, themeIndex = 1) {
     return `<div style="background:#fff; padding:20px; border:1px solid #eee; border-radius:12px; margin-bottom:25px; box-shadow: 0 4px 20px rgba(0,0,0,0.04);">${html}</div>`;
 }
     // 歷史紀錄詳情
-// === 修訂：教師端歷史詳情檢閱 (UI/UX 與學生端完全一致版) ===
-// === 新增：確保教師端擁有與學生端一致的樣式 (解決閱讀點評排版不一致問題) ===
-function ensureStudentStyles() {
-    if (document.getElementById('student-styles-injected')) return;
+// ==========================================================================
+// === 1. [教師端] 萬能樣式注入：移植學生端所有 CSS (確保所有範疇 UI 一致) ===
+// ==========================================================================
+function ensureUniversalStyles() {
+    if (document.getElementById('universal-styles-injected')) return;
     
     const style = document.createElement('style');
-    style.id = 'student-styles-injected';
+    style.id = 'universal-styles-injected';
     style.innerHTML = `
-        /* === 移植自學生端的關鍵樣式 (閱讀點評專用) === */
-        
-        /* 1. 答題步驟卡片 */
-        .steps-container {
-            margin-top: 20px;
-            padding-left: 15px;
-            border-left: 4px solid #4A90E2;
-        }
-        .step-card {
-            background-color: #f7f9fc;
-            border-radius: 8px;
-            padding: 15px 20px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-            border: 1px solid #e1e4e8; /* 增加邊框讓層次更分明 */
-        }
-        .step-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 4px 10px rgba(0,0,0,0.12);
-        }
-        .step-card:last-child { 
-            margin-bottom: 0; 
-        }
-        .step-title {
-            font-weight: bold;
-            font-size: 1.1em;
-            color: #0056b3;
-            margin-bottom: 10px;
-            display: flex; 
-            align-items: center;
-            gap: 8px;
-        }
-        /* 自動為步驟標題加 icon */
-        .step-title::before {
-            content: '\\f0ae'; /* FontAwesome tasks icon */
-            font-family: "Font Awesome 5 Free";
-            font-weight: 900;
-            font-size: 0.9em;
-        }
-        .step-content {
-            font-size: 1em;
-            line-height: 1.7;
-            color: #333;
-            text-align: justify;
-        }
+        /* === 1. 閱讀：答題步驟與指引 === */
+        .steps-container { margin-top: 20px; padding-left: 15px; border-left: 4px solid #4A90E2; }
+        .step-card { background-color: #f7f9fc; border-radius: 8px; padding: 15px 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.08); border: 1px solid #e1e4e8; transition: transform 0.2s; }
+        .step-card:hover { transform: translateY(-3px); box-shadow: 0 4px 10px rgba(0,0,0,0.12); }
+        .step-title { font-weight: bold; font-size: 1.1em; color: #0056b3; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        .step-content { font-size: 1em; line-height: 1.7; color: #333; text-align: justify; }
 
-        /* 2. 改寫範例 / 內文容器 */
-        .rewrite-content {
-            font-family: 'Noto Serif TC', serif !important;
-            font-size: 1rem !important; 
-            line-height: 1.8 !important; 
-            color: #2c3e50 !important;
-            white-space: pre-wrap !important;
-            text-align: justify !important;
-            background-color: #fff !important;
-            padding: 20px !important;
-            border-radius: 8px !important;
-            border: 1px solid #e0e0e0 !important;
-            margin-top: 10px;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.02);
-        }
-        
-        /* 3. 優化原有的解釋卡片 */
-        .rewrite-explanation-card {
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-            margin-bottom: 20px;
-        }
-        .rewrite-explanation-card h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
-            color: #343a40;
-            font-size: 1.2em;
-            border-bottom: 2px solid #e9ecef;
-            padding-bottom: 10px;
-            border-left: none; /* 覆寫 h3 預設 */
-            padding-left: 0;
-        }
-    `;
-    document.head.appendChild(style);
-}
+        /* === 2. 敘事/議論：大綱與文章表格 (原稿紙風格) === */
+        .table-container { overflow-x: auto; width: 100%; margin: 15px 0; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .table-container table { width: 100%; border-collapse: collapse; font-family: 'Noto Serif TC', serif; background-color: #fff; }
+        .table-container th { background-color: #2A9689 !important; color: white !important; font-weight: bold; border: 1px solid #1e7e72 !important; padding: 10px; white-space: nowrap; }
+        .table-container td { border: 1px solid #8baea8; padding: 12px 15px; vertical-align: top; font-size: 1rem; line-height: 40px !important; color: #2c3e50; background-color: #fffcf6 !important; background-image: linear-gradient(transparent 39px, rgba(42, 150, 137, 0.2) 39px, rgba(42, 150, 137, 0.2) 40px, transparent 40px), linear-gradient(90deg, transparent 39px, rgba(0,0,0,0.02) 39px, rgba(0,0,0,0.02) 40px, transparent 40px) !important; background-size: 40px 40px !important; background-attachment: local; }
 
-// ==========================================================================
-// === 1. 樣式注入函數：確保教師端擁有與學生端 100% 一致的報告 UI ===
-// ==========================================================================
-function ensureReportStyles() {
-    if (document.getElementById('report-styles-injected')) return;
-    
-    const style = document.createElement('style');
-    style.id = 'report-styles-injected';
-    style.innerHTML = `
-        /* === 移植自學生端的學習報告樣式 === */
-        
-        /* 1. 報告區塊與標題 */
-        .report-section { display: block; margin-bottom: 50px; clear: both; border-bottom: 1px dashed #e0ddd7; padding-bottom: 30px; }
-        
-        /* 2. 徽章樣式 */
-        .report-category-badge { display: inline-flex; align-items: center; gap: 10px; padding: 10px 25px; border-radius: 50px; color: white; font-weight: bold; font-size: 1.3rem; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); letter-spacing: 1px; }
-        .badge-narrative { background-color: #7da3c0; } 
-        .badge-argument { background-color: #a692c2; } 
-        .badge-reading { background-color: #8da399; } 
-        .badge-expand { background-color: #d69a92; }
-        
-        /* 3. 整體概況 (最高層級) */
-        .badge-general { width: 100%; max-width: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px; margin-bottom: 10px; background: linear-gradient(135deg, #5e7067 0%, #4b5e56 100%); box-shadow: 0 8px 20px rgba(94, 112, 103, 0.3); color: white; border-radius: 12px; position: relative; overflow: hidden; }
-        .badge-general-title { font-size: 1.6rem; font-weight: bold; letter-spacing: 2px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
-        
-        /* 4. 綜合評級標籤 */
-        .overall-grade-tag { background-color: #fff; color: #d9534f; padding: 5px 25px; border-radius: 50px; font-size: 1.4rem; font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.2); border: 2px solid #d69a92; display: flex; align-items: center; gap: 8px; }
-        .overall-grade-label { font-size: 0.8rem; color: #888; font-weight: normal; text-transform: uppercase; letter-spacing: 1px; }
+        /* === 3. 敘事物象/閱讀指引：網格詞彙 === */
+        .vocab-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 15px; padding: 15px 5px; margin-top: 10px; }
+        .vocab-item { background-color: #fff; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px 5px; text-align: center; font-family: 'Noto Serif TC', serif; font-size: 1.1rem; font-weight: 500; color: #555; box-shadow: 0 2px 5px rgba(0,0,0,0.03); transition: all 0.3s ease; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .vocab-item:hover { transform: translateY(-3px); border-color: #2A9689; color: #2A9689; background-color: #f0fdfc; }
 
-        /* 5. 文字卡片 */
-        .report-text-card { background-color: #fdfcf8; border: 1px solid #e0ddd7; border-radius: 12px; padding: 25px; line-height: 1.9; color: #4a4a4a; font-size: 1.05rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); text-align: justify; margin-top: 10px; display: block; }
+        /* === 4. 解題指引：卡片與佈局 === */
+        .guide-section-header { padding: 10px 15px; margin-bottom: 15px; background-color: rgba(255, 255, 255, 0.8); border-radius: 0 8px 8px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 5px solid #4A90E2; }
+        .guide-intro-card { background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 25px; line-height: 1.8; color: #444; font-size: 1.05rem; border: 1px solid #eee; text-align: justify; }
+        .guide-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 25px; width: 100%; box-sizing: border-box; }
+        .guide-card { display: flex !important; flex-direction: column !important; background: #fff; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); height: 100%; overflow: hidden; border: 1px solid #eee; }
+        .card-title, .seed-header { flex-shrink: 0; width: 100%; padding: 15px; font-size: 1.1rem; font-weight: bold; text-align: center; box-sizing: border-box; }
+        .card-content, .seed-body { flex-grow: 1; padding: 20px; font-size: 1rem; line-height: 1.8; color: #444; text-align: justify; }
+        .emotion-card { border-top: 5px solid #4A90E2; } .emotion-card .card-title { background-color: #f0f7ff; color: #0056b3; }
+        .seed-card { border-top: 5px solid #28a745; } .seed-card .seed-header { background-color: #f0fff4; color: #155724; }
+        .seed-body strong { color: #155724 !important; display: inline-block; margin-bottom: 5px; font-size: 1.05rem; border-bottom: 2px solid rgba(40, 167, 69, 0.4) !important; }
 
-        /* 6. 金句卡片 */
-        .report-quote-card { position: relative; background-color: #fffefb; border: 1px solid #e0ddd7; border-radius: 8px; padding: 30px 30px 30px 65px; margin-top: 40px; box-shadow: 4px 4px 0px rgba(0,0,0,0.05); text-align: left; background-image: linear-gradient(to right, transparent 49px, #eebdbd 50px, transparent 51px), radial-gradient(circle at 25px 50%, #d1cdc5 8px, transparent 9px); background-size: 100% 100%, 100% 40px; background-repeat: no-repeat, repeat-y; background-position: 0 0, 0 15px; }
-        .report-quote-content { font-family: 'Noto Serif TC', serif; font-size: 1.2rem; font-weight: bold; color: #5d4037; font-style: italic; line-height: 1.6; }
-        .report-quote-author { margin-top: 10px; font-size: 0.9rem; color: #888; text-align: right; font-style: normal; }
-
-        /* 7. 分隔線 */
-        .report-separator { position: relative; height: 1px; border: 0; border-top: 3px dashed #b6a6ca; margin: 40px 0 50px 0; opacity: 0.6; }
-        .report-separator::after { content: '▼'; position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #fdfcf8; padding: 0 10px; color: #b6a6ca; font-size: 12px; }
-
-        /* 8. 進度條與評分 (重要！) */
+        /* === 5. 評分系統與雷達圖 === */
+        .grading-container { margin-top: 25px; border-top: 2px dashed #aeb6bf; padding-top: 20px; max-width: 100%; }
+        .grading-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: flex-start; }
+        .grading-scores, .grading-radar { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); width: 100%; box-sizing: border-box; }
         .score-item { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 10px; }
-        .score-item label { font-weight: bold; color: #495057; flex-shrink: 0; width: 70px; text-align: left; }
-        .slider-container { flex-grow: 1; display: flex; align-items: center; gap: 8px; max-width: none; }
-        .progress-bar-container { flex-grow: 1; height: 10px; background-color: #e9ecef; border-radius: 6px; overflow: hidden; border: 1px solid #ced4da; }
+        .score-item label { font-weight: bold; color: #495057; width: 60px; }
+        .slider-container { flex-grow: 1; display: flex; align-items: center; gap: 10px; }
+        .progress-bar-container { width: 100%; height: 12px; background-color: #e9ecef; border-radius: 6px; overflow: hidden; border: 1px solid #ced4da; }
         .progress-bar-fill { height: 100%; width: 0%; background-color: #007bff; border-radius: 6px; }
-        .score-display { font-weight: bold; width: 25px; text-align: right; color: #0056b3; font-size: 1rem; }
-        .total-score-container { margin-top: 10px; padding-top: 10px; border-top: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; }
-
-        /* 9. 雷達圖容器 (確保高度不會塌陷) */
-        .report-radar-wrapper { margin-bottom: 30px; background: #fff; padding: 0 20px; border-radius: 0; border: none; display: block; }
+        .score-display { font-weight: bold; width: 25px; text-align: center; color: #0056b3; }
+        .total-score-container { margin-top: 20px; padding-top: 15px; border-top: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; }
         .radar-chart-container { position: relative; height: 320px !important; width: 100%; margin-bottom: 15px; }
-        
-        /* 10. RWD */
+
+        /* === 6. 學習報告專用 === */
+        .report-section { display: block; margin-bottom: 50px; clear: both; border-bottom: 1px dashed #e0ddd7; padding-bottom: 30px; }
+        .report-category-badge { display: inline-flex; align-items: center; gap: 10px; padding: 10px 25px; border-radius: 50px; color: white; font-weight: bold; font-size: 1.3rem; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+        .badge-narrative { background-color: #7da3c0; } .badge-argument { background-color: #a692c2; } .badge-reading { background-color: #8da399; } .badge-expand { background-color: #d69a92; }
+        .badge-general { width: 100%; display: flex; flex-direction: column; align-items: center; padding: 20px; background: linear-gradient(135deg, #5e7067 0%, #4b5e56 100%); color: white; border-radius: 12px; box-shadow: 0 8px 20px rgba(94, 112, 103, 0.3); }
+        .overall-grade-tag { background-color: #fff; color: #d9534f; padding: 5px 25px; border-radius: 50px; font-size: 1.4rem; font-weight: 900; box-shadow: 0 4px 15px rgba(0,0,0,0.2); display: flex; align-items: center; gap: 8px; }
+        .report-text-card { background-color: #fdfcf8; border: 1px solid #e0ddd7; border-radius: 12px; padding: 25px; line-height: 1.9; color: #4a4a4a; font-size: 1.05rem; box-shadow: 0 4px 15px rgba(0,0,0,0.03); text-align: justify; margin-top: 10px; display: block; }
+        .report-quote-card { background-color: #fffefb; border: 1px solid #e0ddd7; border-radius: 8px; padding: 30px 30px 30px 65px; margin-top: 40px; box-shadow: 4px 4px 0px rgba(0,0,0,0.05); text-align: left; background-image: radial-gradient(circle at 25px 50%, #d1cdc5 8px, transparent 9px); background-size: 100% 40px; background-repeat: repeat-y; background-position: 0 15px; }
+        .report-quote-content { font-family: 'Noto Serif TC', serif; font-size: 1.2rem; font-weight: bold; color: #5d4037; font-style: italic; }
+        .report-radar-wrapper { margin-bottom: 30px; background: #fff; padding: 0 20px; display: block; }
+
+        /* === 7. 聊天室 === */
+        .canvas-chat-container { margin-top: 40px; padding-top: 25px; border-top: 3px dashed #2A9689; background-color: #fcfdfd; }
+        .canvas-chat-header { color: #2A9689; font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+        .canvas-chat-history { background-color: #f0f4f8; border: 1px solid #d1d9e6; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .message-bubble { padding: 12px 18px; border-radius: 18px; line-height: 1.6; font-size: 1rem; max-width: 85%; word-wrap: break-word; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .ai-message { background-color: #ffffff; color: #333; align-self: flex-start; border-top-left-radius: 4px; border: 1px solid #e0e0e0; }
+        .user-message { background-color: #2A9689; color: white; align-self: flex-end; border-top-right-radius: 4px; }
+
+        /* === 8. 手機版適配 === */
         @media (max-width: 768px) {
-            .grading-side-by-side { flex-direction: column; }
-            .badge-general { width: 100% !important; border-radius: 12px !important; }
-            .radar-chart-container { height: 300px !important; }
+            .guide-grid-3 { grid-template-columns: 1fr !important; }
+            .grading-grid { grid-template-columns: 1fr !important; }
+            .badge-general { width: 100% !important; }
         }
     `;
     document.head.appendChild(style);
 }
 
 // ==========================================================================
-// === 2. 輔助函數：負責實際繪製報告的雷達圖 ===
+// === 2. [教師端] 主渲染函數：修訂後的 renderDetail (整合所有邏輯) ===
 // ==========================================================================
+function renderDetail(r) {
+    // 1. ★ 注入全套樣式，確保 UI 與學生端 100% 一致
+    ensureUniversalStyles();
+
+    // 2. 隱藏列表層級，顯示詳情
+    ['historyLevel1','historyLevel2','historyLevel3'].forEach(id => document.getElementById(id).style.display='none');
+    document.getElementById('historyDetail').style.display='block';
+    document.getElementById('teacherBreadcrumb').style.display='none';
+    
+    // 3. 解析使用者輸入內容
+    let uContent = '';
+    if (r.category === "學習報告") {
+        uContent = ''; // 報告類不需要顯示輸入
+    } else {
+        const themeToUse = currentThemeIndex || 1;
+        uContent = renderParsedUserContent(r.userContent, themeToUse);
+    }
+
+    const themeIndex = currentThemeIndex || 1;
+    const colorVar = `var(--m-color-${themeIndex})`;
+
+    // 4. 渲染 HTML 結構 (標題 + 學生輸入 + AI 生成結果)
+    document.getElementById('historyDetail').innerHTML = `
+        <div style="margin-bottom:15px;">
+            <button class="nav-btn" onclick="renderLevel3('${currentSubFunction}',${currentThemeIndex})" style="padding:5px 15px; font-size:0.9em;">
+                <i class="fas fa-arrow-left"></i> 返回列表
+            </button>
+        </div>
+
+        <div class="detail-view" style="padding: 10px;">
+            <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:25px;">
+                <h2 style="text-align:left; margin:0; color:#333; font-family: 'Noto Serif TC', serif;">
+                    ${r.title}
+                </h2>
+                <div style="margin-top:8px; font-size:0.9em; color:#888;">
+                    <span style="color:${colorVar}; font-weight:bold;">${r.subFunction}</span>
+                    <span style="margin: 0 5px;">|</span>
+                    <span>${r.dateStr}</span>
+                </div>
+            </div>
+
+            ${uContent}
+
+            <!-- AI 生成結果 (含表格、氣泡、雷達圖) -->
+            <div id="aiContentContainer" class="ai-output-area" style="margin-top:20px;">
+                ${r.aiContent}
+            </div>
+        </div>`;
+
+    // 5. ★★★ 關鍵：重繪圖表 (雷達圖) ★★★
+    // 必須使用 setTimeout 等待 DOM 渲染完成
+    setTimeout(() => {
+        const container = document.getElementById('aiContentContainer');
+        if (!container) return;
+
+        // A. 處理「學習報告」的雙雷達圖 (敘事 + 議論)
+        if (r.category === "學習報告" && r.scoreData) {
+            
+            // 繪製敘事圖表
+            if (r.scoreData["敘事抒情"] && r.scoreData["敘事抒情"].radar) {
+                const narrCanvas = container.querySelector('#reportNarrativeChart') || container.querySelector('#narrativeClassChart');
+                if (narrCanvas) drawReportChart(narrCanvas, r.scoreData["敘事抒情"].radar);
+            }
+
+            // 繪製議論圖表
+            if (r.scoreData["議論"] && r.scoreData["議論"].radar) {
+                const argCanvas = container.querySelector('#reportArgumentChart') || container.querySelector('#argumentClassChart');
+                if (argCanvas) drawReportChart(argCanvas, r.scoreData["議論"].radar);
+            }
+        }
+        
+        // B. 處理一般單篇作業 (敘事/議論) 的雷達圖
+        else if (r.scoreData && r.scoreData.radar) {
+             const canvas = container.querySelector('canvas');
+             if (canvas) {
+                 const parent = canvas.parentNode;
+                 parent.style.height = '350px'; 
+                 parent.style.position = 'relative';
+
+                 new Chart(canvas.getContext('2d'), {
+                    type: 'radar',
+                    data: {
+                        labels: ['立意', '取材', '扣題', '詳略', '詞彙', '文學性'],
+                        datasets: [{
+                            label: '能力分佈',
+                            data: [
+                                r.scoreData.radar.立意, r.scoreData.radar.取材, r.scoreData.radar.扣題,
+                                r.scoreData.radar.詳略, r.scoreData.radar.詞彙, r.scoreData.radar.文學性
+                            ],
+                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 2,
+                            pointBackgroundColor: 'rgba(54, 162, 235, 1)'
+                        }]
+                    },
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } }, 
+                        plugins: { legend: { display: false } } 
+                    }
+                });
+             }
+        }
+    }, 200); 
+}
+
+// 輔助函數：繪製報告圖表 (教師端需要此函數)
 function drawReportChart(canvas, radarData) {
     if (!canvas) return;
-    
-    // 確保父容器有足夠高度
     const parent = canvas.parentNode;
     if (parent) {
         parent.style.height = '300px'; 
         parent.style.position = 'relative';
         parent.style.width = '100%';
     }
+    if (canvas.chart) canvas.chart.destroy();
 
-    // 銷毀舊圖表 (如果有的話) - 雖然這裡是新建 DOM，但保險起見
-    if (canvas.chart) {
-        canvas.chart.destroy();
-    }
-
-    // 建立新圖表
     canvas.chart = new Chart(canvas.getContext('2d'), {
         type: 'radar',
         data: {
             labels: ['立意', '取材', '扣題', '詳略', '詞彙', '文學性'],
             datasets: [{
                 label: '平均能力',
-                data: radarData, // 報告的 radar 數據已經是 array 格式
+                data: radarData,
                 backgroundColor: 'rgba(94, 112, 103, 0.4)',
                 borderColor: '#5e7067',
                 borderWidth: 2,
@@ -2990,17 +3013,8 @@ function drawReportChart(canvas, radarData) {
         },
         options: {
             responsive: true,
-            maintainAspectRatio: false, // 關鍵：允許填滿高度
-            scales: {
-                r: { 
-                    suggestedMin: 0, 
-                    suggestedMax: 10, 
-                    ticks: { display: false },
-                    pointLabels: {
-                        font: { size: 12, family: "'Noto Serif TC', serif" }
-                    }
-                }
-            },
+            maintainAspectRatio: false,
+            scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } },
             plugins: { legend: { display: false } }
         }
     });

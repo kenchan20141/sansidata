@@ -2318,34 +2318,30 @@ let analyticsChartInstance = null;
             let usedSummary = false; // 標記是否使用了輕量數據
  
             // ==========================================
-            // ★★★ 策略 1: 讀取全域輕量數據 (Global) ★★★
-            // ==========================================
-            if (scope === 'global' && (mode === 'month' || mode === 'year')) {
-                let summaryPath = `stats_summary/${y}`;
-                if (mode === 'month') summaryPath += `/${m}`;
-                
-                const summarySnap = await db.ref(summaryPath).once('value');
-                const sData = summarySnap.val();
+// ★★★ 策略 1: 讀取全域輕量數據 (Global) ★★★
+// ==========================================
+if (scope === 'global' && (mode === 'month' || mode === 'year')) {
+    let summaryPath = `stats_summary/${y}`;
+    if (mode === 'month') summaryPath += `/${m}`;
+    
+    // 這裡直接讀取該路徑，學生端現在會直接寫入 stats_summary/2025 的 unique 欄位
+    const summarySnap = await db.ref(summaryPath).once('value');
+    // ...
+}
  
-                if (sData) {
-                    processSummaryData(sData, mode); 
-                    usedSummary = true;
-                }
-            }
-            
-            // ==========================================
-            // ★★★ 策略 2: 讀取班級輕量數據 (Class) - [新增] ★★★
-            // ==========================================
-            else if (scope === 'class' && (mode === 'month' || mode === 'year')) {
-                // 如果沒有指定個別學生 (即查詢整班)，使用輕量數據
-                if (!selectedAnalyticsStudent) {
-                    const g = document.getElementById('statGrade').value;
-                    const c = document.getElementById('statClass').value;
-                    
-                    let summaryPath = `class_stats_summary/${g}/${c}/${y}`;
-                    if (mode === 'month') summaryPath += `/${m}`;
-
-                    const summarySnap = await db.ref(summaryPath).once('value');
+// ==========================================
+// ★★★ 策略 2: 讀取班級輕量數據 (Class) ★★★
+// ==========================================
+else if (scope === 'class' && (mode === 'month' || mode === 'year')) {
+    if (!selectedAnalyticsStudent) {
+        const g = document.getElementById('statGrade').value;
+        const c = document.getElementById('statClass').value;
+        
+        let summaryPath = `class_stats_summary/${g}/${c}/${y}`;
+        if (mode === 'month') summaryPath += `/${m}`;
+ 
+        // 同樣，學生端現在會直接寫入 class_stats_summary/6/A/2025 的 unique 欄位
+        const summarySnap = await db.ref(summaryPath).once('value');
                     const sData = summarySnap.val();
 
                     if (sData) {
@@ -2395,14 +2391,31 @@ let analyticsChartInstance = null;
     }
 
     // ★★★ [新增] 共用的 Summary 數據處理函式 ★★★
-    function processSummaryData(sData, mode) {
-        let totalVisits = 0;
-        let totalDuration = 0;
-        
-        // 遞迴累加所有子節點的 visits 和 duration
+// ★★★ 修改版：共用的 Summary 數據處理函式 (支援 Unique 顯示) ★★★
+function processSummaryData(sData, mode) {
+    let totalVisits = 0;
+    let totalDuration = 0;
+    let uniqueCount = 0; // 新增變數
+    
+    // 判斷數據結構
+    // 情況 A: 讀取特定月份或年份的直接節點 (例如 stats_summary/2025/01 或 stats_summary/2025)
+    // 這時 sData 會包含 { visits: N, duration: M, unique: K }
+    if (sData.visits || sData.unique) {
+        totalVisits = parseInt(sData.visits) || 0;
+        totalDuration = parseInt(sData.duration) || 0;
+        // ★ 讀取 Unique 欄位
+        uniqueCount = parseInt(sData.unique) || 0;
+    }
+    // 情況 B: 遞迴累加 (通常用於 mode='year' 但資料分散在月份子節點的情況)
+    // 注意：如果是 Unique Count，年份的總數不能由月份相加 (會重複)，
+    // 所以我們依賴上面學生端寫入的 `stats_summary/2025` 直接節點。
+    else {
         function sumRecursive(node) {
             if (node.visits) totalVisits += (parseInt(node.visits) || 0);
             if (node.duration) totalDuration += (parseInt(node.duration) || 0);
+            
+            // 如果是遞迴模式，我們無法準確計算 Unique，只能顯示 N/A
+            // 但因為我們在學生端新增了「年份直接寫入」，所以通常會走上面的 情況 A
             
             if (typeof node === 'object') {
                 Object.values(node).forEach(child => {
@@ -2410,26 +2423,21 @@ let analyticsChartInstance = null;
                 });
             }
         }
-        
-        // 判斷數據結構
-        // 如果是 Month 模式，sData 可能是直接的 {visits: N} (如果路徑指到月)，也可能是 { "01": {visits..}, "02": ... } (如果按日分)
-        // 我們的結構是 class_stats_summary/grade/class/YYYY/MM，所以拿到的是該月的物件 { visits: X, duration: Y }
-        if (sData.visits && mode === 'month') {
-            totalVisits = parseInt(sData.visits) || 0;
-            totalDuration = parseInt(sData.duration) || 0;
-        } else {
-            sumRecursive(sData);
-        }
-
-        // 更新 UI
-        document.getElementById('dispUnique').innerText = "N/A*"; // 輕量模式不支援去重人數
-        document.getElementById('dispVisits').innerText = totalVisits;
-        document.getElementById('dispDuration').innerText = Math.round(totalDuration/60);
-        document.getElementById('dispAvg').innerText = totalVisits ? Math.round((totalDuration/60)/totalVisits) : 0;
-        
-        // 繪製簡單圖表
-        renderSimpleChart(sData, mode);
+        sumRecursive(sData);
     }
+ 
+    // 更新 UI
+    // 如果 uniqueCount 有值，就顯示；否則顯示 N/A (針對舊數據)
+    document.getElementById('dispUnique').innerText = uniqueCount > 0 ? uniqueCount : "N/A*";
+    
+    document.getElementById('dispVisits').innerText = totalVisits;
+    document.getElementById('dispDuration').innerText = Math.round(totalDuration/60);
+    // 平均時長使用總人次計算比較合理
+    document.getElementById('dispAvg').innerText = totalVisits ? Math.round((totalDuration/60)/totalVisits) : 0;
+    
+    // 繪製簡單圖表
+    renderSimpleChart(sData, mode);
+}
 
     // ★★★ [新增] 簡單圖表渲染 (給 Summary 用) ★★★
     function renderSimpleChart(sData, mode) {

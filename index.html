@@ -1140,10 +1140,10 @@ canvas {
 
         <!-- 數據概覽卡片 -->
         <div style="display:flex; gap:20px; justify-content:center; margin:30px 0; flex-wrap:wrap;">
-            <div class="stat-card stat-purple">
-                <div class="val" id="dispUnique">0</div>
-                <div class="label">訪問人數</div>
-            </div>
+         <div class="stat-card stat-purple">
+    <div class="val" id="dispUnique">0</div>
+    <div class="label" id="labelUnique">訪問人數</div> <!-- ★ 加入 ID -->
+</div>
             <div class="stat-card stat-blue">
                 <div class="val" id="dispVisits">0</div>
                 <div class="label">訪問次數</div>
@@ -1811,72 +1811,77 @@ async function fetchReportAndOpenModal(grade, cls, name) {
     }
 }
 
-   async function generateClassReport() {
+// === 優化版 V4：基於學生報告全文 + 隱私去名保護 ===
+async function generateClassReport() {
     const btn = document.getElementById('btnClassReport');
     const g = document.getElementById('reportGrade').value;
     const c = document.getElementById('reportClass').value;
+    
     btn.disabled = true; 
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 分析全班數據中...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在匿名處理全班資料...';
 
     try {
+        // 1. 下載該班級資料
         const snapshot = await db.ref(`students/${g}/${c}`).once('value');
         const data = snapshot.val();
+        
         if (!data) { alert("此班級無學生資料！"); return; }
 
-        let classSummary = "", outlineSummary = "", readingSummary = "", expandSummary = "";
+        let fullClassTextPrompt = ""; // 用於累積所有學生的完整文字報告
         
-        // 用於累加原始分數 (0-10)
+        // 用於累加全班的平均分 (作為數據參考)
         let narrativeStats = { content: 0, expression: 0, structure: 0, count: 0 };
         let argumentStats = { content: 0, expression: 0, structure: 0, count: 0 };
         
-        let studentCount = 0;
-        const parser = new DOMParser(); // 用於解析 HTML 字串中的分數
+        let reportCount = 0; 
 
+        // 2. 遍歷每位學生
         Object.entries(data).forEach(([name, d]) => {
             const h = d.history ? (Array.isArray(d.history) ? d.history : Object.values(d.history)) : [];
             
-            // 1. 收集最新一篇報告的摘要
+            // 過濾出「學習報告」並取最新的一份
             const reports = h.filter(r => r.category === "學習報告").sort((a,b) => b.timestamp - a.timestamp);
+            
             if (reports.length > 0) { 
-                studentCount++; 
-                classSummary += `學生 ${studentCount}: ${reports[0].aiContent.replace(/<[^>]*>?/gm, ' ').substring(0, 300)}...\n`; 
-            }
+                const latestReport = reports[0];
+                reportCount++;
+                
+                // === A. 隱私去名與全文提取 ===
+                // 1. 移除 HTML 標籤，轉為純文字 (保留換行以便閱讀)
+                let rawText = latestReport.aiContent.replace(/<br\s*\/?>/gi, '\n') // 將 <br> 轉為換行
+                                                    .replace(/<[^>]+>/g, '')       // 移除所有其他 HTML 標籤
+                                                    .replace(/\s+/g, ' ')          // 將多餘空白縮減
+                                                    .trim();
 
-            // 2. 遍歷歷史紀錄，精準提取分數
-            h.forEach(r => {
-                // 提取摘要文本
-                if (r.subFunction && r.subFunction.includes("大綱")) { let t=r.aiContent.replace(/<[^>]*>?/gm, ' '); let i=t.indexOf("點評"); if(i!==-1) outlineSummary+=`[${r.category}大綱]: ${t.substring(i, i+120)}...\n`; }
-                if (r.category==="閱讀" && r.subFunction==="點評") { let t=r.aiContent.replace(/<[^>]*>?/gm, ' '); let i=t.indexOf("點評"); if(i!==-1) readingSummary+=`[閱讀]: ${t.substring(i, i+150)}...\n`; }
-                if (r.category==="整合拓展" && r.subFunction==="點評") { let t=r.aiContent.replace(/<[^>]*>?/gm, ' '); let i=t.indexOf("點評"); if(i!==-1) expandSummary+=`[整合]: ${t.substring(i, i+150)}...\n`; }
+                // 2. 組合匿名資料 (不包含 name)
+                // 限制每位學生最多傳送 800 字，避免總 Prompt 超出 AI 上限 (通常夠用)
+                fullClassTextPrompt += `\n【學生 ${reportCount} 的個人報告內容】:\n${rawText.substring(0, 800)}...\n----------------\n`;
 
-                // 精準提取分數 (從隱藏的 input 中解析)
-                if ((r.category === "敘事抒情" || r.category === "議論") && r.aiContent) {
-                    try {
-                        const doc = parser.parseFromString(r.aiContent, 'text/html');
-                        // 嘗試找隱藏的分數欄位 (這些欄位存的是 0-10 或 0-3 的原始分)
-                        const cVal = doc.querySelector('input[id*="ContentScore"]')?.value;
-                        const eVal = doc.querySelector('input[id*="ExpressionScore"]')?.value;
-                        const sVal = doc.querySelector('input[id*="StructureScore"]')?.value;
-
-                        if (cVal && eVal && sVal) {
-                            const targetStats = r.category === "敘事抒情" ? narrativeStats : argumentStats;
-                            targetStats.content += parseInt(cVal);
-                            targetStats.expression += parseInt(eVal);
-                            targetStats.structure += parseInt(sVal);
-                            targetStats.count++;
-                        }
-                    } catch (err) {
-                        // 解析失敗則跳過
+                // === B. 提取分數數據 (保持不變，用於計算平均) ===
+                const scores = latestReport.scoreData;
+                if (scores) {
+                    if (scores["敘事抒情"]) {
+                        narrativeStats.content += scores["敘事抒情"].content || 0;
+                        narrativeStats.expression += scores["敘事抒情"].expression || 0;
+                        narrativeStats.structure += scores["敘事抒情"].structure || 0;
+                        narrativeStats.count++;
+                    }
+                    if (scores["議論"]) {
+                        argumentStats.content += scores["議論"].content || 0;
+                        argumentStats.expression += scores["議論"].expression || 0;
+                        argumentStats.structure += scores["議論"].structure || 0;
+                        argumentStats.count++;
                     }
                 }
-            });
+            }
         });
 
-        if (studentCount === 0 && narrativeStats.count === 0 && argumentStats.count === 0 && !outlineSummary) { 
-            alert("此班級數據不足。"); return; 
+        if (reportCount === 0) { 
+            alert("此班級的學生尚未生成任何「學習報告」。\n請先請學生在學生端生成個人報告，老師端才能進行彙整。"); 
+            return; 
         }
 
-        // 計算平均原始分 (0-10)
+        // 3. 計算全班平均分 (0-10分制)
         const calcAvg = (stats) => {
             if (stats.count === 0) return { content: 0, expr: 0, struct: 0 };
             return {
@@ -1889,60 +1894,52 @@ async function fetchReportAndOpenModal(grade, cls, name) {
         const narrAvg = calcAvg(narrativeStats);
         const argAvg = calcAvg(argumentStats);
 
-        // 構建 Prompt (加入嚴格的排版指令)
-        const prompt = `你是一位中文科科主任。分析 ${g}年${c}班 數據：
-        敘事平均表現(10分制)：內容${narrAvg.content}, 表達${narrAvg.expr}, 結構${narrAvg.struct}。
-        議論平均表現(10分制)：內容${argAvg.content}, 表達${argAvg.expr}, 結構${argAvg.struct}。
-        「大綱」表現：${outlineSummary}
-        「閱讀」表現：${readingSummary}
-        「整合拓展」表現：${expandSummary}
-        學習報告：${classSummary}
+        // 4. 構建 Prompt (包含匿名後的全文資料)
+        const prompt = `你是一位中文科科主任。已收集 ${g}年${c}班 共 ${reportCount} 位學生的個人學習報告。
 
-        任務：生成「全班綜合學習評估報告」。
-        
+        【全班硬性指標 (平均分)】：
+        - 敘事抒情：內容${narrAvg.content}/10, 表達${narrAvg.expr}/10, 結構${narrAvg.struct}/10 (樣本數:${narrativeStats.count})
+        - 議論：內容${argAvg.content}/10, 表達${argAvg.expr}/10, 結構${argAvg.struct}/10 (樣本數:${argumentStats.count})
+
+        【個別學生報告內容 (已去名)】：
+        ${fullClassTextPrompt}
+
+        任務：請綜合分析上述所有學生的文字報告內容，歸納出全班的共同強項與弱項，生成一份「全班綜合學習評估報告」。
+
         【格式要求 (必須嚴格遵守 HTML)】：
-        1. <div class="report-section"><div class="report-category-badge badge-general"><div class="badge-general-title">${g}${c}班 綜合評估</div></div><div class="report-text-card"><p>總結</p></div></div><div class="report-separator"></div>
-        2. 嚴禁使用「'」等符號，有需要時必須運用中文的開關引號，即「」。
-        3. 請針對以下四個範疇撰寫分析，並【必須】使用以下指定的 HTML 標題格式：
+        1. <div class="report-section"><div class="report-category-badge badge-general"><div class="badge-general-title">${g}${c}班 綜合評估</div></div><div class="report-text-card"><p>(總結全班整體表現，約200字，請具體引用普遍現象，例如「多數學生在...方面表現出色」)</p></div></div><div class="report-separator"></div>
+        
+        2. 請針對有數據的範疇撰寫分析 (若該範疇無數據則不寫)，必須使用以下 HTML 格式：
            
            (敘事)：
            <div class="report-section">
                <div class="report-category-badge badge-narrative"><i class="fas fa-feather-alt"></i> 敘事抒情</div>
-               <div class="report-text-card"><p>(分析內容)</p></div>
+               <div class="report-text-card"><p>(詳細分析全班在敘事文的具體表現，歸納出 2 個優點和 2 個通病)</p></div>
            </div>
 
            (議論)：
            <div class="report-section">
                <div class="report-category-badge badge-argument"><i class="fas fa-gavel"></i> 議論</div>
-               <div class="report-text-card"><p>(分析內容)</p></div>
-           </div>
-
-           (閱讀)：
-           <div class="report-section">
-               <div class="report-category-badge badge-reading"><i class="fas fa-book-open"></i> 閱讀</div>
-               <div class="report-text-card"><p>(分析內容)</p></div>
-           </div>
-
-           (整合)：
-           <div class="report-section">
-               <div class="report-category-badge badge-expand"><i class="fas fa-project-diagram"></i> 整合拓展</div>
-               <div class="report-text-card"><p>(分析內容)</p></div>
+               <div class="report-text-card"><p>(詳細分析全班在議論文的具體表現，歸納出 2 個優點和 2 個通病)</p></div>
            </div>
         
-        3. 【教學建議部分 - 必須使用此格式，否則會亂掉】：
+        3. 【教學建議部分 - 必須使用此格式】：
            <div class="rewrite-explanation-container">
              <div class="rewrite-explanation-card">
                <h3><i class="fas fa-chalkboard-teacher"></i> 重點教學建議</h3>
-               <div class="explanation-point"><div class="explanation-number">1</div><div class="explanation-text">(建議一內容)</div></div>
-               <div class="explanation-point"><div class="explanation-number">2</div><div class="explanation-text">(建議二內容)</div></div>
-               <div class="explanation-point"><div class="explanation-number">3</div><div class="explanation-text">(建議三內容)</div></div>
+               <div class="explanation-point"><div class="explanation-number">1</div><div class="explanation-text">(針對上述通病，提出具體的教學建議一)</div></div>
+               <div class="explanation-point"><div class="explanation-number">2</div><div class="explanation-text">(針對上述通病，提出具體的教學建議二)</div></div>
+               <div class="explanation-point"><div class="explanation-number">3</div><div class="explanation-text">(針對上述通病，提出具體的教學建議三)</div></div>
              </div>
            </div>
         `;
 
+        btn.innerHTML = '<i class="fas fa-robot"></i> AI 正在閱讀全班報告...';
         
+        // 5. 呼叫 API
         const response = await callAPI(prompt);
         
+        // 6. 存檔與顯示
         const reportData = { 
             timestamp: firebase.database.ServerValue.TIMESTAMP, 
             dateStr: new Date().toLocaleString(), 
@@ -2284,206 +2281,260 @@ function loadAnalyticsClassList() {
 
 let analyticsChartInstance = null;
 
-    // === 雙軌制數據統計函式 (智慧省流版) ===
-   async function fetchAndRenderStats() {
-        const btn = document.querySelector('button[onclick="fetchAndRenderStats()"]'); // 獲取按鈕
-        const originalBtnText = btn.innerHTML; // 暫存按鈕文字
-        
-        const scope = document.getElementById('statScope').value;
-        const mode = document.getElementById('statTimeMode').value;
-        let y, m, d;
-        
-        if (mode === 'day') { 
-            const p = document.getElementById('statDate').value.split('-'); 
-            y=p[0]; m=p[1]; d=p[2]; 
-        } else { 
-            y=document.getElementById('statYear').value; 
-            if(mode==='month') m=document.getElementById('statMonth').value; 
-        }
-        
-        let path = `analytics/${y}`; 
-        if(mode==='day') path+=`/${m}/${d}`; 
-        else if(mode==='month') path+=`/${m}`;
-
-        // ★★★ 優化 1：顯示讀取中狀態 ★★★
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 數據分析中...';
-        
-        // 清空舊數據顯示，避免混淆
-        ['dispUnique','dispVisits','dispDuration','dispAvg'].forEach(id=>document.getElementById(id).innerText='-');
-        if(analyticsChartInstance) {
-            analyticsChartInstance.destroy();
-            analyticsChartInstance = null;
-        }
-
-        try {
-            const snap = await db.ref(path).once('value');
-            const data = snap.val();
-            
-            if (!data) { 
-                alert("此時段無數據紀錄"); 
-                ['dispUnique','dispVisits','dispDuration','dispAvg'].forEach(id=>document.getElementById(id).innerText=0);
-                return; 
-            }
-
-            // 初始化
-            let agg = {};
-            let globalUniqueSet = new Set();
-            let grandTotalVisits = 0;
-            let grandTotalDuration = 0;
-
-            function proc(node, label) {
-                if(!node) return;
-                if(!agg[label]) agg[label] = { uniqueSet: new Set(), visits: 0, duration: 0 };
-
-                // 1. 處理學生
-                if (node.students) {
-                    if(scope === 'global' || scope === 'school') {
-                        Object.keys(node.students).forEach(gKey => {
-                            Object.keys(node.students[gKey]).forEach(cKey => {
-                                Object.keys(node.students[gKey][cKey]).forEach(sName => {
-                                    const sData = node.students[gKey][cKey][sName];
-                                    const uid = `${gKey}${cKey}_${sName}`;
-                                    
-                                    const v = parseInt(sData.visits || 0);
-                                    const t = parseInt(sData.duration || 0);
-                                    
-                                    agg[label].uniqueSet.add(uid);
-                                    agg[label].visits += v;
-                                    agg[label].duration += t;
-
-                                    globalUniqueSet.add(uid);
-                                    grandTotalVisits += v;
-                                    grandTotalDuration += t;
-                                });
-                            });
-                        });
-                    } else if (scope === 'class') {
-                        const g = document.getElementById('statGrade').value;
-                        const c = document.getElementById('statClass').value;
-                        if(node.students[g] && node.students[g][c]) {
-                             Object.keys(node.students[g][c]).forEach(sName => {
-                                if (selectedAnalyticsStudent && sName !== selectedAnalyticsStudent) return;
-                                const sData = node.students[g][c][sName];
-                                const v = parseInt(sData.visits||0);
-                                const t = parseInt(sData.duration||0);
-                                
-                                agg[label].uniqueSet.add(sName);
-                                agg[label].visits += v;
-                                agg[label].duration += t;
-
-                                globalUniqueSet.add(sName);
-                                grandTotalVisits += v;
-                                grandTotalDuration += t;
-                            });
-                        }
-                    }
-                }
-
-                // 2. 處理訪客
-                if (scope === 'global' && node.guests) {
-                    Object.keys(node.guests).forEach(guestID => {
-                        const gData = node.guests[guestID];
-                        const v = parseInt(gData.visits || 0);
-                        const t = parseInt(gData.duration || 0);
-                        
-                        agg[label].uniqueSet.add(guestID);
-                        agg[label].visits += v;
-                        agg[label].duration += t;
-
-                        globalUniqueSet.add(guestID);
-                        grandTotalVisits += v;
-                        grandTotalDuration += t;
-                    });
-                }
-            }
-
-            // 遍歷數據
-            // ★★★ 優化 2：使用 setTimeout 讓 UI 有機會渲染「讀取中」文字，避免畫面凍結 ★★★
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            if(mode==='day') proc(data, '本日');
-            else if(mode==='month') Object.keys(data).sort().forEach(k=>proc(data[k], parseInt(k)+'日'));
-            else if(mode==='year') Object.keys(data).sort().forEach(mk=>{ Object.keys(data[mk]).forEach(dk=>proc(data[mk][dk], parseInt(mk)+'月')); });
-
-            // 卡片顯示
-            const totalPeople = globalUniqueSet.size;
-            const safeDivisor = totalPeople === 0 ? 1 : totalPeople;
-
-            document.getElementById('dispUnique').innerText = totalPeople;
-            document.getElementById('dispVisits').innerText = grandTotalVisits;
-            document.getElementById('dispDuration').innerText = Math.round(grandTotalDuration/60);
-            document.getElementById('dispAvg').innerText = Math.round((grandTotalDuration/60) / safeDivisor);
-
-            // 圖表數據準備
-            const labels = Object.keys(agg);
-            const uniqueData = Object.values(agg).map(a => a.uniqueSet.size);
-            const totalVisitsData = Object.values(agg).map(a => a.visits);
-            const durationData = Object.values(agg).map(a => Math.round(a.duration/60));
-
-            const ctx = document.getElementById('analyticsChart').getContext('2d');
-            
-            analyticsChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: { 
-                    labels: labels, 
-                    datasets: [
-                        { 
-                            label: '訪問次數', 
-                            data: totalVisitsData, 
-                            backgroundColor: '#94a7b5', // 不透明莫蘭迪藍
-                            maxBarThickness: 50,
-                            order: 2,
-                            grouped: false 
-                        },
-                        { 
-                            label: '訪問人數', 
-                            data: uniqueData, 
-                            backgroundColor: '#b6a6ca', // 不透明莫蘭迪紫
-                            maxBarThickness: 30, // 較窄
-                            order: 1,
-                            grouped: false
-                        },
-                        { 
-                            label: '總訪問時長(分)', 
-                            data: durationData, 
-                            type: 'line', 
-                            borderColor: '#d69a92', 
-                            backgroundColor: '#d69a92',
-                            borderWidth: 2, 
-                            yAxisID: 'y1',
-                            tension: 0.1,
-                            order: 0
-                        }
-                    ] 
-                },
-                options: { 
-                    maintainAspectRatio: false, 
-                    interaction: { mode: 'index', intersect: false },
-                    scales: { 
-                        x: { stacked: true },
-                        y: { 
-                            beginAtZero: true, position: 'left', title: {display:true, text:'數量'}, stacked: false,
-                            ticks: { stepSize: 1, callback: function(value) { if (value % 1 === 0) return value; } }
-                        }, 
-                        y1: { 
-                            beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, title: {display:true, text:'分鐘'},
-                            ticks: { stepSize: 1, callback: function(value) { if (value % 1 === 0) return value; } }
-                        } 
-                    }
-                }
-            });
-
-        } catch(e) { 
-            console.error(e); 
-            alert("讀取數據失敗 (可能是數據量過大或網絡問題)"); 
-        } finally {
-            // ★★★ 優化 3：無論成功或失敗，都恢復按鈕狀態 ★★★
-            btn.innerHTML = originalBtnText;
-            btn.disabled = false;
-        }
+   // === 雙軌制數據統計函式 (高效 View 節點版) ===
+// === 雙軌制數據統計函式 (一寬一窄 + 最大寬度限制 + 動態標籤版) ===
+async function fetchAndRenderStats() {
+    const btn = document.querySelector('button[onclick="fetchAndRenderStats()"]');
+    const originalBtnText = btn.innerHTML;
+    
+    // 1. 獲取篩選條件
+    const scope = document.getElementById('statScope').value;
+    const mode = document.getElementById('statTimeMode').value;
+    
+    // 2. ★★★ 動態修改標籤文字邏輯 ★★★
+    const labelEl = document.getElementById('labelUnique');
+    let uniqueLabelText = "";
+    
+    if (mode === 'day') {
+        uniqueLabelText = "訪問人數";
+        if(labelEl) labelEl.innerText = uniqueLabelText;
+    } else {
+        uniqueLabelText = "活躍人次"; // 月或年改為人次
+        if(labelEl) labelEl.innerText = uniqueLabelText;
     }
 
+    // 3. 處理時間參數
+    let y, m, d;
+    if (mode === 'day') { 
+        const p = document.getElementById('statDate').value.split('-'); 
+        y=p[0]; m=p[1]; d=p[2]; 
+    } else { 
+        y = document.getElementById('statYear').value; 
+        if(mode === 'month') m = document.getElementById('statMonth').value; 
+    }
+
+    // 4. 構建路徑
+    let fetchPath = `stats_view/${y}`;
+    if (mode === 'day' || mode === 'month') {
+        fetchPath += `/${m}`;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 數據分析中...';
+    
+    // 清空顯示
+    ['dispUnique','dispVisits','dispDuration','dispAvg'].forEach(id=>document.getElementById(id).innerText='-');
+    if(analyticsChartInstance) {
+        analyticsChartInstance.destroy();
+        analyticsChartInstance = null;
+    }
+
+    try {
+        console.log(`[Stats] 正在讀取: ${fetchPath}`);
+        const snap = await db.ref(fetchPath).once('value');
+        const monthData = snap.val();
+        
+        if (!monthData) { 
+            alert("此時段無數據紀錄"); 
+            ['dispUnique','dispVisits','dispDuration','dispAvg'].forEach(id=>document.getElementById(id).innerText=0);
+            throw new Error("No Data");
+        }
+
+        // === 數據聚合邏輯 ===
+        let totalUnique = 0;
+        let totalVisits = 0;
+        let totalDuration = 0;
+        
+        let chartLabels = [];
+        let chartVisits = [];
+        let chartUnique = [];
+        let chartDuration = [];
+
+        // 輔助：讀取節點數據
+        function getDataFromDayNode(dayNode) {
+            if (!dayNode) return { v:0, u:0, d:0 };
+            if (scope === 'class') {
+                const g = document.getElementById('statGrade').value;
+                const c = document.getElementById('statClass').value;
+                const classKey = `${g}${c}`;
+                if (dayNode.classes && dayNode.classes[classKey]) {
+                    return {
+                        v: dayNode.classes[classKey].visits || 0,
+                        u: dayNode.classes[classKey].unique || 0,
+                        d: dayNode.classes[classKey].duration || 0
+                    };
+                }
+                return { v:0, u:0, d:0 };
+            } else {
+                if (dayNode.global) {
+                    return {
+                        v: dayNode.global.visits || 0,
+                        u: dayNode.global.unique || 0,
+                        d: dayNode.global.duration || 0
+                    };
+                }
+                return { v:0, u:0, d:0 };
+            }
+        }
+
+        // 處理數據
+        if (mode === 'day') {
+            const dayData = monthData[d];
+            const stats = getDataFromDayNode(dayData);
+            totalVisits = stats.v;
+            totalUnique = stats.u;
+            totalDuration = stats.d;
+            
+            chartLabels.push(`${d}日`);
+            chartVisits.push(stats.v);
+            chartUnique.push(stats.u);
+            chartDuration.push(Math.round(stats.d/60));
+
+        } else if (mode === 'month') {
+            Object.keys(monthData).sort().forEach(dayKey => {
+                const stats = getDataFromDayNode(monthData[dayKey]);
+                totalVisits += stats.v;
+                totalUnique += stats.u;
+                totalDuration += stats.d;
+
+                chartLabels.push(`${parseInt(dayKey)}日`);
+                chartVisits.push(stats.v);
+                chartUnique.push(stats.u);
+                chartDuration.push(Math.round(stats.d/60));
+            });
+
+        } else if (mode === 'year') {
+            Object.keys(monthData).sort().forEach(monthKey => {
+                let mVisits = 0, mUnique = 0, mDuration = 0;
+                Object.values(monthData[monthKey]).forEach(dayNode => {
+                    const stats = getDataFromDayNode(dayNode);
+                    mVisits += stats.v;
+                    mUnique += stats.u;
+                    mDuration += stats.d;
+                });
+                totalVisits += mVisits;
+                totalUnique += mUnique;
+                totalDuration += mDuration;
+
+                chartLabels.push(`${parseInt(monthKey)}月`);
+                chartVisits.push(mVisits);
+                chartUnique.push(mUnique);
+                chartDuration.push(Math.round(mDuration/60));
+            });
+        }
+
+        // 更新卡片數字
+        document.getElementById('dispVisits').innerText = totalVisits;
+        document.getElementById('dispUnique').innerText = totalUnique;
+        document.getElementById('dispDuration').innerText = Math.round(totalDuration/60);
+        document.getElementById('dispAvg').innerText = totalUnique > 0 ? Math.round((totalDuration/60) / totalUnique) : 0;
+
+        // ★★★ 繪製圖表 (包含最大寬度與重疊設定) ★★★
+        const ctx = document.getElementById('analyticsChart').getContext('2d');
+        analyticsChartInstance = new Chart(ctx, {
+            type: 'bar',
+            data: { 
+                labels: chartLabels, 
+                datasets: [
+                    { 
+                        // 底層：較寬的淺色 Bar (點擊次數)
+                        label: '訪問次數', 
+                        data: chartVisits, 
+                        backgroundColor: 'rgba(148, 167, 181, 0.5)', // 半透明藍
+                        hoverBackgroundColor: 'rgba(148, 167, 181, 0.7)',
+                        
+                        // ★ 關鍵設定 1：最大寬度 (防止 Bar 太肥)
+                        maxBarThickness: 50, 
+                        
+                        // ★ 關鍵設定 2：不分組 (實現重疊)
+                        grouped: false, 
+                        
+                        order: 3 // 放在最底層
+                    },
+                    { 
+                        // 上層：較窄的深色 Bar (活躍人次)
+                        label: uniqueLabelText, 
+                        data: chartUnique, 
+                        backgroundColor: '#b6a6ca', // 深紫
+                        hoverBackgroundColor: '#9e8fb0',
+                        
+                        // ★ 關鍵設定 1：最大寬度 (比上面的窄)
+                        maxBarThickness: 30, 
+                        
+                        // ★ 關鍵設定 2：不分組 (實現重疊)
+                        grouped: false,
+                        
+                        order: 2 // 放在中間層
+                    },
+                    { 
+                        // 折線圖：總時長
+                        label: '總訪問時長', 
+                        data: chartDuration, 
+                        type: 'line', 
+                        borderColor: '#d69a92', 
+                        backgroundColor: '#d69a92',
+                        borderWidth: 2, 
+                        pointRadius: 3,
+                        yAxisID: 'y1',
+                        tension: 0.3,
+                        order: 1 // 放在最上層
+                    }
+                ] 
+            },
+            options: { 
+                maintainAspectRatio: false, 
+                interaction: { 
+                    mode: 'index', 
+                    intersect: false 
+                },
+                scales: { 
+                    x: { 
+                        // ★ 關鍵設定 3：設為堆疊 (Stacked)，配合 grouped: false 可讓 Bar 置中對齊
+                        stacked: true, 
+                        grid: { display: false }
+                    },
+                    y: { 
+                        beginAtZero: true, 
+                        position: 'left', 
+                        title: {display:true, text:'數量'},
+                        stacked: false // Y 軸數值不堆疊 (Visits 和 Unique 獨立顯示)
+                    }, 
+                    y1: { 
+                        beginAtZero: true, 
+                        position: 'right', 
+                        grid: { drawOnChartArea: false }, 
+                        title: {display:true, text:'分鐘'} 
+                    } 
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                // 優化 Tooltip：移除我們為了識別加上的 (寬)/(窄) 標記
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label = label.replace(' (寬)', '').replace(' (窄)', '');
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += context.parsed.y;
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+    } catch(e) { 
+        console.error(e);
+        if (e.message !== "No Data") alert("讀取數據失敗");
+    } finally {
+        btn.innerHTML = originalBtnText;
+        btn.disabled = false;
+    }
+}
    
 
     // --- 輔助函式：處理原始數據 (保持原有邏輯，無需變動，但需確保它存在) ---

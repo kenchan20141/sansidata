@@ -2877,14 +2877,228 @@ function ensureUniversalStyles() {
     document.head.appendChild(style);
 }
 
+
+
+
 // ==========================================================================
-// === 2. [教師端] 主渲染函數：修訂後的 renderDetail (整合所有邏輯) ===
+// === 1. [強力樣式注入] 專門針對閱讀部分的頑固排版 ===
+// ==========================================================================
+function injectStrictReadingCSS() {
+    // 如果已存在則不重複注入
+    if (document.getElementById('strict-reading-css')) return;
+
+    const style = document.createElement('style');
+    style.id = 'strict-reading-css';
+    style.innerHTML = `
+        /* === 答題步驟卡片 (強制美化) === */
+        .steps-container {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 15px !important;
+            margin-top: 15px !important;
+            padding-left: 10px !important;
+            border-left: 4px solid #4A90E2 !important;
+        }
+
+        .step-card {
+            background-color: #f7f9fc !important;
+            border: 1px solid #e1e4e8 !important;
+            border-radius: 10px !important;
+            padding: 18px 20px !important;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
+            margin-bottom: 15px !important;
+            display: block !important; /* 確保它是塊級元素 */
+        }
+
+        .step-title {
+            font-size: 1.15rem !important;
+            font-weight: bold !important;
+            color: #0056b3 !important;
+            margin-bottom: 10px !important;
+            padding-bottom: 8px !important;
+            border-bottom: 1px dashed #cbd5e0 !important;
+            display: flex !important;
+            align-items: center !important;
+        }
+        
+        .step-title::before {
+            content: '📌';
+            margin-right: 8px;
+        }
+
+        .step-content {
+            font-size: 1rem !important;
+            line-height: 1.8 !important;
+            color: #2d3748 !important;
+            text-align: justify !important;
+            font-family: 'Noto Serif TC', serif !important;
+        }
+
+        /* === 改寫範例 (原稿紙風格強制版) === */
+        .rewrite-wrapper {
+            margin-top: 20px !important;
+            background: #fff !important;
+            border-radius: 12px !important;
+            overflow: hidden !important;
+            border: 1px solid #e0e0e0 !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important;
+        }
+
+        .rewrite-header {
+            background-color: #2A9689 !important;
+            color: #fff !important;
+            padding: 12px 20px !important;
+            font-weight: bold !important;
+            font-size: 1.1rem !important;
+        }
+
+        .rewrite-content {
+            display: block !important;
+            padding: 25px !important;
+            font-family: 'Noto Serif TC', 'Songti TC', serif !important;
+            font-size: 1.1rem !important;
+            line-height: 2 !important; /* 寬鬆行距 */
+            color: #2c3e50 !important;
+            background-color: #fffcf6 !important; /* 米黃紙色 */
+            text-align: justify !important;
+            white-space: pre-wrap !important; /* 保留換行 */
+            
+            /* 格線背景 */
+            background-image: linear-gradient(#e0ddd7 1px, transparent 1px) !important;
+            background-size: 100% 2em !important; /* 模擬行線 */
+        }
+        
+        /* 一般解釋卡片 */
+        .rewrite-explanation-card {
+            background-color: #f8f9fa !important;
+            border: 1px solid #dee2e6 !important;
+            border-radius: 8px !important;
+            padding: 20px !important;
+            margin-bottom: 20px !important;
+        }
+        
+        .rewrite-explanation-card h3 {
+            margin-top: 0 !important;
+            color: #343a40 !important;
+            border-bottom: 2px solid #e9ecef !important;
+            padding-bottom: 10px !important;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// ==========================================================================
+// === 2. [智能重構] 重新解析閱讀內容 (解決文字擠在一起的問題) ===
+// ==========================================================================
+function formatReadingContent(rawHTML) {
+    if (!rawHTML) return "";
+
+    // 建立臨時容器以分析內容
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = rawHTML;
+    
+    let processedHTML = rawHTML;
+
+    // --------------------------------------------------------
+    // 針對「答題步驟及思路」的重構邏輯
+    // 如果內容是純文字或標籤混亂，我們用正則表達式強制重組
+    // --------------------------------------------------------
+    if (rawHTML.includes("【") && rawHTML.includes("】")) {
+        // 尋找包含步驟的部分 (通常在 h3 標題之後)
+        // 這裡我們嘗試找出像 【鋪墊】xxxx 【回應】xxxx 這樣的結構
+        // 並將其轉換為漂亮的 .step-card 結構
+        
+        // 此正則尋找：【標題】(內容)
+        // (?:\n|<br>)* 處理可能的換行符
+        const stepRegex = /【(.*?)】\s*([\s\S]*?)(?=(?:【|$|<div class="rewrite))/g;
+        
+        let stepsHTML = '<div class="steps-container">';
+        let match;
+        let foundSteps = false;
+        
+        // 嘗試在原始文本中匹配
+        // 先移除 HTML 標籤轉為純文字來匹配結構 (更穩健)
+        const textContent = tempDiv.innerText; 
+        
+        // 由於我們不能輕易破壞原有的 HTML 結構 (如果它已經是好的)，
+        // 我們只針對「包含特定標題但沒有被 step-card 包裹」的情況進行處理。
+        // 但為了確保一致性，最簡單的方法是：如果偵測到是閱讀點評，且有步驟關鍵字，就重新渲染該區塊。
+        
+        // 策略：尋找 "答題步驟" 標題，並重寫其後的內容
+        const stepsHeaderRegex = /(?:<h3>|<strong>).*?答題步驟.*?(?:<\/h3>|<\/strong>)/i;
+        
+        if (stepsHeaderRegex.test(rawHTML)) {
+            // 提取純淨的步驟內容
+            let newContent = rawHTML;
+            
+            // 定義替換邏輯：將 【XX】... 替換為 HTML 卡片
+            const replaceSteps = (fullMatch, title, content) => {
+                // 清理內容中的多餘換行
+                const cleanContent = content.replace(/<br\s*\/?>/gi, '\n').trim();
+                return `
+                <div class="step-card">
+                    <div class="step-title">${title}</div>
+                    <div class="step-content">${cleanContent.replace(/\n/g, '<br>')}</div>
+                </div>`;
+            };
+            
+            // 執行全局替換 (針對常見格式)
+            // 注意：這裡假設步驟是以 【 】 包裹的
+            if (rawHTML.includes('<div class="step-card">')) {
+                // 如果已經有卡片結構，不做處理，僅依靠 CSS
+            } else {
+                // 如果沒有結構，嘗試注入
+                processedHTML = processedHTML.replace(/【(.*?)】([\s\S]*?)(?=<br>【|<div|【|$)/g, replaceSteps);
+                
+                // 包裹容器
+                // 這裡稍微複雜，因為要找到插入點，簡單起見，我們讓 CSS 的 .step-card 自帶間距
+            }
+        }
+    }
+
+    // --------------------------------------------------------
+    // 針對「改寫範例」的重構邏輯
+    // --------------------------------------------------------
+    if (rawHTML.includes("改寫範例") || rawHTML.includes("改寫後")) {
+        // 尋找改寫內容並包裹
+        // 假設改寫範例通常在最後，或者由標題引導
+        
+        // 嘗試找到原本的 rewrite-content class，如果沒有，嘗試尋找標題後的內容
+        if (!processedHTML.includes('class="rewrite-content"')) {
+            // 嘗試匹配 "改寫範例" 標題後的文字
+            const rewriteRegex = /(?:<h3>|<strong>)\s*.*?(?:改寫).*?(?:<\/h3>|<\/strong>)([\s\S]*?)(?:<div|$)/i;
+            const match = processedHTML.match(rewriteRegex);
+            
+            if (match && match[1]) {
+                const originalText = match[1];
+                const wrappedText = `
+                <div class="rewrite-wrapper">
+                    <div class="rewrite-header"><i class="fas fa-pen-fancy"></i> 改寫範例</div>
+                    <div class="rewrite-content">${originalText}</div>
+                </div>`;
+                
+                processedHTML = processedHTML.replace(match[0], match[0].replace(originalText, wrappedText));
+            }
+        } else {
+            // 如果已有 class，確保它被正確的 wrapper 包裹以獲得標題樣式
+            // (這步可選，視乎原 HTML 結構)
+        }
+    }
+
+    return processedHTML;
+}
+
+
+    
+// ==========================================================================
+// === 3. [教師端] 主渲染函數：修訂後的 renderDetail ===
 // ==========================================================================
 function renderDetail(r) {
-    // 1. ★ 注入全套樣式，確保 UI 與學生端 100% 一致
-    ensureUniversalStyles();
+    // 1. 注入強力 CSS
+    injectStrictReadingCSS();
+    if (typeof ensureUniversalStyles === 'function') ensureUniversalStyles();
 
-    // 2. 隱藏列表層級，顯示詳情
+    // 2. 隱藏列表，顯示詳情
     ['historyLevel1','historyLevel2','historyLevel3'].forEach(id => document.getElementById(id).style.display='none');
     document.getElementById('historyDetail').style.display='block';
     document.getElementById('teacherBreadcrumb').style.display='none';
@@ -2892,16 +3106,26 @@ function renderDetail(r) {
     // 3. 解析使用者輸入內容
     let uContent = '';
     if (r.category === "學習報告") {
-        uContent = ''; // 報告類不需要顯示輸入
+        uContent = ''; 
     } else {
         const themeToUse = currentThemeIndex || 1;
-        uContent = renderParsedUserContent(r.userContent, themeToUse);
+        // 這裡假設您已有 renderParsedUserContent 函數，若無請保留原樣
+        uContent = (typeof renderParsedUserContent === 'function') 
+                   ? renderParsedUserContent(r.userContent, themeToUse) 
+                   : `<div style="padding:20px; background:#fff; border-radius:8px;">${r.userContent || ''}</div>`;
     }
 
     const themeIndex = currentThemeIndex || 1;
     const colorVar = `var(--m-color-${themeIndex})`;
 
-    // 4. 渲染 HTML 結構 (標題 + 學生輸入 + AI 生成結果)
+    // 4. ★★★ 關鍵：處理 AI 內容 (進行智能重構) ★★★
+    // 特別針對「閱讀」類別進行格式化，其他類別保持原樣 (或也可通用處理)
+    let processedAiContent = r.aiContent;
+    if (r.category === "閱讀") {
+        processedAiContent = formatReadingContent(r.aiContent);
+    }
+
+    // 5. 渲染 HTML
     document.getElementById('historyDetail').innerHTML = `
         <div style="margin-bottom:15px;">
             <button class="nav-btn" onclick="renderLevel3('${currentSubFunction}',${currentThemeIndex})" style="padding:5px 15px; font-size:0.9em;">
@@ -2923,35 +3147,34 @@ function renderDetail(r) {
 
             ${uContent}
 
-            <!-- AI 生成結果 (含表格、氣泡、雷達圖) -->
+            <!-- AI 生成結果 (使用處理過的內容) -->
             <div id="aiContentContainer" class="ai-output-area" style="margin-top:20px;">
-                ${r.aiContent}
+                ${processedAiContent}
             </div>
         </div>`;
 
-    // 5. ★★★ 關鍵：重繪圖表 (雷達圖) ★★★
-    // 必須使用 setTimeout 等待 DOM 渲染完成
+    // 6. 重繪圖表 (雷達圖)
     setTimeout(() => {
         const container = document.getElementById('aiContentContainer');
         if (!container) return;
 
-        // A. 處理「學習報告」的雙雷達圖 (敘事 + 議論)
+        // A. 學習報告
         if (r.category === "學習報告" && r.scoreData) {
-            
-            // 繪製敘事圖表
-            if (r.scoreData["敘事抒情"] && r.scoreData["敘事抒情"].radar) {
+            if (r.scoreData["敘事抒情"]) {
                 const narrCanvas = container.querySelector('#reportNarrativeChart') || container.querySelector('#narrativeClassChart');
-                if (narrCanvas) drawReportChart(narrCanvas, r.scoreData["敘事抒情"].radar);
+                if (narrCanvas && r.scoreData["敘事抒情"].radar) {
+                    drawReportChart(narrCanvas, r.scoreData["敘事抒情"].radar);
+                }
             }
-
-            // 繪製議論圖表
-            if (r.scoreData["議論"] && r.scoreData["議論"].radar) {
+            if (r.scoreData["議論"]) {
                 const argCanvas = container.querySelector('#reportArgumentChart') || container.querySelector('#argumentClassChart');
-                if (argCanvas) drawReportChart(argCanvas, r.scoreData["議論"].radar);
+                if (argCanvas && r.scoreData["議論"].radar) {
+                    drawReportChart(argCanvas, r.scoreData["議論"].radar);
+                }
             }
         }
         
-        // B. 處理一般單篇作業 (敘事/議論) 的雷達圖
+        // B. 一般作業
         else if (r.scoreData && r.scoreData.radar) {
              const canvas = container.querySelector('canvas');
              if (canvas) {
@@ -2987,16 +3210,17 @@ function renderDetail(r) {
     }, 200); 
 }
 
-// 輔助函數：繪製報告圖表 (教師端需要此函數)
+// 輔助函數：繪製報告圖表 (如果未定義)
 function drawReportChart(canvas, radarData) {
     if (!canvas) return;
-    const parent = canvas.parentNode;
-    if (parent) {
-        parent.style.height = '300px'; 
-        parent.style.position = 'relative';
-        parent.style.width = '100%';
-    }
     if (canvas.chart) canvas.chart.destroy();
+    
+    // 確保父容器高度
+    const parent = canvas.parentNode;
+    if(parent) {
+        parent.style.height = '300px';
+        parent.style.position = 'relative';
+    }
 
     canvas.chart = new Chart(canvas.getContext('2d'), {
         type: 'radar',

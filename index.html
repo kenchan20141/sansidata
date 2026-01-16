@@ -2296,7 +2296,7 @@ async function fetchAndRenderStats() {
     let uniqueLabelText = "";
     
     if (mode === 'day') {
-        uniqueLabelText = "訪問人數 (去重)";
+        uniqueLabelText = "訪問人數";
         if(labelEl) labelEl.innerText = uniqueLabelText;
     } else {
         uniqueLabelText = "活躍人次"; // 月或年改為人次
@@ -2438,7 +2438,7 @@ async function fetchAndRenderStats() {
                 datasets: [
                     { 
                         // 底層：較寬的淺色 Bar (點擊次數)
-                        label: '點擊次數 (寬)', 
+                        label: '訪問次數', 
                         data: chartVisits, 
                         backgroundColor: 'rgba(148, 167, 181, 0.5)', // 半透明藍
                         hoverBackgroundColor: 'rgba(148, 167, 181, 0.7)',
@@ -2453,7 +2453,7 @@ async function fetchAndRenderStats() {
                     },
                     { 
                         // 上層：較窄的深色 Bar (活躍人次)
-                        label: uniqueLabelText + ' (窄)', 
+                        label: uniqueLabelText, 
                         data: chartUnique, 
                         backgroundColor: '#b6a6ca', // 深紫
                         hoverBackgroundColor: '#9e8fb0',
@@ -2468,7 +2468,7 @@ async function fetchAndRenderStats() {
                     },
                     { 
                         // 折線圖：總時長
-                        label: '總時長 (分)', 
+                        label: '總訪問時長', 
                         data: chartDuration, 
                         type: 'line', 
                         borderColor: '#d69a92', 

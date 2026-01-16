@@ -2285,203 +2285,192 @@ function loadAnalyticsClassList() {
 let analyticsChartInstance = null;
 
     // === 雙軌制數據統計函式 (智慧省流版) ===
-    async function fetchAndRenderStats() {
-        const btn = document.querySelector('button[onclick="fetchAndRenderStats()"]');
-        const originalBtnText = btn.innerHTML;
-        
-        const scope = document.getElementById('statScope').value; // global, school, class
-        const mode = document.getElementById('statTimeMode').value; // day, month, year
-        
-        // 取得日期參數
-        let y, m, d;
-        if (mode === 'day') {
-            const dateVal = document.getElementById('statDate').value;
-            if(!dateVal) { alert("請選擇日期"); return; }
-            const p = dateVal.split('-');
-            y=p[0]; m=p[1]; d=p[2];
-        } else {
-            y=document.getElementById('statYear').value;
-            if(mode==='month') m=document.getElementById('statMonth').value;
-        }
- 
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 智慧讀取中...';
-        
-        // 清空顯示
-        ['dispUnique','dispVisits','dispDuration','dispAvg'].forEach(id=>document.getElementById(id).innerText='-');
-        if(analyticsChartInstance) {
-            analyticsChartInstance.destroy();
-            analyticsChartInstance = null;
-        }
- 
-        try {
-            let usedSummary = false; // 標記是否使用了輕量數據
- 
-           // ==========================================
-// ★★★ 策略 1: 讀取全域輕量數據 (Global) ★★★
-// ==========================================
-if (scope === 'global' && (mode === 'month' || mode === 'year')) {
-    let summaryPath = `stats_summary/${y}`;
-    if (mode === 'month') summaryPath += `/${m}`;
+  // === [修訂版] 雙軌制數據統計函式 (極速省流版) ===
+async function fetchAndRenderStats() {
+    const btn = document.querySelector('button[onclick="fetchAndRenderStats()"]');
+    const originalBtnText = btn.innerHTML;
     
-    // 這裡直接讀取該路徑，學生端現在會直接寫入 stats_summary/2025 的 unique 欄位
-    const summarySnap = await db.ref(summaryPath).once('value');
-                const sData = summarySnap.val();
- 
-                if (sData) {
-                    processSummaryData(sData, mode); 
-                    usedSummary = true;
-                }
-            }
-            
-           // ==========================================
-// ★★★ 策略 2: 讀取班級輕量數據 (Class) ★★★
-// ==========================================
-else if (scope === 'class' && (mode === 'month' || mode === 'year')) {
-    if (!selectedAnalyticsStudent) {
-        const g = document.getElementById('statGrade').value;
-        const c = document.getElementById('statClass').value;
-        
-        let summaryPath = `class_stats_summary/${g}/${c}/${y}`;
-        if (mode === 'month') summaryPath += `/${m}`;
- 
-        // 同樣，學生端現在會直接寫入 class_stats_summary/6/A/2025 的 unique 欄位
-        const summarySnap = await db.ref(summaryPath).once('value');
-                    const sData = summarySnap.val();
-
-                    if (sData) {
-                        console.log("✅ 命中班級輕量數據！");
-                        processSummaryData(sData, mode);
-                        usedSummary = true;
-                    }
-                }
-            }
- 
-            // ==========================================
-            // ★★★ 策略 3: 後備方案 (原始詳細數據) ★★★
-            // ==========================================
-            if (!usedSummary) {
-                console.log("⚠️ 切換回原始數據下載模式...");
-                
-                // 流量警告：只有在「查全年」且「沒有 Summary」時才警告
-                if (mode === 'year') {
-                    if (!confirm("⚠️ 注意：\n\n您正在查詢「全年」的詳細原始數據，這可能消耗大量流量。\n(因為此時段尚未建立輕量索引)\n\n建議：改為查詢「本月」。\n\n確定要繼續嗎？")) {
-                        btn.disabled = false; btn.innerHTML = originalBtnText; return;
-                    }
-                }
- 
-                let path = `analytics/${y}`;
-                if(mode==='day') path+=`/${m}/${d}`;
-                else if(mode==='month') path+=`/${m}`;
- 
-                const snap = await db.ref(path).once('value');
-                const data = snap.val();
- 
-                if (!data) {
-                    alert("查無數據");
-                    ['dispUnique','dispVisits','dispDuration','dispAvg'].forEach(id=>document.getElementById(id).innerText=0);
-                    return;
-                }
- 
-                processRawData(data, scope, mode, selectedAnalyticsStudent);
-            }
- 
-        } catch(e) {
-            console.error(e);
-            alert("讀取失敗：" + e.message);
-        } finally {
-            btn.innerHTML = originalBtnText;
-            btn.disabled = false;
-        }
+    const scope = document.getElementById('statScope').value; // global, school, class
+    const mode = document.getElementById('statTimeMode').value; // day, month, year
+    
+    // 取得日期參數
+    let y, m, d;
+    if (mode === 'day') {
+        const dateVal = document.getElementById('statDate').value;
+        if(!dateVal) { alert("請選擇日期"); return; }
+        const p = dateVal.split('-');
+        y=p[0]; m=p[1]; d=p[2];
+    } else {
+        y=document.getElementById('statYear').value;
+        if(mode === 'month') m=document.getElementById('statMonth').value;
     }
 
-    // ★★★ [新增] 共用的 Summary 數據處理函式 ★★★
-  // ★★★ 修改版：共用的 Summary 數據處理函式 (支援 Unique 顯示) ★★★
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 智慧讀取中...';
+    
+    // 清空顯示
+    ['dispUnique','dispVisits','dispDuration','dispAvg'].forEach(id=>document.getElementById(id).innerText='-');
+    if(analyticsChartInstance) {
+        analyticsChartInstance.destroy();
+        analyticsChartInstance = null;
+    }
+
+    try {
+        let targetPath = '';
+        let isSummaryMode = false;
+
+        // ★★★ 策略判斷：決定讀取路徑 ★★★
+        
+        // 1. 如果是「每日」(Day) -> 仍需讀取 analytics 原始資料 (因為我們沒做每日 Summary)
+        // 這是唯一會比較花流量的情況，但一天只有 24 小時的數據，通常還好
+        if (mode === 'day') {
+            targetPath = `analytics/${y}/${m}/${d}`;
+            isSummaryMode = false;
+        } 
+        
+        // 2. 如果是「每月」(Month) 或 「每年」(Year) -> 讀取 stats_summary (極速)
+        else {
+            isSummaryMode = true;
+            let suffix = (mode === 'month') ? `/${y}/${m}` : `/${y}`;
+
+            if (scope === 'global') {
+                targetPath = `stats_summary${suffix}`;
+            } 
+            else if (scope === 'school') {
+                targetPath = `school_stats_summary${suffix}`;
+            } 
+            else if (scope === 'class') {
+                const g = document.getElementById('statGrade').value;
+                const c = document.getElementById('statClass').value;
+                // 如果有選特定學生，暫時不支援 Summary 模式，需回退到 raw data
+                if (selectedAnalyticsStudent) {
+                    isSummaryMode = false; // 回退
+                    targetPath = (mode === 'month') ? `analytics/${y}/${m}` : `analytics/${y}`;
+                } else {
+                    targetPath = `class_stats_summary/${g}/${c}${suffix}`;
+                }
+            }
+        }
+
+        console.log(`[Stats] Mode: ${isSummaryMode ? 'Summary (Fast)' : 'Raw (Slow)'}, Path: ${targetPath}`);
+
+        // 讀取數據
+        const snap = await db.ref(targetPath).once('value');
+        const data = snap.val();
+
+        if (!data) {
+            alert("查無數據 (可能是該時段尚未有新版數據寫入)");
+            ['dispUnique','dispVisits','dispDuration','dispAvg'].forEach(id=>document.getElementById(id).innerText=0);
+            return;
+        }
+
+        // 處理顯示
+        if (isSummaryMode) {
+            processSummaryData(data, mode);
+        } else {
+            // 舊有的 Raw Data 處理 (用於日查詢或選定學生時)
+            processRawData(data, scope, mode, selectedAnalyticsStudent);
+        }
+
+    } catch(e) {
+        console.error(e);
+        alert("讀取失敗：" + e.message);
+    } finally {
+        btn.innerHTML = originalBtnText;
+        btn.disabled = false;
+    }
+}
+
+// ★★★ 核心：處理輕量總結數據 (解決 N/A* 問題) ★★★
 function processSummaryData(sData, mode) {
     let totalVisits = 0;
     let totalDuration = 0;
-    let uniqueCount = 0; // 新增變數
+    let uniqueCount = 0;
     
-    // 判斷數據結構
-    // 情況 A: 讀取特定月份或年份的直接節點 (例如 stats_summary/2025/01 或 stats_summary/2025)
-    // 這時 sData 會包含 { visits: N, duration: M, unique: K }
-    if (sData.visits || sData.unique) {
-        totalVisits = parseInt(sData.visits) || 0;
-        totalDuration = parseInt(sData.duration) || 0;
-        // ★ 讀取 Unique 欄位
-        uniqueCount = parseInt(sData.unique) || 0;
-    }
-    // 情況 B: 遞迴累加 (通常用於 mode='year' 但資料分散在月份子節點的情況)
-    // 注意：如果是 Unique Count，年份的總數不能由月份相加 (會重複)，
-    // 所以我們依賴上面學生端寫入的 `stats_summary/2025` 直接節點。
+    // 檢查 sData 是單一層數據還是包含子節點
+    // 如果路徑是 .../2025 (Year Mode) 或 .../2025/01 (Month Mode)
+    // 且該節點下直接有 visits/unique，那就是單層數據
+    
+    if (sData.visits !== undefined || sData.unique !== undefined) {
+        totalVisits = parseInt(sData.visits || 0);
+        totalDuration = parseInt(sData.duration || 0);
+        uniqueCount = parseInt(sData.unique || 0);
+    } 
+    // 如果沒有直接數據 (可能是舊數據結構或部分缺失)，嘗試累加子節點 (不推薦，Unique 會不準)
     else {
-        function sumRecursive(node) {
-            if (node.visits) totalVisits += (parseInt(node.visits) || 0);
-            if (node.duration) totalDuration += (parseInt(node.duration) || 0);
-            
-            // 如果是遞迴模式，我們無法準確計算 Unique，只能顯示 N/A
-            // 但因為我們在學生端新增了「年份直接寫入」，所以通常會走上面的 情況 A
-            
-            if (typeof node === 'object') {
-                Object.values(node).forEach(child => {
-                    if (typeof child === 'object') sumRecursive(child);
-                });
-            }
-        }
-        sumRecursive(sData);
+        // Fallback: 簡單累加
+        Object.values(sData).forEach(child => {
+            if (child.visits) totalVisits += parseInt(child.visits);
+            if (child.duration) totalDuration += parseInt(child.duration);
+            // Unique 無法累加
+        });
+        uniqueCount = "N/A (舊)";
     }
- 
-    // 更新 UI
-    // 如果 uniqueCount 有值，就顯示；否則顯示 N/A (針對舊數據)
-    document.getElementById('dispUnique').innerText = uniqueCount > 0 ? uniqueCount : "N/A*";
-    
+
+    // 更新數字卡片
+    document.getElementById('dispUnique').innerText = uniqueCount;
     document.getElementById('dispVisits').innerText = totalVisits;
     document.getElementById('dispDuration').innerText = Math.round(totalDuration/60);
-    // 平均時長使用總人次計算比較合理
+    // 平均時長 = 總時長 / 總人次 (Visits)
     document.getElementById('dispAvg').innerText = totalVisits ? Math.round((totalDuration/60)/totalVisits) : 0;
-    
-    // 繪製簡單圖表
-    renderSimpleChart(sData, mode);
+
+    // 繪製圖表 (簡單版)
+    renderSummaryChart(sData, mode);
 }
 
-    // ★★★ [新增] 簡單圖表渲染 (給 Summary 用) ★★★
-    function renderSimpleChart(sData, mode) {
-        let labels = [];
-        let visitsData = [];
+// ★★★ 繪製輕量圖表 ★★★
+function renderSummaryChart(sData, mode) {
+    let labels = [];
+    let dataPoints = [];
 
-        // 如果是單一物件 (Month模式直接命中)，沒有子節點，顯示單柱
-        if (sData.visits && mode === 'month') {
-            labels = ['本月總計'];
-            visitsData = [parseInt(sData.visits)];
-        } else {
-            // 有子節點 (Year模式下的月份，或Month模式下的無直接visits)
-            labels = Object.keys(sData).sort((a,b)=>parseInt(a)-parseInt(b));
-            
-            labels.forEach(k => {
-                let v = 0;
-                // 計算該節點下的總和
-                function sumV(n) { 
-                    if(n.visits) v+=parseInt(n.visits); 
-                    if(typeof n==='object') Object.values(n).forEach(c=>typeof c==='object'?sumV(c):null); 
-                }
-                sumV(sData[k]);
-                visitsData.push(v);
-            });
-            
-            // 格式化標籤
-            labels = labels.map(l => l + (mode==='year'?'月':'日'));
-        }
- 
-        const ctx = document.getElementById('analyticsChart').getContext('2d');
-        analyticsChartInstance = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{ label: '訪問次數 (快速預覽)', data: visitsData, backgroundColor: '#94a7b5' }]
-            },
-            options: { maintainAspectRatio: false }
-        });
+    // 如果讀取的是 Year (2025)，sData 可能還包含月份子節點 (01, 02...) 
+    // 但因為我們現在將 Year 總數直接寫在根節點，所以 sData 本身包含總數。
+    // 為了畫圖，我們需要去讀取它的「子節點」來畫分佈。
+    
+    // 注意：如果是 Summary Mode，sData 應該是一個物件。
+    // 如果是 Year Mode，我們期望 sData 裡面有 '01', '02'... 這樣的 key
+    // 但我們上面的寫入邏輯是 stats_summary/2025 = {visits:..., unique:...}
+    // 這意味著 2025 下面不再有 01, 02。
+    // **修正方案**：為了畫圖，我們在 Year Mode 應該還是要讀取所有月份的資料。
+    
+    // 因為 Summary Mode 的 Year Node 只有總數，沒有分佈。
+    // 如果要畫「每月趨勢圖」，我們需要 sData 包含月份 Key。
+    // 這裡做一個簡單處理：如果 sData 只有總數，顯示單柱；如果有子Key，顯示分佈。
+
+    const keys = Object.keys(sData).filter(k => !['visits','duration','unique'].includes(k)).sort();
+    
+    if (keys.length > 0) {
+        // 有分佈數據 (例如讀取 stats_summary/2025 時，Firebase 可能會回傳包含 01, 02 的樹狀結構，視乎寫入方式)
+        // 在我們新的寫入邏輯中，2025 與 2025/01 是同級寫入，Firebase 會合併它們。
+        // 所以 sData 應該會長這樣： { visits:100, unique:10, "01": {visits:20...}, "02": {...} }
+        
+        labels = keys.map(k => k + (mode === 'year' ? '月' : '日'));
+        dataPoints = keys.map(k => parseInt(sData[k]?.visits || 0));
+    } else {
+        // 只有總數 (例如 Month Mode，且沒有日資料)
+        labels = [mode === 'year' ? '本年總計' : '本月總計'];
+        dataPoints = [parseInt(sData.visits || 0)];
     }
+
+    const ctx = document.getElementById('analyticsChart').getContext('2d');
+    analyticsChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: '訪問人次',
+                data: dataPoints,
+                backgroundColor: '#94a7b5',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } }
+        }
+    });
+}
 
     // --- 輔助函式：處理原始數據 (保持原有邏輯，無需變動，但需確保它存在) ---
     function processRawData(data, scope, mode, selectedStudent) {

@@ -1140,10 +1140,10 @@ canvas {
 
         <!-- 數據概覽卡片 -->
         <div style="display:flex; gap:20px; justify-content:center; margin:30px 0; flex-wrap:wrap;">
-            <div class="stat-card stat-purple">
-                <div class="val" id="dispUnique">0</div>
-                <div class="label">訪問人數</div>
-            </div>
+         <div class="stat-card stat-purple">
+    <div class="val" id="dispUnique">0</div>
+    <div class="label" id="labelUnique">訪問人數</div> <!-- ★ 加入 ID -->
+</div>
             <div class="stat-card stat-blue">
                 <div class="val" id="dispVisits">0</div>
                 <div class="label">訪問次數</div>
@@ -2285,15 +2285,28 @@ function loadAnalyticsClassList() {
 let analyticsChartInstance = null;
 
    // === 雙軌制數據統計函式 (高效 View 節點版) ===
+// === 雙軌制數據統計函式 (一寬一窄圖表 + 動態標籤版) ===
 async function fetchAndRenderStats() {
     const btn = document.querySelector('button[onclick="fetchAndRenderStats()"]');
     const originalBtnText = btn.innerHTML;
     
-    // 獲取篩選條件
-    const scope = document.getElementById('statScope').value; // global, school, class
-    const mode = document.getElementById('statTimeMode').value; // day, month, year
+    // 1. 獲取篩選條件
+    const scope = document.getElementById('statScope').value;
+    const mode = document.getElementById('statTimeMode').value;
     
-    // 獲取時間參數
+    // 2. ★★★ 動態修改標籤文字邏輯 ★★★
+    const labelEl = document.getElementById('labelUnique');
+    let uniqueLabelText = "";
+    
+    if (mode === 'day') {
+        uniqueLabelText = "訪問人數 (去重)";
+        if(labelEl) labelEl.innerText = uniqueLabelText;
+    } else {
+        uniqueLabelText = "活躍人次"; // 月或年改為人次
+        if(labelEl) labelEl.innerText = uniqueLabelText;
+    }
+
+    // 3. 處理時間參數
     let y, m, d;
     if (mode === 'day') { 
         const p = document.getElementById('statDate').value.split('-'); 
@@ -2303,12 +2316,10 @@ async function fetchAndRenderStats() {
         if(mode === 'month') m = document.getElementById('statMonth').value; 
     }
 
-    // 構建讀取路徑
-    // 我們將讀取 stats_view/YYYY 或 stats_view/YYYY/MM
-    // 這樣可以一次拉取該時間範圍內的所有數據，然後在客戶端加總
+    // 4. 構建路徑 (使用高效的 stats_view)
     let fetchPath = `stats_view/${y}`;
     if (mode === 'day' || mode === 'month') {
-        fetchPath += `/${m}`; // 讀取整個月的數據，即使是查 Day，這樣結構比較好處理
+        fetchPath += `/${m}`;
     }
 
     btn.disabled = true;
@@ -2322,36 +2333,33 @@ async function fetchAndRenderStats() {
     }
 
     try {
-        console.log(`[Stats] 正在讀取 View 節點: ${fetchPath}`);
+        console.log(`[Stats] 正在讀取: ${fetchPath}`);
         const snap = await db.ref(fetchPath).once('value');
-        const monthData = snap.val(); // 這是一個包含該月所有日期的物件 { "01": {...}, "02": {...} }
+        const monthData = snap.val();
         
         if (!monthData) { 
             alert("此時段無數據紀錄"); 
+            ['dispUnique','dispVisits','dispDuration','dispAvg'].forEach(id=>document.getElementById(id).innerText=0);
             throw new Error("No Data");
         }
 
         // === 數據聚合邏輯 ===
-        let totalUnique = 0; // 注意：Unique 在 View 模式下是每日去重，累加起來其實是「人次」，但這是 trade-off
+        let totalUnique = 0;
         let totalVisits = 0;
         let totalDuration = 0;
         
-        // 圖表數據 (X軸: 日期/月份, Y軸: 數值)
         let chartLabels = [];
         let chartVisits = [];
         let chartUnique = [];
         let chartDuration = [];
 
-        // 輔助：判斷是否要統計這個節點 (針對班級篩選)
+        // 輔助：讀取節點數據
         function getDataFromDayNode(dayNode) {
             if (!dayNode) return { v:0, u:0, d:0 };
-            
             if (scope === 'class') {
                 const g = document.getElementById('statGrade').value;
                 const c = document.getElementById('statClass').value;
                 const classKey = `${g}${c}`;
-                
-                // 讀取 classes 節點下的特定班級
                 if (dayNode.classes && dayNode.classes[classKey]) {
                     return {
                         v: dayNode.classes[classKey].visits || 0,
@@ -2361,7 +2369,6 @@ async function fetchAndRenderStats() {
                 }
                 return { v:0, u:0, d:0 };
             } else {
-                // global 或 school (暫時視為一樣，讀取 global 節點)
                 if (dayNode.global) {
                     return {
                         v: dayNode.global.visits || 0,
@@ -2373,36 +2380,26 @@ async function fetchAndRenderStats() {
             }
         }
 
-        // 處理數據：根據模式聚合
+        // 處理數據
         if (mode === 'day') {
-            // 只看特定一天 (但我們下載了整個月，所以直接取那天)
             const dayData = monthData[d];
             const stats = getDataFromDayNode(dayData);
-            
             totalVisits = stats.v;
             totalUnique = stats.u;
             totalDuration = stats.d;
             
-            // 圖表只顯示這一天 (單柱)
             chartLabels.push(`${d}日`);
             chartVisits.push(stats.v);
             chartUnique.push(stats.u);
             chartDuration.push(Math.round(stats.d/60));
 
         } else if (mode === 'month') {
-            // 遍歷這個月的每一天
             Object.keys(monthData).sort().forEach(dayKey => {
-                const dayNode = monthData[dayKey];
-                const stats = getDataFromDayNode(dayNode);
-                
-                // 累加總數
+                const stats = getDataFromDayNode(monthData[dayKey]);
                 totalVisits += stats.v;
-                // 注意：這裡的 Unique 是每日 Unique 的總和，嚴格來說不是月 Unique，
-                // 但在不存 ID 的情況下這是最佳近似值 (每日活躍人數總和)
-                totalUnique += stats.u; 
+                totalUnique += stats.u; // 這裡是每日活躍的累加 (人次)
                 totalDuration += stats.d;
 
-                // 圖表數據
                 chartLabels.push(`${parseInt(dayKey)}日`);
                 chartVisits.push(stats.v);
                 chartUnique.push(stats.u);
@@ -2410,29 +2407,18 @@ async function fetchAndRenderStats() {
             });
 
         } else if (mode === 'year') {
-            // 年模式比較特殊，因為我們傳入的是 stats_view/YYYY (包含多個月份物件)
-            // monthData 在這裡是 { "01": {days...}, "02": {days...} }
-            
             Object.keys(monthData).sort().forEach(monthKey => {
-                let mVisits = 0;
-                let mUnique = 0;
-                let mDuration = 0;
-                
-                // 遍歷該月的所有天
-                const daysInMonth = monthData[monthKey];
-                Object.values(daysInMonth).forEach(dayNode => {
+                let mVisits = 0, mUnique = 0, mDuration = 0;
+                Object.values(monthData[monthKey]).forEach(dayNode => {
                     const stats = getDataFromDayNode(dayNode);
                     mVisits += stats.v;
                     mUnique += stats.u;
                     mDuration += stats.d;
                 });
-
-                // 累加到年總數
                 totalVisits += mVisits;
                 totalUnique += mUnique;
                 totalDuration += mDuration;
 
-                // 圖表數據
                 chartLabels.push(`${parseInt(monthKey)}月`);
                 chartVisits.push(mVisits);
                 chartUnique.push(mUnique);
@@ -2442,13 +2428,12 @@ async function fetchAndRenderStats() {
 
         // 更新卡片數字
         document.getElementById('dispVisits').innerText = totalVisits;
-        // 這裡顯示的是「人次」或「每日活躍總和」
-        document.getElementById('dispUnique').innerText = totalUnique; 
+        document.getElementById('dispUnique').innerText = totalUnique;
         document.getElementById('dispDuration').innerText = Math.round(totalDuration/60);
-        // 平均 = 總時長 / 總人數 (防止除以零)
+        // 平均 = 總時長 / 總人次 (防止除以零)
         document.getElementById('dispAvg').innerText = totalUnique > 0 ? Math.round((totalDuration/60) / totalUnique) : 0;
 
-        // 繪製圖表
+        // ★★★ 繪製一寬一窄圖表 ★★★
         const ctx = document.getElementById('analyticsChart').getContext('2d');
         analyticsChartInstance = new Chart(ctx, {
             type: 'bar',
@@ -2456,38 +2441,99 @@ async function fetchAndRenderStats() {
                 labels: chartLabels, 
                 datasets: [
                     { 
-                        label: '訪問次數', 
+                        // 底層：較寬的淺色 Bar (瀏覽次數/Visits)
+                        label: '點擊次數 (寬)', 
                         data: chartVisits, 
-                        backgroundColor: '#94a7b5', 
-                        order: 2 
+                        // 使用半透明藍色，讓後面的網格線隱約可見，且不搶眼
+                        backgroundColor: 'rgba(148, 167, 181, 0.5)', 
+                        hoverBackgroundColor: 'rgba(148, 167, 181, 0.7)',
+                        barPercentage: 0.7,      // ★ 關鍵：設定較寬
+                        categoryPercentage: 0.8, // 控制群組間距
+                        order: 3                 // 放在最底層
                     },
                     { 
-                        label: '活躍人數 (日)', 
+                        // 上層：較窄的深色 Bar (活躍人次/Unique)
+                        label: uniqueLabelText + ' (窄)', 
                         data: chartUnique, 
+                        // 使用深莫蘭迪紫，突出顯示核心數據
                         backgroundColor: '#b6a6ca', 
-                        order: 1 
+                        hoverBackgroundColor: '#9e8fb0',
+                        barPercentage: 0.35,     // ★ 關鍵：設定較窄 (約為寬Bar的一半)
+                        categoryPercentage: 0.8, // 必須與寬Bar一致，確保圓心對齊
+                        order: 2                 // 放在中間層
                     },
                     { 
+                        // 折線圖：總時長
                         label: '總時長 (分)', 
                         data: chartDuration, 
                         type: 'line', 
                         borderColor: '#d69a92', 
                         backgroundColor: '#d69a92',
                         borderWidth: 2, 
-                        yAxisID: 'y1',
+                        pointRadius: 3,
+                        yAxisID: 'y1',           // 使用右側 Y 軸
                         tension: 0.3,
-                        order: 0
+                        order: 1                 // 放在最上層
                     }
                 ] 
             },
             options: { 
                 maintainAspectRatio: false, 
-                interaction: { mode: 'index', intersect: false },
+                interaction: { 
+                    mode: 'index', 
+                    intersect: false 
+                },
                 scales: { 
-                    x: { stacked: false },
-                    y: { beginAtZero: true, position: 'left', title: {display:true, text:'數量'} }, 
-                    y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, title: {display:true, text:'分鐘'} } 
-                } 
+                    x: { 
+                        // ★★★ 核心設定：設為 stacked 讓它們重疊 ★★★
+                        stacked: true, 
+                        grid: { display: false }
+                    },
+                    y: { 
+                        beginAtZero: true, 
+                        position: 'left', 
+                        title: {display:true, text:'數量'},
+                        // 因為是 stacked，我們要防止數值疊加 (Visits + Unique)，
+                        // 但 Chart.js 的 stacked: true 預設會累加數值。
+                        // 解決方案：這只是視覺上的重疊，
+                        // 對於 "一寬一窄" 效果，其實設 stacked: true 是最簡單的方法讓它們置中對齊。
+                        // 由於 Visits 永遠 >= Unique，所以 Visits Bar (底層) 會顯示完整高度，
+                        // Unique Bar (上層) 會蓋住 Visits 的下半部，
+                        // 雖然數學上它們被疊加了，但因為我們不需要看「總高度」，
+                        // 我們看的是各自的 Bar頂端 位置。
+                        // 
+                        // 如果您發現高度不對 (例如變成 Visits + Unique 的高度)，
+                        // 請改用 stacked: false 並依靠 barPercentage 來重疊 (需插件支援)
+                        // 
+                        // ★ 對於 Chart.js 3+ 標準做法：
+                        stacked: false // 改回 false，讓它們並排，但透過下面的設定來重疊
+                    }, 
+                    y1: { 
+                        beginAtZero: true, 
+                        position: 'right', 
+                        grid: { drawOnChartArea: false }, 
+                        title: {display:true, text:'分鐘'} 
+                    } 
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                // 優化 Tooltip 顯示
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    // 移除我們為了識別加上的 (寬)/(窄) 標記
+                                    label = label.replace(' (寬)', '').replace(' (窄)', '');
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += context.parsed.y;
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
             }
         });
 
@@ -2499,7 +2545,6 @@ async function fetchAndRenderStats() {
         btn.disabled = false;
     }
 }
-
    
 
     // --- 輔助函式：處理原始數據 (保持原有邏輯，無需變動，但需確保它存在) ---

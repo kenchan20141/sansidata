@@ -2798,13 +2798,110 @@ function renderParsedUserContent(userContent, themeIndex = 1) {
 }
     // 歷史紀錄詳情
 // === 修訂：教師端歷史詳情檢閱 (UI/UX 與學生端完全一致版) ===
+// === 新增：確保教師端擁有與學生端一致的樣式 (解決閱讀點評排版不一致問題) ===
+function ensureStudentStyles() {
+    if (document.getElementById('student-styles-injected')) return;
+    
+    const style = document.createElement('style');
+    style.id = 'student-styles-injected';
+    style.innerHTML = `
+        /* === 移植自學生端的關鍵樣式 (閱讀點評專用) === */
+        
+        /* 1. 答題步驟卡片 */
+        .steps-container {
+            margin-top: 20px;
+            padding-left: 15px;
+            border-left: 4px solid #4A90E2;
+        }
+        .step-card {
+            background-color: #f7f9fc;
+            border-radius: 8px;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            border: 1px solid #e1e4e8; /* 增加邊框讓層次更分明 */
+        }
+        .step-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+        }
+        .step-card:last-child { 
+            margin-bottom: 0; 
+        }
+        .step-title {
+            font-weight: bold;
+            font-size: 1.1em;
+            color: #0056b3;
+            margin-bottom: 10px;
+            display: flex; 
+            align-items: center;
+            gap: 8px;
+        }
+        /* 自動為步驟標題加 icon */
+        .step-title::before {
+            content: '\\f0ae'; /* FontAwesome tasks icon */
+            font-family: "Font Awesome 5 Free";
+            font-weight: 900;
+            font-size: 0.9em;
+        }
+        .step-content {
+            font-size: 1em;
+            line-height: 1.7;
+            color: #333;
+            text-align: justify;
+        }
+
+        /* 2. 改寫範例 / 內文容器 */
+        .rewrite-content {
+            font-family: 'Noto Serif TC', serif !important;
+            font-size: 1rem !important; 
+            line-height: 1.8 !important; 
+            color: #2c3e50 !important;
+            white-space: pre-wrap !important;
+            text-align: justify !important;
+            background-color: #fff !important;
+            padding: 20px !important;
+            border-radius: 8px !important;
+            border: 1px solid #e0e0e0 !important;
+            margin-top: 10px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.02);
+        }
+        
+        /* 3. 優化原有的解釋卡片 */
+        .rewrite-explanation-card {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            margin-bottom: 20px;
+        }
+        .rewrite-explanation-card h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+            color: #343a40;
+            font-size: 1.2em;
+            border-bottom: 2px solid #e9ecef;
+            padding-bottom: 10px;
+            border-left: none; /* 覆寫 h3 預設 */
+            padding-left: 0;
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// === 修訂：教師端歷史詳情檢閱 (加入樣式注入) ===
 function renderDetail(r) {
+    // ★ 關鍵：注入缺失的樣式，確保「答題步驟」與「改寫範例」顯示正確
+    ensureStudentStyles();
+
     // 隱藏列表層級
     ['historyLevel1','historyLevel2','historyLevel3'].forEach(id => document.getElementById(id).style.display='none');
     document.getElementById('historyDetail').style.display='block';
     document.getElementById('teacherBreadcrumb').style.display='none';
     
-    // 1. 解析使用者輸入內容 (使用剛剛定義的統一函式)
+    // 1. 解析使用者輸入內容 (使用統一函式)
     let uContent = '';
     if (r.category === "學習報告") {
         uContent = ''; // 報告類不需要顯示輸入
@@ -2819,7 +2916,6 @@ function renderDetail(r) {
     const colorVar = `var(--m-color-${themeIndex})`;
 
     // 3. 渲染 HTML 結構
-    // 注意：這裡移除了所有教師端特有的框線設計，完全模仿學生端 Modal 的內部結構
     document.getElementById('historyDetail').innerHTML = `
         <!-- 返回按鈕列 -->
         <div style="margin-bottom:15px;">
@@ -2828,7 +2924,7 @@ function renderDetail(r) {
             </button>
         </div>
 
-        <!-- 詳情容器 (模仿學生端 .preview-modal-body 的內距) -->
+        <!-- 詳情容器 (模仿學生端內距) -->
         <div class="detail-view" style="padding: 10px;">
             
             <!-- 標題區塊 -->
@@ -2846,24 +2942,21 @@ function renderDetail(r) {
             <!-- 學生輸入內容 (已解析) -->
             ${uContent}
 
-            <!-- AI 生成結果 (直接輸出，不加額外外框) -->
+            <!-- AI 生成結果 (直接輸出，確保 class 能吃到樣式) -->
             <div id="aiContentContainer" class="ai-output-area" style="margin-top:20px;">
                 ${r.aiContent}
             </div>
         </div>`;
 
     // 4. 重繪圖表 (雷達圖)
-    // 這是為了確保如果內容中有 <canvas>，它能被正確畫出來
     setTimeout(() => {
         const container = document.getElementById('aiContentContainer');
         if (!container) return;
 
         // A. 處理一般紀錄的雷達圖 (如敘事、議論)
         if (r.scoreData && r.scoreData.radar) {
-             // 嘗試尋找 canvas，如果 AI 內容裡有 canvas 標籤
              const canvas = container.querySelector('canvas');
              if (canvas) {
-                 // 確保父容器有高度
                  const parent = canvas.parentNode;
                  parent.style.height = '350px'; 
                  parent.style.position = 'relative';
@@ -2894,14 +2987,12 @@ function renderDetail(r) {
              }
         }
         
-        // B. 處理學習報告的雙雷達圖 (敘事 + 議論)
+        // B. 處理學習報告的雙雷達圖
         if (r.category === "學習報告" && r.scoreData) {
-            // 敘事圖表
             if (r.scoreData["敘事抒情"]) {
                 const narrCanvas = container.querySelector('#reportNarrativeChart');
                 if (narrCanvas) drawReportChart(narrCanvas, r.scoreData["敘事抒情"].radar);
             }
-            // 議論圖表
             if (r.scoreData["議論"]) {
                 const argCanvas = container.querySelector('#reportArgumentChart');
                 if (argCanvas) drawReportChart(argCanvas, r.scoreData["議論"].radar);

@@ -2317,7 +2317,7 @@ let analyticsChartInstance = null;
         try {
             let usedSummary = false; // 標記是否使用了輕量數據
  
-            // ==========================================
+           // ==========================================
 // ★★★ 策略 1: 讀取全域輕量數據 (Global) ★★★
 // ==========================================
 if (scope === 'global' && (mode === 'month' || mode === 'year')) {
@@ -2326,10 +2326,15 @@ if (scope === 'global' && (mode === 'month' || mode === 'year')) {
     
     // 這裡直接讀取該路徑，學生端現在會直接寫入 stats_summary/2025 的 unique 欄位
     const summarySnap = await db.ref(summaryPath).once('value');
-    // ...
-}
+                const sData = summarySnap.val();
  
-// ==========================================
+                if (sData) {
+                    processSummaryData(sData, mode); 
+                    usedSummary = true;
+                }
+            }
+            
+           // ==========================================
 // ★★★ 策略 2: 讀取班級輕量數據 (Class) ★★★
 // ==========================================
 else if (scope === 'class' && (mode === 'month' || mode === 'year')) {
@@ -2391,7 +2396,7 @@ else if (scope === 'class' && (mode === 'month' || mode === 'year')) {
     }
 
     // ★★★ [新增] 共用的 Summary 數據處理函式 ★★★
-// ★★★ 修改版：共用的 Summary 數據處理函式 (支援 Unique 顯示) ★★★
+  // ★★★ 修改版：共用的 Summary 數據處理函式 (支援 Unique 顯示) ★★★
 function processSummaryData(sData, mode) {
     let totalVisits = 0;
     let totalDuration = 0;

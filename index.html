@@ -1811,61 +1811,61 @@ async function fetchReportAndOpenModal(grade, cls, name) {
     }
 }
 
-   // === 優化版 V3：基於學生報告生成全班報告 (省流、高速) ===
+// === 優化版 V4：基於學生報告全文 + 隱私去名保護 ===
 async function generateClassReport() {
     const btn = document.getElementById('btnClassReport');
     const g = document.getElementById('reportGrade').value;
     const c = document.getElementById('reportClass').value;
     
     btn.disabled = true; 
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在彙整學生報告...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在匿名處理全班資料...';
 
     try {
         // 1. 下載該班級資料
-        // (雖然還是要下載整個節點，但我們後續處理會快很多)
         const snapshot = await db.ref(`students/${g}/${c}`).once('value');
         const data = snapshot.val();
         
         if (!data) { alert("此班級無學生資料！"); return; }
 
-        let classSummaryPrompt = ""; // 給 AI 的摘要文字
+        let fullClassTextPrompt = ""; // 用於累積所有學生的完整文字報告
         
-        // 用於累加全班的平均分 (基於學生報告中的數據)
+        // 用於累加全班的平均分 (作為數據參考)
         let narrativeStats = { content: 0, expression: 0, structure: 0, count: 0 };
         let argumentStats = { content: 0, expression: 0, structure: 0, count: 0 };
         
-        let reportCount = 0; // 有提交報告的學生人數
+        let reportCount = 0; 
 
         // 2. 遍歷每位學生
         Object.entries(data).forEach(([name, d]) => {
             const h = d.history ? (Array.isArray(d.history) ? d.history : Object.values(d.history)) : [];
             
-            // ★ 關鍵過濾：只找「學習報告」類別
+            // 過濾出「學習報告」並取最新的一份
             const reports = h.filter(r => r.category === "學習報告").sort((a,b) => b.timestamp - a.timestamp);
             
-            // 如果該學生有報告，只取「最新」的一份
             if (reports.length > 0) { 
                 const latestReport = reports[0];
                 reportCount++;
                 
-                // A. 提取 AI 文字內容 (去除 HTML 標籤)
-                // 我們只提取報告中的重點文字給老師的 AI 參考
-                let textContent = latestReport.aiContent.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
-                // 截取前 150 字摘要即可，避免 Prompt 太長
-                classSummaryPrompt += `[學生:${name}] 綜合評級:${latestReport.scoreData?.overallLevel || '未知'} - 重點:${textContent.substring(0, 150)}...\n`; 
+                // === A. 隱私去名與全文提取 ===
+                // 1. 移除 HTML 標籤，轉為純文字 (保留換行以便閱讀)
+                let rawText = latestReport.aiContent.replace(/<br\s*\/?>/gi, '\n') // 將 <br> 轉為換行
+                                                    .replace(/<[^>]+>/g, '')       // 移除所有其他 HTML 標籤
+                                                    .replace(/\s+/g, ' ')          // 將多餘空白縮減
+                                                    .trim();
 
-                // B. 提取分數數據 (scoreData 是學生端存入的 finalStats)
+                // 2. 組合匿名資料 (不包含 name)
+                // 限制每位學生最多傳送 800 字，避免總 Prompt 超出 AI 上限 (通常夠用)
+                fullClassTextPrompt += `\n【學生 ${reportCount} 的個人報告內容】:\n${rawText.substring(0, 800)}...\n----------------\n`;
+
+                // === B. 提取分數數據 (保持不變，用於計算平均) ===
                 const scores = latestReport.scoreData;
-                
                 if (scores) {
-                    // 累加「敘事抒情」數據
                     if (scores["敘事抒情"]) {
                         narrativeStats.content += scores["敘事抒情"].content || 0;
                         narrativeStats.expression += scores["敘事抒情"].expression || 0;
                         narrativeStats.structure += scores["敘事抒情"].structure || 0;
                         narrativeStats.count++;
                     }
-                    // 累加「議論」數據
                     if (scores["議論"]) {
                         argumentStats.content += scores["議論"].content || 0;
                         argumentStats.expression += scores["議論"].expression || 0;
@@ -1894,47 +1894,47 @@ async function generateClassReport() {
         const narrAvg = calcAvg(narrativeStats);
         const argAvg = calcAvg(argumentStats);
 
-        // 4. 構建 Prompt (現在只包含學生報告的精華，非常精簡)
+        // 4. 構建 Prompt (包含匿名後的全文資料)
         const prompt = `你是一位中文科科主任。已收集 ${g}年${c}班 共 ${reportCount} 位學生的個人學習報告。
 
-        【全班數據統計】：
-        - 敘事抒情 (平均表現)：內容${narrAvg.content}/10, 表達${narrAvg.expr}/10, 結構${narrAvg.struct}/10 (樣本數:${narrativeStats.count})
-        - 議論 (平均表現)：內容${argAvg.content}/10, 表達${argAvg.expr}/10, 結構${argAvg.struct}/10 (樣本數:${argumentStats.count})
+        【全班硬性指標 (平均分)】：
+        - 敘事抒情：內容${narrAvg.content}/10, 表達${narrAvg.expr}/10, 結構${narrAvg.struct}/10 (樣本數:${narrativeStats.count})
+        - 議論：內容${argAvg.content}/10, 表達${argAvg.expr}/10, 結構${argAvg.struct}/10 (樣本數:${argumentStats.count})
 
-        【個別學生報告摘要】：
-        ${classSummaryPrompt}
+        【個別學生報告內容 (已去名)】：
+        ${fullClassTextPrompt}
 
-        任務：生成一份「全班綜合學習評估報告」。
-        
+        任務：請綜合分析上述所有學生的文字報告內容，歸納出全班的共同強項與弱項，生成一份「全班綜合學習評估報告」。
+
         【格式要求 (必須嚴格遵守 HTML)】：
-        1. <div class="report-section"><div class="report-category-badge badge-general"><div class="badge-general-title">${g}${c}班 綜合評估</div></div><div class="report-text-card"><p>(總結全班強弱項，約150字)</p></div></div><div class="report-separator"></div>
-        2. 嚴禁使用「'」等符號，有需要時必須運用中文的開關引號，即「」。
-        3. 請針對有數據的範疇撰寫分析，並【必須】使用以下指定的 HTML 標題格式 (若該範疇無數據則不寫)：
+        1. <div class="report-section"><div class="report-category-badge badge-general"><div class="badge-general-title">${g}${c}班 綜合評估</div></div><div class="report-text-card"><p>(總結全班整體表現，約200字，請具體引用普遍現象，例如「多數學生在...方面表現出色」)</p></div></div><div class="report-separator"></div>
+        
+        2. 請針對有數據的範疇撰寫分析 (若該範疇無數據則不寫)，必須使用以下 HTML 格式：
            
            (敘事)：
            <div class="report-section">
                <div class="report-category-badge badge-narrative"><i class="fas fa-feather-alt"></i> 敘事抒情</div>
-               <div class="report-text-card"><p>(分析全班在敘事文的表現、常見問題及優點)</p></div>
+               <div class="report-text-card"><p>(詳細分析全班在敘事文的具體表現，歸納出 2 個優點和 2 個通病)</p></div>
            </div>
 
            (議論)：
            <div class="report-section">
                <div class="report-category-badge badge-argument"><i class="fas fa-gavel"></i> 議論</div>
-               <div class="report-text-card"><p>(分析全班在議論文的表現、常見問題及優點)</p></div>
+               <div class="report-text-card"><p>(詳細分析全班在議論文的具體表現，歸納出 2 個優點和 2 個通病)</p></div>
            </div>
         
-        4. 【教學建議部分 - 必須使用此格式】：
+        3. 【教學建議部分 - 必須使用此格式】：
            <div class="rewrite-explanation-container">
              <div class="rewrite-explanation-card">
                <h3><i class="fas fa-chalkboard-teacher"></i> 重點教學建議</h3>
-               <div class="explanation-point"><div class="explanation-number">1</div><div class="explanation-text">(建議一內容)</div></div>
-               <div class="explanation-point"><div class="explanation-number">2</div><div class="explanation-text">(建議二內容)</div></div>
-               <div class="explanation-point"><div class="explanation-number">3</div><div class="explanation-text">(建議三內容)</div></div>
+               <div class="explanation-point"><div class="explanation-number">1</div><div class="explanation-text">(針對上述通病，提出具體的教學建議一)</div></div>
+               <div class="explanation-point"><div class="explanation-number">2</div><div class="explanation-text">(針對上述通病，提出具體的教學建議二)</div></div>
+               <div class="explanation-point"><div class="explanation-number">3</div><div class="explanation-text">(針對上述通病，提出具體的教學建議三)</div></div>
              </div>
            </div>
         `;
 
-        btn.innerHTML = '<i class="fas fa-robot"></i> AI 撰寫報告中...';
+        btn.innerHTML = '<i class="fas fa-robot"></i> AI 正在閱讀全班報告...';
         
         // 5. 呼叫 API
         const response = await callAPI(prompt);

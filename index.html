@@ -2962,50 +2962,62 @@ function showSubDetail(sub) {
             Object.entries(d).sort((a,b)=>(parseInt(a[1].profile?.number)||99)-(parseInt(b[1].profile?.number)||99)).forEach(([n,i])=>{ b.innerHTML+=`<label class="student-select-item"><input type="radio" name="ts" value="${n}"> ${i.profile?.number||'??'}. ${n}</label>`; });
         });
     }
-  function moveIndividualStudent() {
-        const n = document.querySelector('input[name="ts"]:checked')?.value;
-        if (!n) return alert("請選擇學生");
-        
-        const fg = document.getElementById('indivFromGrade').value,
-              fc = document.getElementById('indivFromClass').value,
-              tg = document.getElementById('indivToGrade').value,
-              tc = document.getElementById('indivToClass').value;
-              
-        // ★★★ 修改：不再檢查 nn (新班號) ★★★
-        
-        const oldPath = `students/${fg}/${fc}/${n}`;
-        const newPath = `students/${tg}/${tc}/${n}`;
-        
-        db.ref(oldPath).once('value', s => {
-            const d = s.val();
-            if (!d) return;
-            
-            d.profile = d.profile || {};
-            d.profile.grade = tg;
-            d.profile.class = tc;
-            
-            // ★★★ 關鍵修改：強制清空班號，讓學生自己填 ★★★
-            d.profile.number = "";
-            
-            if (oldPath === newPath) {
-                // 如果是同班操作 (雖然現在沒了班號輸入，這邏輯可能較少用到，但保留無妨)
-                db.ref(newPath).update(d, e => {
-                    if (!e) { alert("更新成功"); populateTransferStudentList(); }
-                });
-            } else {
-                // 轉班操作：刪除歷史紀錄
-                if (d.history) delete d.history;
+ // === 修訂：個別轉班 (同步更新 Email Mapping) ===
+async function moveIndividualStudent() {
+    const n = document.querySelector('input[name="ts"]:checked')?.value;
+    if (!n) return alert("請選擇學生");
+    
+    const fg = document.getElementById('indivFromGrade').value;
+    const fc = document.getElementById('indivFromClass').value;
+    const tg = document.getElementById('indivToGrade').value;
+    const tc = document.getElementById('indivToClass').value;
+    
+    if (fg === tg && fc === tc) return alert("來源與目標班級相同，無需調動。");
  
-                db.ref(newPath).set(d, e => {
-                    if (!e) {
-                        db.ref(oldPath).remove();
-                        alert("轉班成功！");
-                        populateTransferStudentList();
-                    }
-                });
-            }
-        });
+    const oldPath = `students/${fg}/${fc}/${n}`;
+    const newPath = `students/${tg}/${tc}/${n}`;
+    
+    try {
+        // 1. 讀取學生完整資料
+        const snapshot = await db.ref(oldPath).once('value');
+        const data = snapshot.val();
+        if (!data) return alert("找不到學生資料");
+ 
+        // 2. 更新 Profile
+        if (!data.profile) data.profile = {};
+        data.profile.grade = tg;
+        data.profile.class = tc;
+        data.profile.number = ""; // 清空班號，讓學生自己填
+ 
+        // 3. 準備原子更新 (Atomic Update)
+        const updates = {};
+        
+        // A. 寫入新位置
+        updates[newPath] = data;
+        
+        // B. 刪除舊位置
+        updates[oldPath] = null;
+ 
+        // C. ★★★ 關鍵：更新 Email Mapping 指向新位置 ★★★
+        if (data.profile.email) {
+            const emailKey = btoa(data.profile.email);
+            // 只需要更新 Mapping 中的 grade, class, number
+            updates[`email_mapping/${emailKey}/grade`] = tg;
+            updates[`email_mapping/${emailKey}/class`] = tc;
+            updates[`email_mapping/${emailKey}/number`] = ""; // 索引中也清空班號
+        }
+ 
+        // 4. 執行更新
+        await db.ref().update(updates);
+ 
+        alert(`✅ 轉班成功！\n${n} 已從 ${fg}${fc} 調動至 ${tg}${tc}。\n學生下次登入時將自動彈出更新班號視窗。`);
+        populateTransferStudentList();
+ 
+    } catch (e) {
+        console.error("轉班失敗", e);
+        alert("轉班失敗：" + e.message);
     }
+}
 
 
 
@@ -3102,89 +3114,93 @@ async function moveSelectedToPending() {
 
 // === 核心邏輯更新：學年過渡 ===
 // === 核心邏輯更新：學年過渡 (修復 NaN 與特殊帳號問題) ===
-// === 核心邏輯更新：學年過渡 (修復 NaN 與特殊帳號問題) ===
 async function runYearTransition() {
     if (prompt("請輸入密碼以確認清除舊紀錄並升班：") !== "23262036") return;
     
-    if (!confirm("確定執行？\n警告：\n1. 中六學生將被移除\n2. 中三學生移至待分班\n3. 其他學生升級\n4. 特殊帳號 (System/Special) 將保留")) return;
-
+    if (!confirm("確定執行？\n警告：\n1. 中六學生將被移除 (及其索引)\n2. 中三學生移至待分班 (移除索引，等待分配)\n3. 其他學生升級 (同步更新索引)\n4. 特殊帳號 (System/Special) 將保留")) return;
+ 
     const btn = event.target;
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 處理中...';
-
+ 
     try {
         const snapshot = await db.ref('students').once('value');
         const allStudents = snapshot.val() || {};
-
-        let newStudentsMap = {}; 
+ 
+        let newStudentsMap = {};
         let pendingMap = {};
-        
-        // 讀取現有的 pending
-        const existingPendingSnap = await db.ref('pending_allocation').once('value');
-        if (existingPendingSnap.exists()) {
-            pendingMap = existingPendingSnap.val();
-        }
-
+        let mappingUpdates = {}; // 用於收集所有 Email Mapping 的變更
+ 
         for (const grade in allStudents) {
-            // ★★★ 修復重點 1：檢查是否為特殊非數字年級 (System, Special) ★★★
             const g = parseInt(grade);
-
+ 
+            // 保留 System / Special 帳號
             if (isNaN(g)) {
-                // 如果是 System 或 Special，直接原封不動保留到新名單
-                console.log(`保留特殊組別: ${grade}`);
                 newStudentsMap[grade] = allStudents[grade];
-                continue; // 跳過後面的升班邏輯
+                continue;
             }
-
-            // --- 以下為正常學生的升班邏輯 ---
+ 
             for (const cls in allStudents[grade]) {
                 const studentsInClass = allStudents[grade][cls];
                 for (const studentName in studentsInClass) {
                     const studentData = studentsInClass[studentName];
-
-                    // 清空班號
-                    if (studentData.profile) studentData.profile.number = ""; 
-
-
-                      // ★★★ 新增這行：強制刪除該學生的歷史紀錄 ★★★
-    if (studentData.history) delete studentData.history;
-
-                    if (g === 6) { 
-                        // 中六畢業 (刪除，不加入新名單)
-                        // 可選擇性：移入 graduates 節點 (這裡暫不實作，依您原意刪除)
-                    } 
+                    const email = studentData.profile?.email;
+                    const emailKey = email ? btoa(email) : null;
+ 
+                    // A. 清空班號 & 刪除歷史
+                    if (studentData.profile) studentData.profile.number = "";
+                    if (studentData.history) delete studentData.history;
+ 
+                    // B. 處理各年級邏輯
+                    if (g === 6) {
+                        // 中六畢業 -> 刪除 Mapping
+                        if (emailKey) mappingUpdates[`email_mapping/${emailKey}`] = null;
+                    }
                     else if (g === 3) {
-                        pendingMap[studentName] = studentData; // 中三移入 pending
-                    } 
+                        // 中三 -> 待分班 -> 暫時刪除 Mapping (或保留但標記pending)
+                        // 建議：暫時刪除 Mapping，讓學生無法登入，直到老師將其分配到新班級
+                        // 這樣分配後，executeAllocation 會重新建立 Mapping
+                        if (emailKey) mappingUpdates[`email_mapping/${emailKey}`] = null;
+                        pendingMap[studentName] = studentData;
+                    }
                     else {
-                        // 其他自動升班 (1->2, 2->3, 4->5, 5->6)
+                        // 其他年級 -> 升班 (1->2, 2->3, 4->5, 5->6)
                         const newG = (g + 1).toString();
                         
-                        // 更新 profile 內的年級資料
+                        // 更新資料庫結構
                         if (studentData.profile) studentData.profile.grade = newG;
-                        
-                        // 建構新結構
                         if (!newStudentsMap[newG]) newStudentsMap[newG] = {};
                         if (!newStudentsMap[newG][cls]) newStudentsMap[newG][cls] = {};
                         newStudentsMap[newG][cls][studentName] = studentData;
+ 
+                        // ★★★ 關鍵：更新 Mapping 指向新位置 ★★★
+                        if (emailKey) {
+                            mappingUpdates[`email_mapping/${emailKey}/grade`] = newG;
+                            mappingUpdates[`email_mapping/${emailKey}/class`] = cls;
+                            mappingUpdates[`email_mapping/${emailKey}/number`] = "";
+                        }
                     }
                 }
             }
         }
-
-        // 寫入資料庫
-        await db.ref('students').set(newStudentsMap);
-        await db.ref('pending_allocation').set(pendingMap);
+ 
+        // 執行所有資料庫寫入
+        const updates = {};
+        updates['students'] = newStudentsMap;
+        updates['pending_allocation'] = pendingMap;
+        updates['assignments'] = null; // 清除舊功課
+        updates['assignments_submissions'] = null;
+        updates['class_reports'] = null;
         
-        // 清除舊資料
-        await db.ref('assignments').remove();
-        await db.ref('assignments_submissions').remove();
-        await db.ref('class_reports').remove();
-
-        alert("✅ 新學年過渡成功！\n特殊帳號已保留，學生已升班。");
+        // 合併 Mapping 的更新
+        Object.assign(updates, mappingUpdates);
+ 
+        await db.ref().update(updates);
+ 
+        alert("✅ 新學年過渡成功！\n- 中六已畢業刪除\n- 中三已移至待分班\n- 其他年級已升班\n- 所有 Email 索引已同步更新");
         
         checkAndRenderPendingPanel();
-
+ 
     } catch (e) {
         console.error(e);
         alert("失敗：" + e.message);
@@ -3289,47 +3305,52 @@ async function allocateRetainStudents() {
     await executeAllocation(checkboxes, targetGrade, targetClass);
 }
 
-// === 共用執行函式 ===
+// === 修訂：執行分配 (同步重建 Email Mapping) ===
 async function executeAllocation(checkboxElements, targetGrade, targetClass) {
     try {
         const pendingSnap = await db.ref('pending_allocation').once('value');
         const pendingData = pendingSnap.val() || {};
         
         const updates = {};
-        const removeKeys = {};
-
+ 
         checkboxElements.forEach(cb => {
             const name = cb.value;
             const studentData = pendingData[name];
             
             if (studentData) {
-                // 更新資料
+                // 更新 Profile
                 if (!studentData.profile) studentData.profile = {};
                 studentData.profile.grade = targetGrade;
                 studentData.profile.class = targetClass;
-                // 注意：班號已在 runYearTransition 時清空，這裡不需要再清
+                // 班號應已在過渡時清空，這裡確保一下
+                studentData.profile.number = "";
                 
-                // 1. 寫入新位置 (students/Grade/Class/Name)
+                // 1. 寫入新位置
                 updates[`students/${targetGrade}/${targetClass}/${name}`] = studentData;
                 
                 // 2. 從 Pending 移除
-                removeKeys[`pending_allocation/${name}`] = null;
+                updates[`pending_allocation/${name}`] = null;
+ 
+                // 3. ★★★ 關鍵：重建 Email Mapping ★★★
+                // 因為他們在進入 Pending 時 Mapping 被刪除了，現在要加回來
+                if (studentData.profile.email) {
+                    const emailKey = btoa(studentData.profile.email);
+                    updates[`email_mapping/${emailKey}`] = studentData.profile;
+                }
             }
         });
-
-        // 執行
+ 
+        // 執行所有更新
         await db.ref().update(updates);
-        await db.ref().update(removeKeys);
-
-        alert("✅ 調動成功！");
+ 
+        alert("✅ 分班成功！\n索引已重建，學生登入時將自動指向新班級。");
         checkAndRenderPendingPanel(); // 刷新列表
-
+ 
     } catch (error) {
         console.error(error);
         alert("錯誤：" + error.message);
     }
 }
-
 // 頁面載入時初始化
 document.addEventListener('DOMContentLoaded', () => {
     // 如果頁面上原本有 checkAndRenderS3AllocationPanel 的呼叫，請改為：
@@ -3341,9 +3362,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-    
-    function deleteStudent() { const n=document.querySelector('input[name="ts"]:checked')?.value; if(n && confirm(`刪除 ${n}?`)) db.ref(`students/${document.getElementById('indivFromGrade').value}/${document.getElementById('indivFromClass').value}/${n}`).remove(e=>{ if(!e) populateTransferStudentList(); }); }
-   
+ // === 修訂：刪除學生 (同步刪除 Email Mapping) ===
+async function deleteStudent() {
+    const n = document.querySelector('input[name="ts"]:checked')?.value;
+    const g = document.getElementById('indivFromGrade').value;
+    const c = document.getElementById('indivFromClass').value;
+ 
+    if (!n) return alert("請選擇要刪除的學生");
+    if (!confirm(`⚠️ 危險操作\n\n確定要永久刪除學生「${n}」嗎？\n這將一併刪除該學生的所有歷史紀錄、課業提交及雲端索引，且無法復原。`)) return;
+ 
+    try {
+        // 1. 先讀取該學生的 Profile 以獲取 Email
+        const path = `students/${g}/${c}/${n}`;
+        const snapshot = await db.ref(path + '/profile').once('value');
+        const profile = snapshot.val();
+ 
+        const updates = {};
+        
+        // 2. 準備刪除學生資料的指令
+        updates[path] = null;
+ 
+        // 3. 準備刪除 Email Mapping 的指令 (如果有 Email)
+        if (profile && profile.email) {
+            const emailKey = btoa(profile.email);
+            updates[`email_mapping/${emailKey}`] = null;
+            console.log(`準備刪除索引: ${profile.email}`);
+        }
+ 
+        // 4. 原子化執行 (一次過刪除)
+        await db.ref().update(updates);
+        
+        alert("✅ 學生及關聯索引已刪除。");
+        populateTransferStudentList(); // 刷新列表
+ 
+    } catch (e) {
+        console.error("刪除失敗", e);
+        alert("刪除失敗：" + e.message);
+    }
+}
   
 </script>
 

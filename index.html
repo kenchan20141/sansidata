@@ -1139,15 +1139,18 @@ canvas {
         </div>
 
         <!-- 數據概覽卡片 -->
-        <div style="display:flex; gap:20px; justify-content:center; margin:30px 0; flex-wrap:wrap;">
-         <div class="stat-card stat-purple">
-    <div class="val" id="dispUnique">0</div>
-    <div class="label" id="labelUnique">訪問人數</div> <!-- ★ 加入 ID -->
-</div>
-            <div class="stat-card stat-blue">
-                <div class="val" id="dispVisits">0</div>
-                <div class="label">訪問次數</div>
-            </div>
+       <div style="display:flex; gap:20px; justify-content:center; margin:30px 0; flex-wrap:wrap;">
+    <!-- 1. 人數/人次卡片 (顏色會變) -->
+    <div id="cardUnique" class="stat-card stat-purple">
+        <div class="val" id="dispUnique">0</div>
+        <div class="label" id="labelUnique">訪問人數</div>
+    </div>
+    
+    <!-- 2. 次數卡片 (固定藍色) -->
+    <div id="cardVisits" class="stat-card stat-blue">
+        <div class="val" id="dispVisits">0</div>
+        <div class="label">訪問次數</div>
+    </div>
             <div class="stat-card stat-red">
                 <div class="val" id="dispDuration">0</div>
                 <div class="label">總訪問時長 (分鐘)</div>
@@ -2282,8 +2285,7 @@ function loadAnalyticsClassList() {
 let analyticsChartInstance = null;
 
    // === 雙軌制數據統計函式 (高效 View 節點版) ===
-// === 雙軌制數據統計函式 (一寬一窄 + 最大寬度限制 + 動態標籤版) ===
-// === 雙軌制數據統計函式 (顏色與透明度修復版) ===
+// === 雙軌制數據統計函式 (顏色邏輯修正版 V2) ===
 async function fetchAndRenderStats() {
     const btn = document.querySelector('button[onclick="fetchAndRenderStats()"]');
     const originalBtnText = btn.innerHTML;
@@ -2292,19 +2294,46 @@ async function fetchAndRenderStats() {
     const scope = document.getElementById('statScope').value;
     const mode = document.getElementById('statTimeMode').value;
     
-    // 2. 動態修改標籤文字邏輯
-    const labelEl = document.getElementById('labelUnique');
+    // === 定義顏色變數 (方便統一管理) ===
+    const COLOR_VISITS_OPAQUE = '#94a7b5'; // 莫蘭迪藍 (不透明)
+    const COLOR_DURATION      = '#d69a92'; // 莫蘭迪紅 (時長專用)
+    const COLOR_UNIQUE_DAY    = '#b6a6ca'; // 莫蘭迪紫 (每日-訪問人數)
+    const COLOR_UNIQUE_AGG    = '#8fa398'; // 莫蘭迪綠 (月/年-活躍人次)
+    const COLOR_SAND          = '#c7b299'; // 奶茶色 (平均值)
+
+    // 2. 決定「人數/人次」的顏色與文字
+    let uniqueColor = "";
     let uniqueLabelText = "";
-    
+    let uniqueCardGradient = ""; // 卡片需要漸層背景
+
     if (mode === 'day') {
         uniqueLabelText = "訪問人數";
-        if(labelEl) labelEl.innerText = uniqueLabelText;
+        uniqueColor = COLOR_UNIQUE_DAY; // 紫色
+        // 設定卡片漸層 (紫)
+        uniqueCardGradient = "linear-gradient(135deg, #b6a6ca 0%, #9e8fb0 100%)";
     } else {
-        uniqueLabelText = "活躍人次"; 
-        if(labelEl) labelEl.innerText = uniqueLabelText;
+        uniqueLabelText = "活躍人次";
+        uniqueColor = COLOR_UNIQUE_AGG; // 綠色
+        // 設定卡片漸層 (綠)
+        uniqueCardGradient = "linear-gradient(135deg, #8fa398 0%, #7d9186 100%)";
     }
 
-    // 3. 處理時間參數
+    // 3. 更新上方卡片 UI (標籤與顏色同步)
+    const labelEl = document.getElementById('labelUnique');
+    const cardUnique = document.getElementById('cardUnique');
+    const cardVisits = document.getElementById('cardVisits');
+    
+    if (labelEl) labelEl.innerText = uniqueLabelText;
+    
+    // 強制更新卡片背景顏色以匹配圖表
+    if (cardUnique) cardUnique.style.background = uniqueCardGradient;
+    
+    // 確保其他卡片顏色正確 (防止 CSS 被覆蓋)
+    if (cardVisits) cardVisits.style.background = "linear-gradient(135deg, #94a7b5 0%, #7a8f9e 100%)"; // 藍
+    const cardDuration = document.getElementById('cardDuration');
+    if (cardDuration) cardDuration.style.background = "linear-gradient(135deg, #d69a92 0%, #bf857d 100%)"; // 紅
+
+    // 4. 處理時間參數
     let y, m, d;
     if (mode === 'day') { 
         const p = document.getElementById('statDate').value.split('-'); 
@@ -2314,7 +2343,7 @@ async function fetchAndRenderStats() {
         if(mode === 'month') m = document.getElementById('statMonth').value; 
     }
 
-    // 4. 構建路徑
+    // 5. 構建路徑
     let fetchPath = `stats_view/${y}`;
     if (mode === 'day' || mode === 'month') {
         fetchPath += `/${m}`;
@@ -2325,6 +2354,7 @@ async function fetchAndRenderStats() {
     
     // 清空顯示
     ['dispUnique','dispVisits','dispDuration','dispAvg'].forEach(id=>document.getElementById(id).innerText='-');
+    
     if(analyticsChartInstance) {
         analyticsChartInstance.destroy();
         analyticsChartInstance = null;
@@ -2378,7 +2408,7 @@ async function fetchAndRenderStats() {
             }
         }
 
-        // 處理數據
+        // 處理數據 (Day / Month / Year)
         if (mode === 'day') {
             const dayData = monthData[d];
             const stats = getDataFromDayNode(dayData);
@@ -2430,7 +2460,7 @@ async function fetchAndRenderStats() {
         document.getElementById('dispDuration').innerText = Math.round(totalDuration/60);
         document.getElementById('dispAvg').innerText = totalUnique > 0 ? Math.round((totalDuration/60) / totalUnique) : 0;
 
-        // ★★★ 繪製圖表 (顏色修訂版) ★★★
+        // ★★★ 繪製圖表 ★★★
         const ctx = document.getElementById('analyticsChart').getContext('2d');
         analyticsChartInstance = new Chart(ctx, {
             type: 'bar',
@@ -2438,37 +2468,39 @@ async function fetchAndRenderStats() {
                 labels: chartLabels, 
                 datasets: [
                     { 
-                        // 底層：訪問次數 (修改：完全不透明的莫蘭迪藍)
+                        // 底層：訪問次數 (完全不透明藍色)
                         label: '訪問次數', 
                         data: chartVisits, 
-                        backgroundColor: '#94a7b5', // 原本是 rgba(..., 0.5)，現在改為純色
-                        hoverBackgroundColor: '#7a8f9e',
+                        backgroundColor: COLOR_VISITS_OPAQUE, 
+                        hoverBackgroundColor: '#7a8f9e', // hover 時稍微變深
+                        
                         maxBarThickness: 50, 
                         grouped: false, 
-                        order: 3
+                        order: 3 
                     },
                     { 
-                        // 上層：活躍人次 (修改：改為莫蘭迪紅/豆沙色，與藍色形成對比)
+                        // 上層：人數/人次 (紫色 或 綠色，視 mode 而定)
                         label: uniqueLabelText, 
                         data: chartUnique, 
-                        backgroundColor: '#d69a92', // 改用紅色系
-                        hoverBackgroundColor: '#bf857d',
+                        backgroundColor: uniqueColor,
+                        hoverBackgroundColor: uniqueColor, // 保持一致或微調
+                        
                         maxBarThickness: 30, 
                         grouped: false,
-                        order: 2
+                        order: 2 
                     },
                     { 
-                        // 折線圖：總時長 (保持深褐色/金色)
+                        // 折線圖：總時長 (紅色)
                         label: '總訪問時長', 
                         data: chartDuration, 
                         type: 'line', 
-                        borderColor: '#c7b299', // 改為奶茶棕，避免與紅Bar衝突
-                        backgroundColor: '#c7b299',
+                        borderColor: COLOR_DURATION, 
+                        backgroundColor: COLOR_DURATION,
                         borderWidth: 2, 
                         pointRadius: 3,
                         yAxisID: 'y1',
                         tension: 0.3,
-                        order: 1
+                        order: 1 
                     }
                 ] 
             },
@@ -2724,11 +2756,13 @@ function renderLevel1() {
         });
     }
     
-   // === 新增：與學生端一致的內容解析函式 ===
+   // 共用解析函式 (修正版：保留學生分段空行)
+    // === 新增：與學生端完全一致的內容解析函式 ===
 function renderParsedUserContent(userContent, themeIndex = 1) {
     if (!userContent) return '<div style="padding:20px; color:#999; text-align:center;">無使用者輸入內容</div>';
     
     const lines = userContent.split('\n');
+    // 使用與學生端相同的 class
     let html = `<div class="history-parsed-container history-theme-context-${themeIndex}">`;
     let currentLabel = '輸入內容'; 
     let currentContent = []; 
@@ -2758,57 +2792,82 @@ function renderParsedUserContent(userContent, themeIndex = 1) {
     }
     
     html += `</div>`;
-    // 外層包裹樣式，確保有圓角和陰影
-    return `<div style="background:#fff;padding:20px;border:1px solid #eee;border-radius:12px;margin-bottom:25px; box-shadow:0 2px 10px rgba(0,0,0,0.03);">${html}</div>`;
-}
-
-
     
+    // 外層包裹樣式 (學生端風格：白色卡片、圓角、陰影)
+    return `<div style="background:#fff; padding:20px; border:1px solid #eee; border-radius:12px; margin-bottom:25px; box-shadow: 0 4px 20px rgba(0,0,0,0.04);">${html}</div>`;
+}
     // 歷史紀錄詳情
-// === 修訂：教師端歷史詳情檢閱 ===
+// === 修訂：教師端歷史詳情檢閱 (UI/UX 與學生端完全一致版) ===
 function renderDetail(r) {
-    ['historyLevel1','historyLevel2','historyLevel3'].forEach(id=>document.getElementById(id).style.display='none');
+    // 隱藏列表層級
+    ['historyLevel1','historyLevel2','historyLevel3'].forEach(id => document.getElementById(id).style.display='none');
     document.getElementById('historyDetail').style.display='block';
     document.getElementById('teacherBreadcrumb').style.display='none';
     
+    // 1. 解析使用者輸入內容 (使用剛剛定義的統一函式)
     let uContent = '';
-    
-    // ★★★ 關鍵修改：使用 renderParsedUserContent 來渲染學生輸入 ★★★
     if (r.category === "學習報告") {
-        uContent = ''; 
+        uContent = ''; // 報告類不需要顯示輸入
     } else {
-        // 使用目前的主題顏色索引，如果沒有則預設為 1
+        // 使用目前的主題顏色索引 (如果沒有則預設為 1)
         const themeToUse = currentThemeIndex || 1;
         uContent = renderParsedUserContent(r.userContent, themeToUse);
     }
 
-    // 渲染 HTML
+    // 2. 決定標題顏色 (與學生端一致)
+    const themeIndex = currentThemeIndex || 1;
+    const colorVar = `var(--m-color-${themeIndex})`;
+
+    // 3. 渲染 HTML 結構
+    // 注意：這裡移除了所有教師端特有的框線設計，完全模仿學生端 Modal 的內部結構
     document.getElementById('historyDetail').innerHTML = `
+        <!-- 返回按鈕列 -->
         <div style="margin-bottom:15px;">
-            <button class="nav-btn" onclick="renderLevel3('${currentSubFunction}',${currentThemeIndex})" style="padding:5px 15px;font-size:0.9em;">
+            <button class="nav-btn" onclick="renderLevel3('${currentSubFunction}',${currentThemeIndex})" style="padding:5px 15px; font-size:0.9em;">
                 <i class="fas fa-arrow-left"></i> 返回列表
             </button>
         </div>
-        <div class="detail-view">
-            <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:20px;">
-                <h2 style="text-align:left; margin:0; color:#333;">${r.title}</h2>
-                <p style="color:#888; margin-top:5px;">${r.dateStr}</p>
+
+        <!-- 詳情容器 (模仿學生端 .preview-modal-body 的內距) -->
+        <div class="detail-view" style="padding: 10px;">
+            
+            <!-- 標題區塊 -->
+            <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:25px;">
+                <h2 style="text-align:left; margin:0; color:#333; font-family: 'Noto Serif TC', serif;">
+                    ${r.title}
+                </h2>
+                <div style="margin-top:8px; font-size:0.9em; color:#888;">
+                    <span style="color:${colorVar}; font-weight:bold;">${r.subFunction}</span>
+                    <span style="margin: 0 5px;">|</span>
+                    <span>${r.dateStr}</span>
+                </div>
             </div>
+
+            <!-- 學生輸入內容 (已解析) -->
             ${uContent}
-            <div class="detail-ai-box" style="margin-top:20px;" id="aiContentContainer">
-                <h4 style="color:var(--m-green); margin-bottom:10px;">AI 生成結果：</h4>
+
+            <!-- AI 生成結果 (直接輸出，不加額外外框) -->
+            <div id="aiContentContainer" class="ai-output-area" style="margin-top:20px;">
                 ${r.aiContent}
             </div>
         </div>`;
 
-    // ★★★ 確保雷達圖能顯示的邏輯 (這部分保持原樣或確保存在) ★★★
+    // 4. 重繪圖表 (雷達圖)
+    // 這是為了確保如果內容中有 <canvas>，它能被正確畫出來
     setTimeout(() => {
-        // ... (原有的雷達圖繪製代碼，請保留 admin.html 裡原有的這部分) ...
         const container = document.getElementById('aiContentContainer');
+        if (!container) return;
+
+        // A. 處理一般紀錄的雷達圖 (如敘事、議論)
         if (r.scoreData && r.scoreData.radar) {
+             // 嘗試尋找 canvas，如果 AI 內容裡有 canvas 標籤
              const canvas = container.querySelector('canvas');
              if (canvas) {
-                 // 重繪 Chart.js ...
+                 // 確保父容器有高度
+                 const parent = canvas.parentNode;
+                 parent.style.height = '350px'; 
+                 parent.style.position = 'relative';
+
                  new Chart(canvas.getContext('2d'), {
                     type: 'radar',
                     data: {
@@ -2821,12 +2880,32 @@ function renderDetail(r) {
                             ],
                             backgroundColor: 'rgba(54, 162, 235, 0.2)',
                             borderColor: 'rgba(54, 162, 235, 1)',
-                            borderWidth: 2
+                            borderWidth: 2,
+                            pointBackgroundColor: 'rgba(54, 162, 235, 1)'
                         }]
                     },
-                    options: { responsive: true, maintainAspectRatio: false, scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } }, plugins: { legend: { display: false } } }
+                    options: { 
+                        responsive: true, 
+                        maintainAspectRatio: false, 
+                        scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { display: false } } }, 
+                        plugins: { legend: { display: false } } 
+                    }
                 });
              }
+        }
+        
+        // B. 處理學習報告的雙雷達圖 (敘事 + 議論)
+        if (r.category === "學習報告" && r.scoreData) {
+            // 敘事圖表
+            if (r.scoreData["敘事抒情"]) {
+                const narrCanvas = container.querySelector('#reportNarrativeChart');
+                if (narrCanvas) drawReportChart(narrCanvas, r.scoreData["敘事抒情"].radar);
+            }
+            // 議論圖表
+            if (r.scoreData["議論"]) {
+                const argCanvas = container.querySelector('#reportArgumentChart');
+                if (argCanvas) drawReportChart(argCanvas, r.scoreData["議論"].radar);
+            }
         }
     }, 100);
 }

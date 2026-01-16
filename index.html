@@ -1546,141 +1546,273 @@ canvas {
     const SUB_ICONS = { "文章點評": "fa-file-alt", "大綱點評": "fa-list-ol", "綜合分析": "fa-chart-pie", "敘事物象": "fa-tree", "解題指引": "fa-compass", "指引": "fa-lightbulb", "點評": "fa-comment-dots", "討論紀錄": "fa-comments" };
 
     // === 1. 修訂：學生列表載入 (加入點擊偵測除錯) ===
-// === 1. 修訂：學生列表載入 (自動鎖定班別 + 優化顯示) ===
-function loadStudentList() {
+// === 優化版 V2：省流載入列表 (Lazy Loading) ===
+async function loadStudentList() {
     const gradeSelect = document.getElementById('viewGrade');
     const classSelect = document.getElementById('viewClass');
     
-    // ★ 自動化邏輯：System -> Test / Special -> User ★
+    // 自動鎖定邏輯 (保持不變)
     if (gradeSelect.value === 'System') {
-        classSelect.value = 'Test';
-        classSelect.disabled = true; // 鎖定
-    } 
-    else if (gradeSelect.value === 'Special') {
-        // ★ 新增這段：選特許用家自動跳「用家班」並鎖定
-        classSelect.value = 'User';
-        classSelect.disabled = true; 
-    } 
-    else {
-        classSelect.disabled = false; // 解鎖
-        // 如果從 System 或 Special 切換回來，自動歸位到 A
-        if (classSelect.value === 'Test' || classSelect.value === 'User') {
-            classSelect.value = 'A'; 
-        }
+        classSelect.value = 'Test'; classSelect.disabled = true;
+    } else if (gradeSelect.value === 'Special') {
+        classSelect.value = 'User'; classSelect.disabled = true;
+    } else {
+        classSelect.disabled = false;
+        if (classSelect.value === 'Test' || classSelect.value === 'User') classSelect.value = 'A';
     }
-
+ 
     const g = gradeSelect.value;
     const c = classSelect.value;
     const container = document.getElementById('studentListContainer');
     
-    // ... (以下程式碼保持不變) ...
-    container.innerHTML = '<p style="text-align:center; padding:20px; width:100%; color:#888;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
-    
-    db.ref(`students/${g}/${c}`).once('value', snapshot => {
-        const data = snapshot.val();
-        if (!data) { 
-            container.innerHTML = '<p style="text-align:center; width:100%; color:#aaa;">暫無資料。</p>'; 
-            return; 
+    container.innerHTML = '<p style="text-align:center; padding:20px; width:100%; color:#888;"><i class="fas fa-spinner fa-spin"></i> 正在獲取名單 (省流模式)...</p>';
+ 
+    try {
+        // 1. 獲取登入 Token (用於 REST API)
+        const user = firebase.auth().currentUser;
+        if (!user) return;
+        const token = await user.getIdToken();
+ 
+        // 2. 使用 REST API 的 shallow=true 只抓取「學生名字清單」(不抓內容)
+        const dbUrl = "https://sansidata-default-rtdb.firebaseio.com"; // 請確認這是您的 DB URL
+        const resp = await fetch(`${dbUrl}/students/${g}/${c}.json?shallow=true&auth=${token}`);
+        const nameData = await resp.json();
+ 
+        if (!nameData) {
+            container.innerHTML = '<p style="text-align:center; width:100%; color:#aaa;">暫無資料。</p>';
+            return;
         }
+ 
+        // 3. 拿到名單後，並行讀取每位學生的 Profile (只讀 Profile，不讀 History)
+        // 這樣流量非常小，因為 Profile 只有名字和班號
+        const names = Object.keys(nameData);
         
+        // 建立一個 Promise 陣列來快速抓取班號
+        const profilePromises = names.map(async (name) => {
+            const snap = await db.ref(`students/${g}/${c}/${name}/profile`).once('value');
+            return { name: name, profile: snap.val() || {} };
+        });
+ 
+        const students = await Promise.all(profilePromises);
+ 
+        // 4. 排序並渲染
         container.innerHTML = '';
         
-        Object.entries(data)
-            .sort(([,a], [,b]) => (parseInt(a.profile?.number)||99) - (parseInt(b.profile?.number)||99))
-            .forEach(([name, d]) => {
-                const h = d.history ? (Array.isArray(d.history) ? d.history : Object.values(d.history)) : [];
-                
-                // ★ 顯示邏輯優化 ★
-                let displayNameHtml = '';
-                if (g === 'System') {
-                    displayNameHtml = `<span style="color:var(--m-blue); font-weight:bold;">系統測試</span> - ${name}`;
-                } else if (g === 'Special') {
-                    // ★ 新增這段：特許用家的顯示方式
-                    displayNameHtml = `<span style="color:var(--m-purple); font-weight:bold;">特許用家</span> - ${name}`;
-                } else {
-                    displayNameHtml = `${name} <small>(${d.profile?.number||''})</small>`;
-                }
+        students.sort((a, b) => {
+            const numA = parseInt(a.profile.number) || 99;
+            const numB = parseInt(b.profile.number) || 99;
+            return numA - numB;
+        });
+ 
+        students.forEach(s => {
+            const name = s.name;
+            const profile = s.profile;
+            const num = profile.number || '';
+ 
+            // 顯示名稱邏輯
+            let displayNameHtml = '';
+            if (g === 'System') displayNameHtml = `<span style="color:var(--m-blue); font-weight:bold;">系統測試</span> - ${name}`;
+            else if (g === 'Special') displayNameHtml = `<span style="color:var(--m-purple); font-weight:bold;">特許用家</span> - ${name}`;
+            else displayNameHtml = `${name} <small>(${num})</small>`;
+ 
+            const div = document.createElement('div');
+            div.className = 'student-card';
+            // 注意：這裡移除了 "紀錄: XX 筆" 的顯示，因為我們還沒下載歷史紀錄
+            // 改為顯示 "點擊查看詳情"
+            div.innerHTML = `
+                <div class="student-name">${displayNameHtml}</div>
+                <div class="last-sync" style="color:#2A9689;">
+                    <i class="fas fa-mouse-pointer"></i> 點擊讀取紀錄
+                </div>
+            `;
+ 
+            // ★ 點擊時才去下載該學生的 History
+            div.onclick = () => fetchHistoryAndOpenModal(g, c, name);
+            
+            container.appendChild(div);
+        });
+ 
+    } catch (error) {
+        console.error("載入失敗", error);
+        container.innerHTML = '<p style="text-align:center; color:red;">載入失敗，請重試。</p>';
+    }
+}
 
-                const div = document.createElement('div'); 
-                div.className = 'student-card';
-                div.innerHTML = `
-                    <div class="student-name">${displayNameHtml}</div>
-                    <div class="last-sync"><i class="fas fa-history"></i> 紀錄: ${h.length} 筆</div>
-                `;
-                
-                div.addEventListener('click', function() {
-                    try { openHistoryModal(name, h); } catch (err) { console.error(err); }
-                });
-                
-                container.appendChild(div);
-            });
-    });
+
+    // === 新增：按需下載歷史紀錄 ===
+async function fetchHistoryAndOpenModal(grade, cls, name) {
+    // 1. 顯示簡單的 Loading 提示 (或者您可以用更漂亮的 Modal Loading)
+    const btn = event.currentTarget; // 獲取被點擊的卡片
+    const originalContent = btn.innerHTML;
+    
+    // 在卡片上顯示讀取中
+    btn.innerHTML = `<div style="text-align:center; padding:10px;"><i class="fas fa-circle-notch fa-spin"></i> 下載大數據中...</div>`;
+    btn.style.pointerEvents = 'none'; // 防止連點
+ 
+    try {
+        // 2. 精準下載：只下載該學生的 history 節點
+        const snapshot = await db.ref(`students/${grade}/${cls}/${name}/history`).once('value');
+        const historyData = snapshot.val();
+        
+        // 轉換為陣列 (處理 Firebase 物件格式)
+        let historyArray = [];
+        if (historyData) {
+            historyArray = Array.isArray(historyData) ? historyData : Object.values(historyData);
+        }
+ 
+        // 3. 呼叫原本的開啟視窗函式
+        // (注意：這裡的 openHistoryModal 需要微調，因為我們現在才傳入 history)
+        openHistoryModal(name, historyArray);
+ 
+    } catch (error) {
+        alert("讀取失敗：" + error.message);
+    } finally {
+        // 還原卡片顯示
+        btn.innerHTML = originalContent;
+        btn.style.pointerEvents = 'auto';
+    }
 }
     
 
     // === 報告管理 ===
-  // === 報告管理列表載入 (自動鎖定 + 優化顯示) ===
-function loadReportStudentList() {
+// === 優化版 V2：學生報告列表 (Lazy Loading) ===
+async function loadReportStudentList() {
     const gradeSelect = document.getElementById('reportGrade');
     const classSelect = document.getElementById('reportClass');
-
-    // ★ 自動化邏輯 ★
+ 
+    // 自動鎖定邏輯 (保持不變)
     if (gradeSelect.value === 'System') {
-        classSelect.value = 'Test';
-        classSelect.disabled = true;
+        classSelect.value = 'Test'; classSelect.disabled = true;
+    } else if (gradeSelect.value === 'Special') {
+        classSelect.value = 'User'; classSelect.disabled = true;
     } else {
         classSelect.disabled = false;
-        if (classSelect.value === 'Test') classSelect.value = 'A';
+        if (classSelect.value === 'Test' || classSelect.value === 'User') classSelect.value = 'A';
     }
-
+ 
     const g = gradeSelect.value;
     const c = classSelect.value;
     const container = document.getElementById('reportStudentListContainer');
     
-    container.innerHTML = '<p style="text-align:center; padding:20px; width:100%; color:#888;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
+    // 顯示 Loading
+    container.innerHTML = '<p style="text-align:center; padding:20px; width:100%; color:#888;"><i class="fas fa-spinner fa-spin"></i> 正在獲取名單 (省流模式)...</p>';
     
-    loadClassReportHistory(); // 同時載入班級報告紀錄
-
-    db.ref(`students/${g}/${c}`).once('value', snapshot => {
-        const data = snapshot.val();
-        if (!data) { container.innerHTML = '<p style="text-align:center; width:100%; color:#aaa;">暫無資料。</p>'; return; }
-        
+    // 同時載入上方的班級綜合報告 (這個流量很小，保留)
+    loadClassReportHistory();
+ 
+    try {
+        // 1. 獲取 Token
+        const user = firebase.auth().currentUser;
+        if (!user) return;
+        const token = await user.getIdToken();
+ 
+        // 2. 使用 REST API 只抓取學生名單
+        const dbUrl = "https://sansidata-default-rtdb.firebaseio.com";
+        const resp = await fetch(`${dbUrl}/students/${g}/${c}.json?shallow=true&auth=${token}`);
+        const nameData = await resp.json();
+ 
+        if (!nameData) {
+            container.innerHTML = '<p style="text-align:center; width:100%; color:#aaa;">暫無資料。</p>';
+            return;
+        }
+ 
+        // 3. 並行讀取 Profile (取得班號)
+        const names = Object.keys(nameData);
+        const profilePromises = names.map(async (name) => {
+            const snap = await db.ref(`students/${g}/${c}/${name}/profile`).once('value');
+            return { name: name, profile: snap.val() || {} };
+        });
+ 
+        const students = await Promise.all(profilePromises);
+ 
+        // 4. 排序並渲染
         container.innerHTML = '';
-        Object.entries(data).sort(([,a], [,b]) => (parseInt(a.profile?.number)||99) - (parseInt(b.profile?.number)||99)).forEach(([name, d]) => {
-            const h = d.history ? (Array.isArray(d.history) ? d.history : Object.values(d.history)) : [];
-            const reports = h.filter(r => r.category === "學習報告");
-            
-            // ★ 顯示邏輯優化 ★
+        
+        students.sort((a, b) => {
+            const numA = parseInt(a.profile.number) || 99;
+            const numB = parseInt(b.profile.number) || 99;
+            return numA - numB;
+        });
+ 
+        students.forEach(s => {
+            const name = s.name;
+            const num = s.profile.number || '';
+ 
+            // 顯示名稱邏輯
             let displayNameHtml = '';
-            if (g === 'System') {
-                displayNameHtml = `<span style="color:var(--m-blue); font-weight:bold;">系統測試</span> - ${name}`;
-            } else {
-                displayNameHtml = `${name} <small>(${d.profile?.number||''})</small>`;
-            }
-
-            const div = document.createElement('div'); 
+            if (g === 'System') displayNameHtml = `<span style="color:var(--m-blue); font-weight:bold;">系統測試</span> - ${name}`;
+            else if (g === 'Special') displayNameHtml = `<span style="color:var(--m-purple); font-weight:bold;">特許用家</span> - ${name}`;
+            else displayNameHtml = `${name} <small>(${num})</small>`;
+ 
+            const div = document.createElement('div');
             div.className = 'student-card';
-            const style = reports.length > 0 ? '' : 'opacity: 0.6; filter: grayscale(100%);';
-            div.style.cssText = style;
+            
+            // 這裡不再根據報告數量變灰，因為我們還不知道誰有報告
+            div.style.cssText = '';
             
             div.innerHTML = `
                 <div class="student-name">${displayNameHtml}</div>
-                <div class="last-sync" style="color:${reports.length>0?'var(--m-red)':'#ccc'}; font-weight:bold;">
-                    <i class="fas fa-chart-pie"></i> 已生成報告: ${reports.length} 份
-                </div>`;
+                <div class="last-sync" style="color:var(--m-blue);">
+                    <i class="fas fa-search-plus"></i> 點擊檢查報告
+                </div>
+            `;
             
-            if (reports.length > 0) { 
-                div.onclick = () => { 
-                    openHistoryModal(name, h); 
-                    setTimeout(() => { 
-                        renderLevel2('學習報告'); 
-                        setTimeout(() => renderLevel3('綜合分析', 5), 100); 
-                    }, 300); 
-                }; 
-            }
+            // ★ 點擊時觸發：下載數據 -> 檢查是否有報告 -> 打開
+            div.onclick = () => fetchReportAndOpenModal(g, c, name);
+            
             container.appendChild(div);
         });
-    });
+ 
+    } catch (error) {
+        console.error("載入失敗", error);
+        container.innerHTML = '<p style="text-align:center; color:red;">載入失敗，請重試。</p>';
+    }
+}
+
+
+    // === 新增：按需下載並檢查報告 ===
+async function fetchReportAndOpenModal(grade, cls, name) {
+    // 1. UI 反饋
+    const btn = event.currentTarget;
+    const originalContent = btn.innerHTML;
+    
+    btn.innerHTML = `<div style="text-align:center; padding:10px;"><i class="fas fa-circle-notch fa-spin"></i> 搜尋報告中...</div>`;
+    btn.style.pointerEvents = 'none';
+ 
+    try {
+        // 2. 下載該學生的完整歷史紀錄
+        const snapshot = await db.ref(`students/${grade}/${cls}/${name}/history`).once('value');
+        const historyData = snapshot.val();
+        
+        let historyArray = [];
+        if (historyData) {
+            historyArray = Array.isArray(historyData) ? historyData : Object.values(historyData);
+        }
+ 
+        // 3. 檢查是否有「學習報告」類別的紀錄
+        const reports = historyArray.filter(r => r.category === "學習報告");
+ 
+        if (reports.length > 0) {
+            // A. 有報告 -> 打開視窗並自動跳轉
+            openHistoryModal(name, historyArray);
+            
+            // 自動導航到報告頁面 (模擬點擊流程)
+            setTimeout(() => {
+                renderLevel2('學習報告');
+                setTimeout(() => renderLevel3('綜合分析', 5), 100);
+            }, 300);
+        } else {
+            // B. 無報告 -> 提示並恢復
+            alert(`提示：學生「${name}」尚未生成任何學習報告。`);
+        }
+ 
+    } catch (error) {
+        alert("讀取失敗：" + error.message);
+    } finally {
+        // 還原按鈕狀態
+        btn.innerHTML = originalContent;
+        btn.style.pointerEvents = 'auto';
+    }
 }
 
    async function generateClassReport() {
@@ -2471,39 +2603,27 @@ let analyticsChartInstance = null;
         });
     }
     // === 共用功能與共用 HTML 解析函式 ===
-   // === 2. 修訂：開啟歷史視窗 (加入強制作動) ===
-function openHistoryModal(name, h) {
-    console.log(`[系統] 準備開啟 ${name} 的歷史紀錄，共 ${h.length} 筆`);
-
+// === 修訂：開啟歷史視窗 (接收傳入的數據) ===
+function openHistoryModal(name, historyArray) {
+    console.log(`[系統] 開啟 ${name} 的紀錄，共 ${historyArray.length} 筆`);
+ 
     const modal = document.getElementById('historyViewerModal');
     const title = document.getElementById('viewerTitle');
-
-    if (!modal || !title) {
-        alert("錯誤：找不到視窗元件，請檢查 HTML ID。");
-        return;
-    }
-
-    // ★★★ 關鍵修復 1：將視窗搬運到 body 最外層，防止被其他 div 困住或遮擋 ★★★
+ 
+    if (!modal || !title) return;
+ 
     document.body.appendChild(modal);
-
-    // ★★★ 關鍵修復 2：強制設定超高層級 (Z-Index)，確保在最上層 ★★★
     modal.style.zIndex = "99999";
-
-    // 設定標題
+ 
     title.innerHTML = `<i class="fas fa-user-graduate"></i> ${name}`;
     
-    // 更新全域變數
-    currentStudentHistory = h; 
+    // 更新全域變數 (供 renderLevel1 等函式使用)
+    currentStudentHistory = historyArray;
     
-    // 顯示視窗
-    modal.style.display = 'flex'; 
+    modal.style.display = 'flex';
     
-    // 渲染內容
-    try {
-        renderLevel1();
-    } catch (e) {
-        console.error("渲染內容失敗:", e);
-    }
+    // 渲染第一層
+    renderLevel1();
 }
     
     // 渲染主範疇 (已修訂：隱藏學習報告)

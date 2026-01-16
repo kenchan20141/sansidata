@@ -1621,9 +1621,7 @@ async function loadStudentList() {
             // 改為顯示 "點擊查看詳情"
             div.innerHTML = `
                 <div class="student-name">${displayNameHtml}</div>
-                <div class="last-sync" style="color:#2A9689;">
-                    <i class="fas fa-mouse-pointer"></i> 點擊讀取紀錄
-                </div>
+             
             `;
  
             // ★ 點擊時才去下載該學生的 History
@@ -1752,9 +1750,7 @@ async function loadReportStudentList() {
             
             div.innerHTML = `
                 <div class="student-name">${displayNameHtml}</div>
-                <div class="last-sync" style="color:var(--m-blue);">
-                    <i class="fas fa-search-plus"></i> 點擊檢查報告
-                </div>
+               
             `;
             
             // ★ 點擊時觸發：下載數據 -> 檢查是否有報告 -> 打開

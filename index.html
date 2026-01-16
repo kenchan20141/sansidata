@@ -1811,72 +1811,77 @@ async function fetchReportAndOpenModal(grade, cls, name) {
     }
 }
 
-   async function generateClassReport() {
+   // === 優化版 V3：基於學生報告生成全班報告 (省流、高速) ===
+async function generateClassReport() {
     const btn = document.getElementById('btnClassReport');
     const g = document.getElementById('reportGrade').value;
     const c = document.getElementById('reportClass').value;
+    
     btn.disabled = true; 
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 分析全班數據中...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在彙整學生報告...';
 
     try {
+        // 1. 下載該班級資料
+        // (雖然還是要下載整個節點，但我們後續處理會快很多)
         const snapshot = await db.ref(`students/${g}/${c}`).once('value');
         const data = snapshot.val();
+        
         if (!data) { alert("此班級無學生資料！"); return; }
 
-        let classSummary = "", outlineSummary = "", readingSummary = "", expandSummary = "";
+        let classSummaryPrompt = ""; // 給 AI 的摘要文字
         
-        // 用於累加原始分數 (0-10)
+        // 用於累加全班的平均分 (基於學生報告中的數據)
         let narrativeStats = { content: 0, expression: 0, structure: 0, count: 0 };
         let argumentStats = { content: 0, expression: 0, structure: 0, count: 0 };
         
-        let studentCount = 0;
-        const parser = new DOMParser(); // 用於解析 HTML 字串中的分數
+        let reportCount = 0; // 有提交報告的學生人數
 
+        // 2. 遍歷每位學生
         Object.entries(data).forEach(([name, d]) => {
             const h = d.history ? (Array.isArray(d.history) ? d.history : Object.values(d.history)) : [];
             
-            // 1. 收集最新一篇報告的摘要
+            // ★ 關鍵過濾：只找「學習報告」類別
             const reports = h.filter(r => r.category === "學習報告").sort((a,b) => b.timestamp - a.timestamp);
+            
+            // 如果該學生有報告，只取「最新」的一份
             if (reports.length > 0) { 
-                studentCount++; 
-                classSummary += `學生 ${studentCount}: ${reports[0].aiContent.replace(/<[^>]*>?/gm, ' ').substring(0, 300)}...\n`; 
-            }
+                const latestReport = reports[0];
+                reportCount++;
+                
+                // A. 提取 AI 文字內容 (去除 HTML 標籤)
+                // 我們只提取報告中的重點文字給老師的 AI 參考
+                let textContent = latestReport.aiContent.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
+                // 截取前 150 字摘要即可，避免 Prompt 太長
+                classSummaryPrompt += `[學生:${name}] 綜合評級:${latestReport.scoreData?.overallLevel || '未知'} - 重點:${textContent.substring(0, 150)}...\n`; 
 
-            // 2. 遍歷歷史紀錄，精準提取分數
-            h.forEach(r => {
-                // 提取摘要文本
-                if (r.subFunction && r.subFunction.includes("大綱")) { let t=r.aiContent.replace(/<[^>]*>?/gm, ' '); let i=t.indexOf("點評"); if(i!==-1) outlineSummary+=`[${r.category}大綱]: ${t.substring(i, i+120)}...\n`; }
-                if (r.category==="閱讀" && r.subFunction==="點評") { let t=r.aiContent.replace(/<[^>]*>?/gm, ' '); let i=t.indexOf("點評"); if(i!==-1) readingSummary+=`[閱讀]: ${t.substring(i, i+150)}...\n`; }
-                if (r.category==="整合拓展" && r.subFunction==="點評") { let t=r.aiContent.replace(/<[^>]*>?/gm, ' '); let i=t.indexOf("點評"); if(i!==-1) expandSummary+=`[整合]: ${t.substring(i, i+150)}...\n`; }
-
-                // 精準提取分數 (從隱藏的 input 中解析)
-                if ((r.category === "敘事抒情" || r.category === "議論") && r.aiContent) {
-                    try {
-                        const doc = parser.parseFromString(r.aiContent, 'text/html');
-                        // 嘗試找隱藏的分數欄位 (這些欄位存的是 0-10 或 0-3 的原始分)
-                        const cVal = doc.querySelector('input[id*="ContentScore"]')?.value;
-                        const eVal = doc.querySelector('input[id*="ExpressionScore"]')?.value;
-                        const sVal = doc.querySelector('input[id*="StructureScore"]')?.value;
-
-                        if (cVal && eVal && sVal) {
-                            const targetStats = r.category === "敘事抒情" ? narrativeStats : argumentStats;
-                            targetStats.content += parseInt(cVal);
-                            targetStats.expression += parseInt(eVal);
-                            targetStats.structure += parseInt(sVal);
-                            targetStats.count++;
-                        }
-                    } catch (err) {
-                        // 解析失敗則跳過
+                // B. 提取分數數據 (scoreData 是學生端存入的 finalStats)
+                const scores = latestReport.scoreData;
+                
+                if (scores) {
+                    // 累加「敘事抒情」數據
+                    if (scores["敘事抒情"]) {
+                        narrativeStats.content += scores["敘事抒情"].content || 0;
+                        narrativeStats.expression += scores["敘事抒情"].expression || 0;
+                        narrativeStats.structure += scores["敘事抒情"].structure || 0;
+                        narrativeStats.count++;
+                    }
+                    // 累加「議論」數據
+                    if (scores["議論"]) {
+                        argumentStats.content += scores["議論"].content || 0;
+                        argumentStats.expression += scores["議論"].expression || 0;
+                        argumentStats.structure += scores["議論"].structure || 0;
+                        argumentStats.count++;
                     }
                 }
-            });
+            }
         });
 
-        if (studentCount === 0 && narrativeStats.count === 0 && argumentStats.count === 0 && !outlineSummary) { 
-            alert("此班級數據不足。"); return; 
+        if (reportCount === 0) { 
+            alert("此班級的學生尚未生成任何「學習報告」。\n請先請學生在學生端生成個人報告，老師端才能進行彙整。"); 
+            return; 
         }
 
-        // 計算平均原始分 (0-10)
+        // 3. 計算全班平均分 (0-10分制)
         const calcAvg = (stats) => {
             if (stats.count === 0) return { content: 0, expr: 0, struct: 0 };
             return {
@@ -1889,47 +1894,36 @@ async function fetchReportAndOpenModal(grade, cls, name) {
         const narrAvg = calcAvg(narrativeStats);
         const argAvg = calcAvg(argumentStats);
 
-        // 構建 Prompt (加入嚴格的排版指令)
-        const prompt = `你是一位中文科科主任。分析 ${g}年${c}班 數據：
-        敘事平均表現(10分制)：內容${narrAvg.content}, 表達${narrAvg.expr}, 結構${narrAvg.struct}。
-        議論平均表現(10分制)：內容${argAvg.content}, 表達${argAvg.expr}, 結構${argAvg.struct}。
-        「大綱」表現：${outlineSummary}
-        「閱讀」表現：${readingSummary}
-        「整合拓展」表現：${expandSummary}
-        學習報告：${classSummary}
+        // 4. 構建 Prompt (現在只包含學生報告的精華，非常精簡)
+        const prompt = `你是一位中文科科主任。已收集 ${g}年${c}班 共 ${reportCount} 位學生的個人學習報告。
 
-        任務：生成「全班綜合學習評估報告」。
+        【全班數據統計】：
+        - 敘事抒情 (平均表現)：內容${narrAvg.content}/10, 表達${narrAvg.expr}/10, 結構${narrAvg.struct}/10 (樣本數:${narrativeStats.count})
+        - 議論 (平均表現)：內容${argAvg.content}/10, 表達${argAvg.expr}/10, 結構${argAvg.struct}/10 (樣本數:${argumentStats.count})
+
+        【個別學生報告摘要】：
+        ${classSummaryPrompt}
+
+        任務：生成一份「全班綜合學習評估報告」。
         
         【格式要求 (必須嚴格遵守 HTML)】：
-        1. <div class="report-section"><div class="report-category-badge badge-general"><div class="badge-general-title">${g}${c}班 綜合評估</div></div><div class="report-text-card"><p>總結</p></div></div><div class="report-separator"></div>
+        1. <div class="report-section"><div class="report-category-badge badge-general"><div class="badge-general-title">${g}${c}班 綜合評估</div></div><div class="report-text-card"><p>(總結全班強弱項，約150字)</p></div></div><div class="report-separator"></div>
         2. 嚴禁使用「'」等符號，有需要時必須運用中文的開關引號，即「」。
-        3. 請針對以下四個範疇撰寫分析，並【必須】使用以下指定的 HTML 標題格式：
+        3. 請針對有數據的範疇撰寫分析，並【必須】使用以下指定的 HTML 標題格式 (若該範疇無數據則不寫)：
            
            (敘事)：
            <div class="report-section">
                <div class="report-category-badge badge-narrative"><i class="fas fa-feather-alt"></i> 敘事抒情</div>
-               <div class="report-text-card"><p>(分析內容)</p></div>
+               <div class="report-text-card"><p>(分析全班在敘事文的表現、常見問題及優點)</p></div>
            </div>
 
            (議論)：
            <div class="report-section">
                <div class="report-category-badge badge-argument"><i class="fas fa-gavel"></i> 議論</div>
-               <div class="report-text-card"><p>(分析內容)</p></div>
-           </div>
-
-           (閱讀)：
-           <div class="report-section">
-               <div class="report-category-badge badge-reading"><i class="fas fa-book-open"></i> 閱讀</div>
-               <div class="report-text-card"><p>(分析內容)</p></div>
-           </div>
-
-           (整合)：
-           <div class="report-section">
-               <div class="report-category-badge badge-expand"><i class="fas fa-project-diagram"></i> 整合拓展</div>
-               <div class="report-text-card"><p>(分析內容)</p></div>
+               <div class="report-text-card"><p>(分析全班在議論文的表現、常見問題及優點)</p></div>
            </div>
         
-        3. 【教學建議部分 - 必須使用此格式，否則會亂掉】：
+        4. 【教學建議部分 - 必須使用此格式】：
            <div class="rewrite-explanation-container">
              <div class="rewrite-explanation-card">
                <h3><i class="fas fa-chalkboard-teacher"></i> 重點教學建議</h3>
@@ -1940,9 +1934,12 @@ async function fetchReportAndOpenModal(grade, cls, name) {
            </div>
         `;
 
+        btn.innerHTML = '<i class="fas fa-robot"></i> AI 撰寫報告中...';
         
+        // 5. 呼叫 API
         const response = await callAPI(prompt);
         
+        // 6. 存檔與顯示
         const reportData = { 
             timestamp: firebase.database.ServerValue.TIMESTAMP, 
             dateStr: new Date().toLocaleString(), 
@@ -2285,7 +2282,7 @@ function loadAnalyticsClassList() {
 let analyticsChartInstance = null;
 
    // === 雙軌制數據統計函式 (高效 View 節點版) ===
-// === 雙軌制數據統計函式 (一寬一窄圖表 + 動態標籤版) ===
+// === 雙軌制數據統計函式 (一寬一窄 + 最大寬度限制 + 動態標籤版) ===
 async function fetchAndRenderStats() {
     const btn = document.querySelector('button[onclick="fetchAndRenderStats()"]');
     const originalBtnText = btn.innerHTML;
@@ -2316,7 +2313,7 @@ async function fetchAndRenderStats() {
         if(mode === 'month') m = document.getElementById('statMonth').value; 
     }
 
-    // 4. 構建路徑 (使用高效的 stats_view)
+    // 4. 構建路徑
     let fetchPath = `stats_view/${y}`;
     if (mode === 'day' || mode === 'month') {
         fetchPath += `/${m}`;
@@ -2397,7 +2394,7 @@ async function fetchAndRenderStats() {
             Object.keys(monthData).sort().forEach(dayKey => {
                 const stats = getDataFromDayNode(monthData[dayKey]);
                 totalVisits += stats.v;
-                totalUnique += stats.u; // 這裡是每日活躍的累加 (人次)
+                totalUnique += stats.u;
                 totalDuration += stats.d;
 
                 chartLabels.push(`${parseInt(dayKey)}日`);
@@ -2430,10 +2427,9 @@ async function fetchAndRenderStats() {
         document.getElementById('dispVisits').innerText = totalVisits;
         document.getElementById('dispUnique').innerText = totalUnique;
         document.getElementById('dispDuration').innerText = Math.round(totalDuration/60);
-        // 平均 = 總時長 / 總人次 (防止除以零)
         document.getElementById('dispAvg').innerText = totalUnique > 0 ? Math.round((totalDuration/60) / totalUnique) : 0;
 
-        // ★★★ 繪製一寬一窄圖表 ★★★
+        // ★★★ 繪製圖表 (包含最大寬度與重疊設定) ★★★
         const ctx = document.getElementById('analyticsChart').getContext('2d');
         analyticsChartInstance = new Chart(ctx, {
             type: 'bar',
@@ -2441,26 +2437,34 @@ async function fetchAndRenderStats() {
                 labels: chartLabels, 
                 datasets: [
                     { 
-                        // 底層：較寬的淺色 Bar (瀏覽次數/Visits)
+                        // 底層：較寬的淺色 Bar (點擊次數)
                         label: '點擊次數 (寬)', 
                         data: chartVisits, 
-                        // 使用半透明藍色，讓後面的網格線隱約可見，且不搶眼
-                        backgroundColor: 'rgba(148, 167, 181, 0.5)', 
+                        backgroundColor: 'rgba(148, 167, 181, 0.5)', // 半透明藍
                         hoverBackgroundColor: 'rgba(148, 167, 181, 0.7)',
-                        barPercentage: 0.7,      // ★ 關鍵：設定較寬
-                        categoryPercentage: 0.8, // 控制群組間距
-                        order: 3                 // 放在最底層
+                        
+                        // ★ 關鍵設定 1：最大寬度 (防止 Bar 太肥)
+                        maxBarThickness: 50, 
+                        
+                        // ★ 關鍵設定 2：不分組 (實現重疊)
+                        grouped: false, 
+                        
+                        order: 3 // 放在最底層
                     },
                     { 
-                        // 上層：較窄的深色 Bar (活躍人次/Unique)
+                        // 上層：較窄的深色 Bar (活躍人次)
                         label: uniqueLabelText + ' (窄)', 
                         data: chartUnique, 
-                        // 使用深莫蘭迪紫，突出顯示核心數據
-                        backgroundColor: '#b6a6ca', 
+                        backgroundColor: '#b6a6ca', // 深紫
                         hoverBackgroundColor: '#9e8fb0',
-                        barPercentage: 0.35,     // ★ 關鍵：設定較窄 (約為寬Bar的一半)
-                        categoryPercentage: 0.8, // 必須與寬Bar一致，確保圓心對齊
-                        order: 2                 // 放在中間層
+                        
+                        // ★ 關鍵設定 1：最大寬度 (比上面的窄)
+                        maxBarThickness: 30, 
+                        
+                        // ★ 關鍵設定 2：不分組 (實現重疊)
+                        grouped: false,
+                        
+                        order: 2 // 放在中間層
                     },
                     { 
                         // 折線圖：總時長
@@ -2471,9 +2475,9 @@ async function fetchAndRenderStats() {
                         backgroundColor: '#d69a92',
                         borderWidth: 2, 
                         pointRadius: 3,
-                        yAxisID: 'y1',           // 使用右側 Y 軸
+                        yAxisID: 'y1',
                         tension: 0.3,
-                        order: 1                 // 放在最上層
+                        order: 1 // 放在最上層
                     }
                 ] 
             },
@@ -2485,7 +2489,7 @@ async function fetchAndRenderStats() {
                 },
                 scales: { 
                     x: { 
-                        // ★★★ 核心設定：設為 stacked 讓它們重疊 ★★★
+                        // ★ 關鍵設定 3：設為堆疊 (Stacked)，配合 grouped: false 可讓 Bar 置中對齊
                         stacked: true, 
                         grid: { display: false }
                     },
@@ -2493,20 +2497,7 @@ async function fetchAndRenderStats() {
                         beginAtZero: true, 
                         position: 'left', 
                         title: {display:true, text:'數量'},
-                        // 因為是 stacked，我們要防止數值疊加 (Visits + Unique)，
-                        // 但 Chart.js 的 stacked: true 預設會累加數值。
-                        // 解決方案：這只是視覺上的重疊，
-                        // 對於 "一寬一窄" 效果，其實設 stacked: true 是最簡單的方法讓它們置中對齊。
-                        // 由於 Visits 永遠 >= Unique，所以 Visits Bar (底層) 會顯示完整高度，
-                        // Unique Bar (上層) 會蓋住 Visits 的下半部，
-                        // 雖然數學上它們被疊加了，但因為我們不需要看「總高度」，
-                        // 我們看的是各自的 Bar頂端 位置。
-                        // 
-                        // 如果您發現高度不對 (例如變成 Visits + Unique 的高度)，
-                        // 請改用 stacked: false 並依靠 barPercentage 來重疊 (需插件支援)
-                        // 
-                        // ★ 對於 Chart.js 3+ 標準做法：
-                        stacked: false // 改回 false，讓它們並排，但透過下面的設定來重疊
+                        stacked: false // Y 軸數值不堆疊 (Visits 和 Unique 獨立顯示)
                     }, 
                     y1: { 
                         beginAtZero: true, 
@@ -2519,10 +2510,9 @@ async function fetchAndRenderStats() {
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                // 優化 Tooltip 顯示
+                                // 優化 Tooltip：移除我們為了識別加上的 (寬)/(窄) 標記
                                 let label = context.dataset.label || '';
                                 if (label) {
-                                    // 移除我們為了識別加上的 (寬)/(窄) 標記
                                     label = label.replace(' (寬)', '').replace(' (窄)', '');
                                     label += ': ';
                                 }

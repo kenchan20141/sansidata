@@ -2528,31 +2528,16 @@ function loadAnalyticsClassList() {
 let analyticsChartInstance = null;
 
 // === 雙軌制數據統計函式 (最終修正版：誠實數據 + 實色 + 莫蘭迪配色) ===
+// === 雙軌制數據統計函式 (精準讀取優化版) ===
 async function fetchAndRenderStats() {
     const btn = document.querySelector('button[onclick="fetchAndRenderStats()"]');
     const originalBtnText = btn.innerHTML;
     
     // 1. 獲取篩選條件
-    const scope = document.getElementById('statScope').value;
-    const mode = document.getElementById('statTimeMode').value;
+    const scope = document.getElementById('statScope').value; // global, school, class
+    const mode = document.getElementById('statTimeMode').value; // day, month, year
     
-    // 2. 設定標籤與顏色 (引入新莫蘭迪色)
-    const labelEl = document.getElementById('labelUnique');
-    let uniqueLabelText = "";
-    let uniqueColor = ""; 
-
-    if (mode === 'day') {
-        uniqueLabelText = "訪問人數";
-        uniqueColor = "#b6a6ca"; // 莫蘭迪紫 (本日)
-    } else {
-        uniqueLabelText = "活躍人次"; 
-        // ★ 需求四：本月/本年使用新的莫蘭迪杏仁沙色 (#d8caaf)，與紫色區分
-        uniqueColor = "#d8caaf"; 
-    }
-    
-    if(labelEl) labelEl.innerText = uniqueLabelText;
-
-    // 3. 處理時間參數
+    // 2. 處理時間參數
     let y, m, d;
     if (mode === 'day') { 
         const p = document.getElementById('statDate').value.split('-'); 
@@ -2562,10 +2547,38 @@ async function fetchAndRenderStats() {
         if(mode === 'month') m = document.getElementById('statMonth').value; 
     }
 
-    // 4. 構建路徑
-    let fetchPath = `stats_view/${y}`;
-    if (mode === 'day' || mode === 'month') {
+    // 3. 智能構建路徑 (Smart Path Construction)
+    // 根據用戶選擇，只讀取需要的那個節點，不再讀取整個 stats_view
+    let fetchPath = "";
+    
+    // 判斷是否選擇了特定學生
+    const selectedStudent = (scope === 'class' && typeof selectedAnalyticsStudent !== 'undefined' && selectedAnalyticsStudent) ? selectedAnalyticsStudent : null;
+
+    if (selectedStudent) {
+        // A. 查詢個別學生
+        const g = document.getElementById('statGrade').value;
+        const c = document.getElementById('statClass').value;
+        const safeName = selectedStudent.replace(/[.#$/[\]]/g, '_');
+        fetchPath = `stats_students/${g}${c}/${safeName}/${y}`;
+    } else if (scope === 'class') {
+        // B. 查詢個別班級
+        const g = document.getElementById('statGrade').value;
+        const c = document.getElementById('statClass').value;
+        fetchPath = `stats_classes/${g}${c}/${y}`;
+    } else {
+        // C. 查詢全校/所有 (Global)
+        fetchPath = `stats_global/${y}`;
+    }
+
+    // 時間維度進一步細分路徑 (如果是日或月)
+    if (mode === 'month' || mode === 'day') {
         fetchPath += `/${m}`;
+    }
+    // 注意：如果是 'day'，我們不加 `/${d}`，因為我們希望拿到該月的結構來做容錯，
+    // 或者可以直接加 `/${d}`，但為了下方邏輯統一，我們統一讀取到「月」或「日」層級。
+    // 優化：如果是 Day，直接讀 Day 節點最快。
+    if (mode === 'day') {
+        fetchPath += `/${d}`;
     }
 
     btn.disabled = true;
@@ -2578,94 +2591,83 @@ async function fetchAndRenderStats() {
         analyticsChartInstance = null;
     }
 
+    // 設定顏色
+    const labelEl = document.getElementById('labelUnique');
+    let uniqueLabelText = (mode === 'day') ? "訪問人數" : "活躍人次";
+    let uniqueColor = (mode === 'day') ? "#b6a6ca" : "#d8caaf"; 
+    if(labelEl) labelEl.innerText = uniqueLabelText;
+
     try {
-        console.log(`[Stats] 正在讀取: ${fetchPath}`);
+        console.log(`[Stats] 精準讀取路徑: ${fetchPath}`);
         const snap = await db.ref(fetchPath).once('value');
-        const monthData = snap.val();
+        const dataNode = snap.val();
         
-        if (!monthData) { 
+        if (!dataNode) { 
             alert("此時段無數據紀錄"); 
             ['dispUnique','dispVisits','dispDuration','dispAvg'].forEach(id=>document.getElementById(id).innerText=0);
             throw new Error("No Data");
         }
 
-        // === 數據聚合邏輯 ===
-        let totalUnique = 0;
-        let totalVisits = 0;
-        let totalDuration = 0;
-        
-        let chartLabels = [];
-        let chartVisits = [];
-        let chartUnique = [];
-        let chartDuration = [];
+        // === 數據聚合邏輯 (適配新結構) ===
+        let totalUnique = 0, totalVisits = 0, totalDuration = 0;
+        let chartLabels = [], chartVisits = [], chartUnique = [], chartDuration = [];
 
-        // 輔助：讀取節點數據 (絕對誠實版)
-        function getDataFromDayNode(dayNode) {
-            if (!dayNode) return { v:0, u:0, d:0 };
-            
-            let v = 0, u = 0, d = 0;
+        // 讀取單日物件的 helper
+        const getStats = (obj) => ({
+            v: parseInt(obj?.visits || 0),
+            u: parseInt(obj?.unique || 0), // 學生個人節點可能沒有 unique，預設 0
+            d: parseInt(obj?.duration || 0)
+        });
 
-            if (scope === 'class') {
-                const g = document.getElementById('statGrade').value;
-                const c = document.getElementById('statClass').value;
-                const classKey = `${g}${c}`; // 例如 "6A"
-                
-                // 讀取班級數據
-                if (dayNode.classes && dayNode.classes[classKey]) {
-                    v = parseInt(dayNode.classes[classKey].visits || 0);
-                    u = parseInt(dayNode.classes[classKey].unique || 0);
-                    d = parseInt(dayNode.classes[classKey].duration || 0);
-                }
-            } else {
-                // 讀取全校(Global)數據
-                if (dayNode.global) {
-                    v = parseInt(dayNode.global.visits || 0);
-                    u = parseInt(dayNode.global.unique || 0);
-                    d = parseInt(dayNode.global.duration || 0);
-                }
-            }
-            
-            // ★ 修正：完全移除「強制 u=1」的邏輯。
-            // 如果 DB 裡 v=8, u=0，這裡就回傳 0。這反映了資料庫的真實狀態。
-            
-            return { v, u, d };
-        }
-
-        // 處理數據 (根據模式迴圈)
         if (mode === 'day') {
-            const dayData = monthData[d]; 
-            const stats = getDataFromDayNode(dayData);
-            totalVisits = stats.v;
-            totalUnique = stats.u;
-            totalDuration = stats.d;
+            // dataNode 就是當天的數據 {visits:..., duration:...}
+            const s = getStats(dataNode);
+            totalVisits = s.v;
+            totalDuration = s.d;
             
+            // 如果是學生個人，unique 永遠是 1 (如果有訪問)
+            if (selectedStudent && s.v > 0) totalUnique = 1;
+            else totalUnique = s.u;
+
             chartLabels.push(`${d}日`);
-            chartVisits.push(stats.v);
-            chartUnique.push(stats.u);
-            chartDuration.push(Math.round(stats.d/60));
+            chartVisits.push(s.v);
+            chartUnique.push(totalUnique);
+            chartDuration.push(Math.round(s.d/60));
 
         } else if (mode === 'month') {
-            Object.keys(monthData).sort().forEach(dayKey => {
-                const stats = getDataFromDayNode(monthData[dayKey]);
-                totalVisits += stats.v;
-                totalUnique += stats.u; // 累加每日人次
-                totalDuration += stats.d;
+            // dataNode 是 { "01": {...}, "02": {...} }
+            Object.keys(dataNode).sort().forEach(dayKey => {
+                const s = getStats(dataNode[dayKey]);
+                totalVisits += s.v;
+                totalDuration += s.d;
+                
+                // 處理 Unique 累加
+                let dailyUnique = s.u;
+                if (selectedStudent && s.v > 0) dailyUnique = 1;
+                totalUnique += dailyUnique;
 
                 chartLabels.push(`${parseInt(dayKey)}日`);
-                chartVisits.push(stats.v);
-                chartUnique.push(stats.u);
-                chartDuration.push(Math.round(stats.d/60));
+                chartVisits.push(s.v);
+                chartUnique.push(dailyUnique);
+                chartDuration.push(Math.round(s.d/60));
             });
 
         } else if (mode === 'year') {
-            Object.keys(monthData).sort().forEach(monthKey => {
+            // dataNode 是 { "01": {"01":...}, "02":... } (月份 -> 日期)
+            Object.keys(dataNode).sort().forEach(monthKey => {
                 let mVisits = 0, mUnique = 0, mDuration = 0;
-                Object.values(monthData[monthKey]).forEach(dayNode => {
-                    const stats = getDataFromDayNode(dayNode);
-                    mVisits += stats.v;
-                    mUnique += stats.u; 
-                    mDuration += stats.d;
+                
+                // 遍歷該月的所有日期
+                const monthData = dataNode[monthKey];
+                Object.values(monthData).forEach(dayNode => {
+                    const s = getStats(dayNode);
+                    mVisits += s.v;
+                    mDuration += s.d;
+                    let dailyU = s.u;
+                    if (selectedStudent && s.v > 0) dailyU = 1;
+                    mUnique += dailyU;
                 });
+
                 totalVisits += mVisits;
                 totalUnique += mUnique;
                 totalDuration += mDuration;
@@ -2677,104 +2679,43 @@ async function fetchAndRenderStats() {
             });
         }
 
-        // === 更新卡片數字 ===
+        // === 更新 UI ===
         document.getElementById('dispUnique').innerText = totalUnique;
         document.getElementById('dispVisits').innerText = totalVisits;
         document.getElementById('dispDuration').innerText = Math.round(totalDuration/60);
         
-        // 平均時長計算 (防除以零)
+        // 平均計算
         let avgTime = 0;
-        if (totalUnique > 0) {
-            avgTime = Math.round((totalDuration/60) / totalUnique);
+        // 如果選的是學生，平均 = 總時長 / 訪問次數 (或天數)
+        // 這裡維持通用邏輯：總時長 / 活躍人次 (如果是個人，就是 1)
+        // 但為了顯示更合理，如果是單人模式，且 unique 累加很大(代表很多天)，
+        // 平均值解釋為「每次訪問的平均時長」可能更好： duration / visits
+        if (selectedStudent) {
+             if (totalVisits > 0) avgTime = Math.round((totalDuration/60) / totalVisits);
+        } else {
+             if (totalUnique > 0) avgTime = Math.round((totalDuration/60) / totalUnique);
         }
         document.getElementById('dispAvg').innerText = avgTime;
 
-        // ★★★ 繪製圖表 (樣式修正) ★★★
+        // === 繪圖 ===
         const ctx = document.getElementById('analyticsChart').getContext('2d');
-        
-        let chartDatasets = [
-            { 
-                // 底層：訪問次數
-                label: '訪問次數', 
-                data: chartVisits, 
-                // ★ 需求一修正：改為實色莫蘭迪藍，移除透明度
-                backgroundColor: '#94a7b5', 
-                hoverBackgroundColor: '#7a8f9e',
-                maxBarThickness: 50, 
-                grouped: false, // 允許重疊
-                order: 3
-            },
-            { 
-                // 上層：活躍人次/人數
-                label: uniqueLabelText, 
-                data: chartUnique, 
-                // ★ 需求四修正：根據模式使用不同顏色 (紫 vs 新沙色)
-                backgroundColor: uniqueColor, 
-                hoverBackgroundColor: uniqueColor, 
-                maxBarThickness: 25, 
-                grouped: false,
-                order: 2 
-            },
-            { 
-                // 折線圖：總時長
-                label: '總訪問時長', 
-                data: chartDuration, 
-                type: 'line', 
-                borderColor: '#d69a92', 
-                backgroundColor: '#d69a92',
-                borderWidth: 2, 
-                pointRadius: 3,
-                yAxisID: 'y1',
-                tension: 0.3,
-                order: 1
-            }
-        ];
-
         analyticsChartInstance = new Chart(ctx, {
             type: 'bar',
             data: { 
                 labels: chartLabels, 
-                datasets: chartDatasets
+                datasets: [
+                    { label: '訪問次數', data: chartVisits, backgroundColor: '#94a7b5', hoverBackgroundColor: '#7a8f9e', maxBarThickness: 50, order: 3 },
+                    { label: uniqueLabelText, data: chartUnique, backgroundColor: uniqueColor, hoverBackgroundColor: uniqueColor, maxBarThickness: 25, order: 2 },
+                    { label: '總訪問時長 (分)', data: chartDuration, type: 'line', borderColor: '#d69a92', backgroundColor: '#d69a92', borderWidth: 2, pointRadius: 3, yAxisID: 'y1', tension: 0.3, order: 1 }
+                ]
             },
             options: { 
                 maintainAspectRatio: false, 
-                interaction: { 
-                    mode: 'index', 
-                    intersect: false 
-                },
+                interaction: { mode: 'index', intersect: false },
                 scales: { 
-                    x: { 
-                        stacked: true, // 允許 Bar 重疊
-                        grid: { display: false }
-                    },
-                    y: { 
-                        beginAtZero: true, 
-                        position: 'left', 
-                        title: {display:true, text:'數量'},
-                        stacked: false 
-                    }, 
-                    y1: { 
-                        beginAtZero: true, 
-                        position: 'right', 
-                        grid: { drawOnChartArea: false }, 
-                        title: {display:true, text:'分鐘'} 
-                    } 
-                },
-                plugins: {
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                let label = context.dataset.label || '';
-                                if (label) {
-                                    label += ': ';
-                                }
-                                if (context.parsed.y !== null) {
-                                    label += context.parsed.y;
-                                }
-                                return label;
-                            }
-                        }
-                    }
+                    x: { stacked: true, grid: { display: false } },
+                    y: { beginAtZero: true, position: 'left', title: {display:true, text:'數量'}, stacked: false }, 
+                    y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, title: {display:true, text:'分鐘'} } 
                 }
             }
         });

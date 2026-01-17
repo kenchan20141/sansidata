@@ -1403,32 +1403,95 @@ button[id^="continue"] {
 /* ========================================= */
 @media (max-width: 768px) {
     
-    /* 1. 修正圓點按鈕 (Radio Button) 被拉伸的問題 */
-    /* 針對 .transfer-column 裡面的 radio 類型 input 進行特例處理 */
+    /* 1. 修正圓點按鈕 (Radio Button) */
     .transfer-column input[type="radio"] {
-        width: 24px !important;        /* 強制恢復為固定小尺寸 */
-        height: 24px !important;       /* 設定高度 */
-        flex: 0 0 24px !important;     /* 禁止 Flex 自動拉伸或壓縮 */
-        margin: 0 15px 0 0 !important; /* 右邊留白，底部不留白 */
-        box-shadow: none !important;   /* 移除可能的陰影 */
+        width: 16px !important;        /* ★ 修改：縮小至 16px */
+        height: 16px !important;       /* ★ 修改：縮小至 16px */
+        flex: 0 0 16px !important;     /* 禁止伸縮，固定大小 */
+        margin: 0 12px 0 0 !important; /* 右邊留白 */
+        transform: none !important;    /* 移除任何放大效果 */
+        box-shadow: none !important;
+        background-color: transparent !important; /* 確保背景乾淨 */
     }
 
     /* 2. 修正列表項目的排版 */
     .student-select-item {
-        display: flex !important;       /* 確保是橫向排列 */
-        flex-direction: row !important; /* 強制水平方向 (左圖右文) */
-        align-items: center !important; /* 垂直置中 */
-        justify-content: flex-start !important; /* 內容靠左 */
-        text-align: left !important;    /* 文字靠左 */
+        display: flex !important;
+        flex-direction: row !important;
+        align-items: center !important; /* 垂直置中對齊 */
+        justify-content: flex-start !important;
+        text-align: left !important;
         
         width: 100% !important;
-        padding: 12px 10px !important;  /* 增加點擊範圍 */
+        padding: 12px 10px !important;
         box-sizing: border-box;
+        
+        /* 確保文字大小適中，讓圓點看起來相對較小 */
+        font-size: 16px !important; 
+        line-height: 1.5 !important;
     }
     
-    /* 3. 優化列表容器的高度，避免手機上太短難滑 */
+    /* 3. 優化列表容器高度 */
     .transfer-list-box {
-        height: 300px !important; /* 稍微加高 */
+        height: 300px !important;
+    }
+}
+
+
+    /* ========================================= */
+/* === [手機版修復] 數據統計選單並排顯示 === */
+/* ========================================= */
+@media (max-width: 768px) {
+
+    /* 1. 設定容器為 Flexbox，並允許換行 */
+    #tab-analytics .filter-group {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        justify-content: space-between !important; /* 左右對齊 */
+        gap: 10px !important; /* 元素之間的間距 */
+        padding: 15px !important;
+    }
+
+    /* 2. 強制所有「標籤 (Label)」獨佔一行 */
+    #tab-analytics .filter-group label {
+        width: 100% !important;
+        margin-bottom: 5px !important;
+        margin-left: 0 !important;
+        display: block !important;
+    }
+
+    /* 3. 核心：強制「時間模式」與「日期輸入」並排 */
+    /* 設定寬度為 50% 減去一點間距，讓它們剛好塞進一行 */
+    #statTimeMode, 
+    #statDate, 
+    #statMonth, 
+    #statYear {
+        width: calc(50% - 6px) !important; /* 扣除 gap 的一半 */
+        min-width: 0 !important;           /* 防止被內容撐開 */
+        flex: 0 0 auto !important;         /* 禁止自動伸縮 */
+        margin: 0 !important;              /* 清除外邊距 */
+        box-sizing: border-box !important;
+    }
+
+    /* 4. 針對「對象」選單 (上面的選單) 的特殊處理 */
+    /* 如果是對象選單，因為它可能沒有配對的輸入框，我們讓它保持 100% 或視情況調整 */
+    #statScope, #statGrade, #statClass {
+        /* 如果您希望上面的年級/班別也並排，保留這行；如果希望它們佔滿，改為 100% */
+        width: calc(50% - 6px) !important; 
+    }
+    
+    /* 對象主選單 (Global/School/Class) 通常字較長，可以讓它獨佔一行，或者也並排 */
+    #statScope {
+        width: 100% !important;
+        margin-bottom: 10px !important;
+    }
+
+    /* 5. 查詢按鈕獨佔一行 */
+    #tab-analytics .btn-action {
+        width: 100% !important;
+        margin-top: 15px !important;
+        margin-left: 0 !important;
+        justify-content: center;
     }
 }
     

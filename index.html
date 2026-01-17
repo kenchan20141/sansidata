@@ -1063,6 +1063,96 @@ canvas {
     color: var(--m-blue);
 }
 
+    /* =======================================================
+   === [新增] 閱卷員追問區 (畫布聊天室) 樣式 - 教師端移植版 ===
+   ======================================================= */
+
+/* 1. 聊天室外層容器 */
+.canvas-chat-container {
+    margin-top: 40px;
+    padding-top: 25px;
+    border-top: 3px dashed #2A9689; /* 標誌性的綠色虛線 */
+    background-color: #fcfdfd;
+    padding-bottom: 20px;
+    font-family: 'Noto Serif TC', serif;
+    animation: fadeIn 0.5s ease;
+    border-radius: 8px; /* 增加圓角讓視覺更柔和 */
+}
+
+/* 2. 標題設計 */
+.canvas-chat-header {
+    color: #2A9689;
+    font-size: 1.3rem;
+    font-weight: bold;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-left: 5px;
+}
+
+/* 3. 聊天紀錄捲動區 (在歷史紀錄中我們通常希望它自動伸展，不要 Scroll，方便列印或閱讀) */
+.canvas-chat-history {
+    background-color: #f0f4f8; /* 淺藍灰背景 */
+    border: 1px solid #d1d9e6;
+    border-radius: 12px;
+    padding: 25px;
+    /* 這裡移除了固定高度，改為自動高度，讓歷史紀錄完整顯示 */
+    height: auto !important; 
+    min-height: 100px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px; /* 氣泡間距 */
+}
+
+/* 4. 訊息氣泡通用設定 */
+.message-bubble {
+    padding: 15px 20px;
+    border-radius: 18px;
+    line-height: 1.8;
+    font-size: 1rem;
+    max-width: 88%;
+    word-wrap: break-word;
+    position: relative;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    margin-bottom: 10px; /* 確保氣泡間有間距 */
+}
+
+/* 5. AI (閱卷員) 氣泡 - 左側 */
+.message-bubble.ai-message {
+    background-color: #ffffff;
+    color: #333;
+    align-self: flex-start; /* 靠左 */
+    border-top-left-radius: 4px;
+    border: 1px solid #e0e0e0;
+    margin-right: auto; /* 確保靠左 */
+}
+
+/* 6. 學生 (用戶) 氣泡 - 右側 */
+.message-bubble.user-message {
+    background-color: #2A9689; /* 主題綠 */
+    color: white;
+    align-self: flex-end; /* 靠右 */
+    border-top-right-radius: 4px;
+    box-shadow: 0 4px 10px rgba(42, 150, 137, 0.2);
+    margin-left: auto; /* 確保靠右 */
+}
+
+/* 7. 強制隱藏歷史紀錄中的輸入框 (教師端不需要輸入) */
+.canvas-input-area,
+#writingGuideChatInputContainer,
+#writingChatInputContainer,
+#argumentChatInputContainer,
+#chatInputContainer {
+    display: none !important;
+}
+
+/* 8. 強制隱藏按鈕 */
+.canvas-send-btn,
+.btn-icon-action,
+button[id^="continue"] {
+    display: none !important;
+}
     
     
 </style>

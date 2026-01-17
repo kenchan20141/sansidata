@@ -1212,6 +1212,10 @@ button[id^="continue"] {
 
     /* === [新增] 即時在線名單樣式 (莫蘭迪風格) === */
 
+/* ========================================= */
+/* === [即時在線名單] 完整樣式 (含手機版置中修復) === */
+/* ========================================= */
+
 /* 1. 左下角懸浮按鈕 */
 .online-status-fab {
     position: fixed;
@@ -1321,18 +1325,17 @@ button[id^="continue"] {
 }
 .online-footer div { display: flex; align-items: center; gap: 6px; }
 
-/* 手機版適配 */
+/* 手機版適配 (懸浮按鈕) */
 @media (max-width: 600px) {
     .online-status-fab {
-        bottom: 15px;
-        left: 15px;
+        bottom: 25px; /* 稍微提高避免貼底 */
+        left: 20px;
         padding: 10px 15px;
     }
     .online-text { display: none; } /* 手機版只顯示圖示 */
 }
 
-
-    /* ========================================= */
+/* ========================================= */
 /* === [修正] 在線名單視窗 UI 優化補丁 === */
 /* ========================================= */
 
@@ -1352,7 +1355,7 @@ button[id^="continue"] {
     width: 100%;
 }
 
-/* 當內容為空時的專用樣式 (JS 會用到) */
+/* 當內容為空時的專用樣式 */
 .empty-state-container {
     flex-grow: 1;
     display: flex;
@@ -1365,23 +1368,33 @@ button[id^="continue"] {
 
 /* 2. 手機版響應式修正 (針對在線名單視窗) */
 @media (max-width: 600px) {
-    #onlineUsersModal .modal-body {
-        width: 85% !important;       /* 左右留白，不貼邊 */
-        max-width: 350px !important; /* 限制最大寬度 */
-        margin: auto !important;     /* 強制置中 */
-        border-radius: 16px !important; /* 恢復圓角 */
-        height: auto !important;     /* 高度自動 */
-        max-height: 70vh !important; /* 限制高度不超過螢幕 70% */
-        position: relative;
-        top: 50%;
-        transform: translateY(-50%); /* 垂直置中 */
-    }
-    
-    /* 修正遮罩層的對齊方式 */
+    /* 遮罩層設定：強制使用 Flexbox 垂直水平置中 */
     #onlineUsersModal.modal-overlay {
-        display: none; /* 預設隱藏 (JS 控制 display: flex) */
-        align-items: flex-start; /* 讓 transform 置中生效 */
+        display: none; /* 預設隱藏 (JS 會切換為 flex) */
+        
+        /* ★★★ 核心修復：強制置中 ★★★ */
+        align-items: center !important;     /* 垂直置中 */
+        justify-content: center !important; /* 水平置中 */
+        
         padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* 視窗本體設定 */
+    #onlineUsersModal .modal-body {
+        /* ★★★ 核心修復：移除所有位移屬性 ★★★ */
+        position: relative !important;
+        top: auto !important;
+        transform: none !important;
+        margin: 0 !important; /* Margin 0，因為父層已經幫忙置中了 */
+        
+        /* 尺寸與外觀 */
+        width: 85% !important;
+        max-width: 350px !important;
+        height: auto !important;
+        max-height: 80vh !important; /* 限制最大高度 */
+        border-radius: 16px !important;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.3) !important;
     }
 }
     
@@ -2703,7 +2716,7 @@ function loadAnalyticsClassList() {
 
 let analyticsChartInstance = null;
 
-// === 雙軌制數據統計函式 (精準讀取優化版 - 含 stats_school 支援) ===
+// === 雙軌制數據統計函式 (精準讀取優化版 + 流量監控) ===
 async function fetchAndRenderStats() {
     const btn = document.querySelector('button[onclick="fetchAndRenderStats()"]');
     const originalBtnText = btn.innerHTML;
@@ -2725,25 +2738,20 @@ async function fetchAndRenderStats() {
     // 3. 智能構建路徑 (Smart Path Construction)
     let fetchPath = "";
     
-    // 判斷是否選擇了特定學生
     const selectedStudent = (scope === 'class' && typeof selectedAnalyticsStudent !== 'undefined' && selectedAnalyticsStudent) ? selectedAnalyticsStudent : null;
 
     if (selectedStudent) {
-        // A. 查詢個別學生
         const g = document.getElementById('statGrade').value;
         const c = document.getElementById('statClass').value;
         const safeName = selectedStudent.replace(/[.#$/[\]]/g, '_');
         fetchPath = `stats_students/${g}${c}/${safeName}/${y}`;
     } else if (scope === 'class') {
-        // B. 查詢個別班級
         const g = document.getElementById('statGrade').value;
         const c = document.getElementById('statClass').value;
         fetchPath = `stats_classes/${g}${c}/${y}`;
     } else if (scope === 'school') {
-        // ★★★ C. 新增：查詢全校 (僅學生) ★★★
         fetchPath = `stats_school/${y}`;
     } else {
-        // D. 查詢所有用家 (Global - 含訪客)
         fetchPath = `stats_global/${y}`;
     }
 
@@ -2758,23 +2766,47 @@ async function fetchAndRenderStats() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 數據分析中...';
     
-    // 清空顯示
     ['dispUnique','dispVisits','dispDuration','dispAvg'].forEach(id=>document.getElementById(id).innerText='-');
     if(analyticsChartInstance) {
         analyticsChartInstance.destroy();
         analyticsChartInstance = null;
     }
 
-    // 設定顏色
     const labelEl = document.getElementById('labelUnique');
     let uniqueLabelText = (mode === 'day') ? "訪問人數" : "活躍人次";
     let uniqueColor = (mode === 'day') ? "#b6a6ca" : "#d8caaf"; 
     if(labelEl) labelEl.innerText = uniqueLabelText;
 
     try {
-        console.log(`[Stats] 精準讀取路徑: ${fetchPath}`);
+        console.log(`🔍 [Stats] 準備讀取路徑: ${fetchPath}`);
         const snap = await db.ref(fetchPath).once('value');
         const dataNode = snap.val();
+        
+        // ==========================================
+        // ★★★ [新增] 數據統計流量監控 ★★★
+        // ==========================================
+        if (dataNode) {
+            try {
+                // 將資料轉為 JSON 字串並計算真實 UTF-8 大小
+                const jsonString = JSON.stringify(dataNode);
+                const bytes = new TextEncoder().encode(jsonString).length;
+                const kb = (bytes / 1024).toFixed(2);
+                
+                console.group("📊 數據統計流量報告");
+                console.log(`📂 下載路徑: ${fetchPath}`);
+                console.log(`📉 數據大小: ${bytes} bytes (約 ${kb} KB)`);
+                
+                // 簡單估算資料節點數量
+                const keys = Object.keys(dataNode);
+                console.log(`🔢 資料節點: 約 ${keys.length} 筆主要紀錄`);
+                console.groupEnd();
+            } catch (e) {
+                console.log("流量計算錯誤", e);
+            }
+        } else {
+            console.log(`📊 [數據統計] 此路徑無資料 (0 KB)`);
+        }
+        // ==========================================
         
         if (!dataNode) { 
             alert("此時段無數據紀錄"); 
@@ -2846,7 +2878,6 @@ async function fetchAndRenderStats() {
             });
         }
 
-        // === 更新 UI ===
         document.getElementById('dispUnique').innerText = totalUnique;
         document.getElementById('dispVisits').innerText = totalVisits;
         document.getElementById('dispDuration').innerText = Math.round(totalDuration/60);
@@ -2859,7 +2890,6 @@ async function fetchAndRenderStats() {
         }
         document.getElementById('dispAvg').innerText = avgTime;
 
-        // === 繪圖 ===
         const ctx = document.getElementById('analyticsChart').getContext('2d');
         analyticsChartInstance = new Chart(ctx, {
             type: 'bar',

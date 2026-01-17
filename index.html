@@ -4232,7 +4232,7 @@ function stopListeningOnlineUsers() {
     }
 }
 
-// 4. 渲染名單 (最終修正版：準確顯示空狀態)
+// 4. 渲染名單 (最終版：合併訪客 + F12流量 + 中文顯示)
 function renderOnlineUsers(data) {
     const list = document.getElementById('onlineUserList');
     const totalEl = document.getElementById('onlineTotalCount');
@@ -4240,19 +4240,38 @@ function renderOnlineUsers(data) {
     const cntTeacherEl = document.getElementById('cntTeacher');
     const cntGuestEl = document.getElementById('cntGuest');
 
-    // 清空列表，準備重新繪製
+    // ==========================================
+    // ★★★ F12 流量數據監控 ★★★
+    // ==========================================
+    if (data) {
+        try {
+            const jsonString = JSON.stringify(data);
+            const bytes = new TextEncoder().encode(jsonString).length;
+            const kb = (bytes / 1024).toFixed(2);
+            
+            console.group("📊 在線名單流量報告");
+            console.log(`📉 數據大小: ${bytes} bytes (約 ${kb} KB)`);
+            console.log(`🔢 原始筆數: ${Object.keys(data).length} 筆`);
+            console.groupEnd();
+        } catch (e) {
+            console.log("流量計算錯誤", e);
+        }
+    } else {
+        console.log(`📊 [流量監控] 本次下載: 0 bytes (無人)`);
+    }
+    // ==========================================
+
     list.innerHTML = '';
 
-    // 1. 初始化容器與計數器
     let users = [];
     let stats = { student: 0, teacher: 0, guest: 0 };
     let activeGuestCount = 0;
 
-    // 2. 如果有資料，開始分類處理
+    // 1. 資料處理與分類
     if (data) {
         Object.entries(data).forEach(([uid, info]) => {
-            // 過濾掉太舊的資料 (超過 10 分鐘)
             const now = Date.now();
+            // 過濾逾時資料 (10分鐘)
             if (info.timestamp && (now - info.timestamp > 10 * 60 * 1000)) return;
 
             // A. 老師 / 特許用家
@@ -4277,44 +4296,44 @@ function renderOnlineUsers(data) {
                 });
                 stats.student++;
             }
-            // C. 訪客 (只計數)
+            // C. 訪客 (★ 關鍵邏輯：只計數，不加入列表 ★)
             else {
-                activeGuestCount++;
+                activeGuestCount++; // 這裡只增加數字，不產生 "GUEST" 卡片
                 stats.guest++;
             }
         });
     }
 
-    // 3. 處理訪客合併顯示
+    // 2. 只有當訪客數 > 0 時，才手動加入一行「訪客」
     if (activeGuestCount > 0) {
         users.push({
             uid: 'merged_guest_node',
             type: 'guest',
-            displayName: '訪客',
-            subInfo: `共 ${activeGuestCount} 人`,
+            displayName: '訪客', // ★ 強制顯示中文
+            subInfo: `共 ${activeGuestCount} 人`, // ★ 顯示人數
             sortWeight: 3
         });
     }
 
-    // 4. ★★★ 關鍵判斷：如果處理完後沒有任何人 ★★★
+    // 3. 空狀態處理
     if (users.length === 0) {
-        // 注入「無人在線」的 HTML
         list.innerHTML = `
             <div class="empty-state-box">
                 <i class="fas fa-coffee"></i>
                 <p>目前無人在線</p>
             </div>
         `;
+        list.style.justifyContent = 'center';
         
-        // 更新統計數字為 0
         totalEl.innerText = 0;
         cntStudentEl.innerText = 0;
         cntTeacherEl.innerText = 0;
         cntGuestEl.innerText = 0;
-        return; // 結束函式
+        return;
     }
 
-    // 5. 如果有人，進行排序並渲染
+    // 4. 排序並渲染
+    list.style.justifyContent = 'flex-start';
     users.sort((a, b) => a.sortWeight - b.sortWeight);
 
     users.forEach(u => {
@@ -4337,13 +4356,12 @@ function renderOnlineUsers(data) {
         list.appendChild(item);
     });
 
-    // 6. 更新統計數字
+    // 5. 更新統計數字
     totalEl.innerText = stats.student + stats.teacher + stats.guest;
     cntStudentEl.innerText = stats.student;
     cntTeacherEl.innerText = stats.teacher;
     cntGuestEl.innerText = stats.guest;
 }
-
     
   
 </script>

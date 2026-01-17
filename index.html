@@ -962,6 +962,70 @@ canvas {
         height: auto !important;
     }
 }
+
+    /* ========================================= */
+/* === [修復] 閱讀點評與改寫範例專用樣式 === */
+/* ========================================= */
+
+/* 1. 答題步驟與思路 (修復標題不明顯與排版雜亂) */
+.steps-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;       /* 卡片之間的間距 */
+    margin-top: 15px;
+}
+
+.step-card {
+    background-color: #fff;
+    border: 1px solid #e0ddd7;
+    border-left: 5px solid var(--m-blue); /* 左側加粗色條，突顯層次 */
+    border-radius: 8px;
+    padding: 18px 20px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+    transition: transform 0.2s;
+}
+
+.step-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 12px rgba(0,0,0,0.08);
+}
+
+.step-title {
+    font-size: 1.15rem;
+    font-weight: bold;
+    color: var(--m-blue); /* 使用主題藍色 */
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px dashed #ccc; /* 標題下方加虛線 */
+    letter-spacing: 1px;
+}
+
+.step-content {
+    font-size: 1.05rem;
+    line-height: 1.9; /* 加寬行距，解決字體太窄問題 */
+    color: #444;
+    text-align: justify;
+    white-space: pre-wrap; /* 保留換行 */
+}
+
+/* 2. 改寫範例 (修復擠在一起的問題) */
+.rewrite-content {
+    background-color: #fcfcfc;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 25px;       /* 增加內邊距 */
+    margin-top: 15px;
+    
+    /* 字體與排版優化 */
+    font-family: 'Noto Serif TC', serif;
+    font-size: 1.1rem;   /* 字體稍微加大 */
+    line-height: 2.2;    /* 大幅增加行距，模擬原稿紙閱讀感 */
+    color: #2c3e50;
+    text-align: justify;
+    white-space: pre-wrap;
+    
+    box-shadow: inset 0 0 15px rgba(0,0,0,0.02); /* 輕微內陰影增加質感 */
+}
     
 </style>
 </head>

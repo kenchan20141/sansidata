@@ -1153,7 +1153,61 @@ canvas {
 button[id^="continue"] {
     display: none !important;
 }
+
+
+
+    /* === 手機版響應式修正 (請貼在 style 標籤最後面) === */
+@media (max-width: 768px) {
+
+    /* --- 修復 1：學年管理 - 個別調動名單擠壓問題 --- */
+    .student-select-item {
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
+        white-space: nowrap !important; /* 禁止文字換行 */
+        padding: 12px 10px !important;  /* 增加手指點擊範圍 */
+        box-sizing: border-box;
+    }
     
+    .student-select-item input[type="radio"] {
+        flex-shrink: 0 !important;      /* 防止圓形按鈕變形 */
+        margin-right: 12px !important;  /* 確保名字與按鈕有距離 */
+        width: 20px;
+        height: 20px;
+    }
+
+    /* --- 修復 2：數據統計 - 時間選單強制並排 --- */
+    /* 針對數據統計頁面的選單容器 */
+    #tab-analytics .filter-group {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between; /* 讓元件左右對齊 */
+        gap: 2%; /* 間距 */
+    }
+
+    /* 強制所有選單和日期選擇器並排 (各佔 49%) */
+    #tab-analytics select, 
+    #tab-analytics input[type="date"] {
+        width: 48% !important;
+        flex: 0 0 48% !important; /* 禁止 Flex 自動拉伸 */
+        min-width: 0 !important;
+        margin-bottom: 10px;
+        margin-left: 0 !important; /* 移除可能的左邊距 */
+    }
+
+    /* 標籤和按鈕則保持佔滿整行 */
+    #tab-analytics label,
+    #tab-analytics button {
+        width: 100% !important;
+        margin-left: 0 !important;
+    }
+    
+    /* 修正標籤的顯示，避免擠在一起 */
+    #tab-analytics label {
+        margin-top: 10px;
+        margin-bottom: 5px;
+    }
+}
     
 </style>
 </head>

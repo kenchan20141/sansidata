@@ -1208,6 +1208,128 @@ button[id^="continue"] {
         margin-bottom: 5px;
     }
 }
+
+
+    /* === [新增] 即時在線名單樣式 (莫蘭迪風格) === */
+
+/* 1. 左下角懸浮按鈕 */
+.online-status-fab {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background: #ffffff;
+    color: #5e7067; /* 莫蘭迪深綠 */
+    border: 1px solid #8fa398;
+    padding: 10px 20px;
+    border-radius: 50px;
+    box-shadow: 0 4px 15px rgba(143, 163, 152, 0.4);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: bold;
+    z-index: 9999;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    font-size: 0.95rem;
+}
+
+.online-status-fab:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 20px rgba(143, 163, 152, 0.6);
+    background: #fdfcf8;
+}
+
+/* 綠色呼吸燈效果 */
+.online-dot {
+    width: 10px;
+    height: 10px;
+    background-color: #4caf50;
+    border-radius: 50%;
+    box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7);
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(76, 175, 80, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+}
+
+/* 2. 名單列表樣式 */
+.online-user-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.online-user-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 20px;
+    border-bottom: 1px solid #eee;
+    background: #fff;
+    transition: background 0.2s;
+}
+
+.online-user-item:hover {
+    background: #fafafa;
+}
+
+.online-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 15px;
+    font-size: 1rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.avatar-guest { background-color: #e0e0e0; color: #999; }
+.avatar-student { background-color: #8fa398; } /* 莫蘭迪綠 */
+.avatar-teacher { background-color: #94a7b5; } /* 莫蘭迪藍 */
+
+.online-info {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.online-name {
+    font-weight: bold;
+    color: #555;
+    font-size: 1rem;
+}
+
+.online-sub {
+    font-size: 0.8rem;
+    color: #999;
+}
+
+/* 3. 底部統計欄 */
+.online-footer {
+    padding: 10px 20px;
+    background: #fff;
+    border-top: 1px solid #eee;
+    display: flex;
+    justify-content: space-around;
+    font-size: 0.9rem;
+    color: #666;
+    border-radius: 0 0 15px 15px;
+}
+.online-footer div { display: flex; align-items: center; gap: 6px; }
+
+/* 手機版適配 */
+@media (max-width: 600px) {
+    .online-status-fab {
+        bottom: 15px;
+        left: 15px;
+        padding: 10px 15px;
+    }
+    .online-text { display: none; } /* 手機版只顯示圖示 */
+}
     
 </style>
 </head>
@@ -3851,11 +3973,200 @@ async function deleteStudent() {
         alert("刪除失敗：" + e.message);
     }
 }
+
+
+
+// === [新增] 即時在線名單功能邏輯 ===
+
+let isOnlineModalOpen = false;
+let onlineUsersListener = null;
+
+// 1. 開關視窗與監聽器管理 (省流核心)
+function toggleOnlineUsersModal() {
+    const modal = document.getElementById('onlineUsersModal');
+    const list = document.getElementById('onlineUserList');
+    
+    if (!isOnlineModalOpen) {
+        // === 開啟時 ===
+        modal.style.display = 'flex';
+        isOnlineModalOpen = true;
+        
+        // 開始監聽 (Listen)
+        list.innerHTML = '<div style="text-align:center; padding:30px; color:#999;"><i class="fas fa-spinner fa-spin"></i> 正在連線獲取名單...</div>';
+        startListeningOnlineUsers();
+    } else {
+        // === 關閉時 ===
+        modal.style.display = 'none';
+        isOnlineModalOpen = false;
+        
+        // 停止監聽 (Stop Listen) - 這是省流的關鍵
+        stopListeningOnlineUsers();
+    }
+}
+
+// 2. 啟動 Firebase 監聽
+function startListeningOnlineUsers() {
+    // 指向 Rules 中新增的節點
+    const onlineRef = db.ref('online_users');
+    
+    // 使用 .on('value') 進行即時監聽
+    onlineUsersListener = onlineRef.on('value', (snapshot) => {
+        const data = snapshot.val();
+        renderOnlineUsers(data);
+    });
+}
+
+// 3. 停止 Firebase 監聽
+function stopListeningOnlineUsers() {
+    if (onlineUsersListener) {
+        db.ref('online_users').off('value', onlineUsersListener);
+        onlineUsersListener = null;
+        console.log("已停止在線名單監聽 (省流模式)");
+    }
+}
+
+// 4. 渲染名單 (處理顯示邏輯)
+function renderOnlineUsers(data) {
+    const list = document.getElementById('onlineUserList');
+    const totalEl = document.getElementById('onlineTotalCount');
+    const cntStudentEl = document.getElementById('cntStudent');
+    const cntTeacherEl = document.getElementById('cntTeacher');
+    const cntGuestEl = document.getElementById('cntGuest');
+
+    if (!data) {
+        list.innerHTML = '<div style="text-align:center; padding:30px; color:#ccc;">目前無人在线</div>';
+        totalEl.innerText = 0;
+        cntStudentEl.innerText = 0; cntTeacherEl.innerText = 0; cntGuestEl.innerText = 0;
+        return;
+    }
+
+    // 轉換為陣列並分類
+    let users = [];
+    let stats = { student: 0, teacher: 0, guest: 0 };
+
+    Object.entries(data).forEach(([uid, info]) => {
+        // 過濾掉太舊的資料 (例如超過 10 分鐘沒更新的，雖然 onDisconnect 應該會處理，但雙重保險)
+        // 這裡假設 client 端有寫入 timestamp
+        const now = Date.now();
+        if (info.timestamp && (now - info.timestamp > 10 * 60 * 1000)) return;
+
+        let type = 'guest';
+        let displayName = '訪客';
+        let subInfo = 'Guest';
+        let sortWeight = 3; // 1:老師, 2:學生, 3:訪客
+
+        // === 核心邏輯：根據身分決定顯示內容 ===
+        
+        // A. 老師 / 特許用家
+        if (info.grade === 'Special' || info.grade === 'System' || info.role === 'teacher') {
+            type = 'teacher';
+            displayName = info.name || '老師';
+            subInfo = '教師/特許';
+            sortWeight = 1;
+            stats.teacher++;
+        }
+        // B. 學生 (已登入)
+        else if (info.grade && info.class && info.name) {
+            type = 'student';
+            // 規則：顯示 班別 + 姓名，不顯示班號
+            displayName = `${info.grade}${info.class} ${info.name}`;
+            subInfo = '學生'; // 這裡不顯示班號
+            sortWeight = 2;
+            stats.student++;
+        }
+        // C. 訪客 (未登入 或 資料不全)
+        else {
+            type = 'guest';
+            displayName = '訪客';
+            subInfo = '未登入';
+            sortWeight = 3;
+            stats.guest++;
+        }
+
+        users.push({ uid, type, displayName, subInfo, sortWeight });
+    });
+
+    // 排序：老師 -> 學生 -> 訪客
+    users.sort((a, b) => a.sortWeight - b.sortWeight);
+
+    // 生成 HTML
+    list.innerHTML = '';
+    users.forEach(u => {
+        let icon = 'fa-user';
+        let avatarClass = 'avatar-guest';
+        
+        if (u.type === 'student') { icon = 'fa-user-graduate'; avatarClass = 'avatar-student'; }
+        if (u.type === 'teacher') { icon = 'fa-user-tie'; avatarClass = 'avatar-teacher'; }
+
+        const item = document.createElement('div');
+        item.className = 'online-user-item';
+        item.innerHTML = `
+            <div class="online-avatar ${avatarClass}"><i class="fas ${icon}"></i></div>
+            <div class="online-info">
+                <div class="online-name">${u.displayName}</div>
+                <div class="online-sub">${u.subInfo}</div>
+            </div>
+            <div style="width:8px; height:8px; background:#4caf50; border-radius:50%; box-shadow:0 0 5px #4caf50;"></div>
+        `;
+        list.appendChild(item);
+    });
+
+    // 更新統計數字
+    totalEl.innerText = users.length;
+    cntStudentEl.innerText = stats.student;
+    cntTeacherEl.innerText = stats.teacher;
+    cntGuestEl.innerText = stats.guest;
+}
+
+
+
+
+    
   
 </script>
 
 <footer class="copyright-footer">
     <p>Copyright © 2025 陳冠健. All rights reserved.</p>
 </footer>
+
+
+<!-- === [新增] 即時在線名單按鈕 (左下角懸浮) === -->
+<div id="onlineUserBtn" class="online-status-fab" onclick="toggleOnlineUsersModal()">
+    <div class="online-dot"></div>
+    <i class="fas fa-wifi"></i>
+    <span class="online-text">在線名單</span>
+</div>
+
+<!-- === [新增] 即時在線名單視窗 === -->
+<div id="onlineUsersModal" class="modal-overlay">
+    <div class="modal-body" style="max-width: 400px; height: 60vh;">
+        <div class="modal-header" style="background: linear-gradient(135deg, #8fa398 0%, #7d9186 100%); color: white; border: none;">
+            <h3 style="margin:0; color:white; font-size:1.1rem; display:flex; align-items:center; gap:10px;">
+                <i class="fas fa-users"></i> 即時在線
+                <span id="onlineTotalCount" style="background:rgba(255,255,255,0.2); padding:2px 10px; border-radius:10px; font-size:0.8em;">0</span>
+            </h3>
+            <button onclick="toggleOnlineUsersModal()" style="font-size:24px; border:none; background:none; cursor:pointer; color:white; opacity:0.8;">&times;</button>
+        </div>
+        <div class="modal-content-scroll" style="background:#f4f4f4; padding:0;">
+            <!-- 清單容器 -->
+            <div id="onlineUserList" class="online-user-list">
+                <div style="text-align:center; padding:30px; color:#999;">
+                    <i class="fas fa-spinner fa-spin"></i> 連線中...
+                </div>
+            </div>
+        </div>
+        <!-- 底部統計欄 -->
+        <div class="online-footer">
+            <div><i class="fas fa-user-graduate" style="color:#8fa398;"></i> <span id="cntStudent">0</span></div>
+            <div><i class="fas fa-user-tie" style="color:#94a7b5;"></i> <span id="cntTeacher">0</span></div>
+            <div><i class="fas fa-user-secret" style="color:#ccc;"></i> <span id="cntGuest">0</span></div>
+        </div>
+    </div>
+</div>
+
+
+
+
+    
 </body>
 </html>

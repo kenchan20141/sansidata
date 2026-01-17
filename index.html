@@ -1330,6 +1330,60 @@ button[id^="continue"] {
     }
     .online-text { display: none; } /* 手機版只顯示圖示 */
 }
+
+
+    /* ========================================= */
+/* === [修正] 在線名單視窗 UI 優化補丁 === */
+/* ========================================= */
+
+/* 1. 設定內容區域的最小高度 & 空狀態置中 */
+#onlineUsersModal .modal-content-scroll {
+    min-height: 300px !important;  /* 設定最小高度，避免太扁 */
+    display: flex;                 /* 使用 Flex 佈局 */
+    flex-direction: column;
+}
+
+/* 讓列表容器自動撐滿高度，以便空狀態能垂直置中 */
+#onlineUserList {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; /* 有人時靠上 */
+    width: 100%;
+}
+
+/* 當內容為空時的專用樣式 (JS 會用到) */
+.empty-state-container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #aaa;
+    gap: 15px;
+}
+
+/* 2. 手機版響應式修正 (針對在線名單視窗) */
+@media (max-width: 600px) {
+    #onlineUsersModal .modal-body {
+        width: 85% !important;       /* 左右留白，不貼邊 */
+        max-width: 350px !important; /* 限制最大寬度 */
+        margin: auto !important;     /* 強制置中 */
+        border-radius: 16px !important; /* 恢復圓角 */
+        height: auto !important;     /* 高度自動 */
+        max-height: 70vh !important; /* 限制高度不超過螢幕 70% */
+        position: relative;
+        top: 50%;
+        transform: translateY(-50%); /* 垂直置中 */
+    }
+    
+    /* 修正遮罩層的對齊方式 */
+    #onlineUsersModal.modal-overlay {
+        display: none; /* 預設隱藏 (JS 控制 display: flex) */
+        align-items: flex-start; /* 讓 transform 置中生效 */
+        padding: 0 !important;
+    }
+}
     
 </style>
 </head>
@@ -4025,7 +4079,7 @@ function stopListeningOnlineUsers() {
     }
 }
 
-// 4. 渲染名單 (合併訪客版 + 流量監控)
+// 4. 渲染名單 (UI 優化版：支援最小高度與空狀態)
 function renderOnlineUsers(data) {
     const list = document.getElementById('onlineUserList');
     const totalEl = document.getElementById('onlineTotalCount');
@@ -4033,83 +4087,68 @@ function renderOnlineUsers(data) {
     const cntTeacherEl = document.getElementById('cntTeacher');
     const cntGuestEl = document.getElementById('cntGuest');
 
-    // === [DEBUG] 流量監控開始 ===
+    // === [DEBUG] 流量監控 ===
     if (data) {
         try {
-            // 將物件轉為字串並計算 UTF-8 真實大小
             const jsonString = JSON.stringify(data);
             const bytes = new TextEncoder().encode(jsonString).length;
             const kb = (bytes / 1024).toFixed(2);
-            console.log(`📊 [流量監控] 本次下載在線名單大小: ${bytes} bytes (約 ${kb} KB)`);
-            console.log(`👥 [數據內容] 原始資料筆數: ${Object.keys(data).length} 筆`);
-        } catch (e) {
-            console.log("流量計算錯誤", e);
-        }
-    } else {
-        console.log("📊 [流量監控] 本次下載: 0 bytes (無人)");
+            console.log(`📊 [流量] ${bytes} bytes (${kb} KB)`);
+        } catch (e) {}
     }
-    // === [DEBUG] 流量監控結束 ===
 
-    if (!data) {
-        list.innerHTML = '<div style="text-align:center; padding:30px; color:#ccc;">目前無人在线</div>';
+    // 判斷是否為空 (null 或 空物件)
+    const isEmpty = !data || Object.keys(data).length === 0;
+
+    if (isEmpty) {
+        // ★★★ 修改處：使用漂亮的空狀態樣式 ★★★
+        list.innerHTML = `
+            <div class="empty-state-container">
+                <i class="fas fa-wind" style="font-size: 3rem; opacity: 0.3;"></i>
+                <p>目前無人在線</p>
+            </div>
+        `;
+        // 修正列表對齊方式 (讓它置中)
+        list.style.justifyContent = 'center';
+        
         totalEl.innerText = 0;
         cntStudentEl.innerText = 0; cntTeacherEl.innerText = 0; cntGuestEl.innerText = 0;
         return;
     }
 
+    // 如果有人，恢復靠上對齊
+    list.style.justifyContent = 'flex-start';
+
     // 轉換為陣列並分類
     let users = [];
     let stats = { student: 0, teacher: 0, guest: 0 };
-    
-    // 訪客計數器
     let activeGuestCount = 0;
 
     Object.entries(data).forEach(([uid, info]) => {
-        // 過濾掉太舊的資料 (超過 10 分鐘)
         const now = Date.now();
         if (info.timestamp && (now - info.timestamp > 10 * 60 * 1000)) return;
 
         // A. 老師 / 特許用家
         if (info.grade === 'Special' || info.grade === 'System' || info.role === 'teacher') {
-            users.push({ 
-                uid, 
-                type: 'teacher', 
-                displayName: info.name || '老師', 
-                subInfo: '教師/特許', 
-                sortWeight: 1 
-            });
+            users.push({ uid, type: 'teacher', displayName: info.name || '老師', subInfo: '教師/特許', sortWeight: 1 });
             stats.teacher++;
         }
-        // B. 學生 (已登入)
+        // B. 學生
         else if (info.grade && info.class && info.name) {
-            users.push({ 
-                uid, 
-                type: 'student', 
-                displayName: `${info.grade}${info.class} ${info.name}`, 
-                subInfo: '學生', 
-                sortWeight: 2 
-            });
+            users.push({ uid, type: 'student', displayName: `${info.grade}${info.class} ${info.name}`, subInfo: '學生', sortWeight: 2 });
             stats.student++;
         }
-        // C. 訪客 (只計數，不獨立顯示)
+        // C. 訪客 (計數)
         else {
             activeGuestCount++;
             stats.guest++;
         }
     });
 
-    // 如果有訪客，手動加入一個聚合欄位
     if (activeGuestCount > 0) {
-        users.push({
-            uid: 'merged_guest_node',
-            type: 'guest',
-            displayName: '訪客',
-            subInfo: `共 ${activeGuestCount} 人`,
-            sortWeight: 3
-        });
+        users.push({ uid: 'guest_group', type: 'guest', displayName: '訪客', subInfo: `共 ${activeGuestCount} 人`, sortWeight: 3 });
     }
 
-    // 排序
     users.sort((a, b) => a.sortWeight - b.sortWeight);
 
     // 生成 HTML
@@ -4117,7 +4156,6 @@ function renderOnlineUsers(data) {
     users.forEach(u => {
         let icon = 'fa-user';
         let avatarClass = 'avatar-guest';
-        
         if (u.type === 'student') { icon = 'fa-user-graduate'; avatarClass = 'avatar-student'; }
         if (u.type === 'teacher') { icon = 'fa-user-tie'; avatarClass = 'avatar-teacher'; }
 
@@ -4134,13 +4172,11 @@ function renderOnlineUsers(data) {
         list.appendChild(item);
     });
 
-    // 更新統計數字
     totalEl.innerText = stats.student + stats.teacher + stats.guest;
     cntStudentEl.innerText = stats.student;
     cntTeacherEl.innerText = stats.teacher;
     cntGuestEl.innerText = stats.guest;
 }
-
 
     
   

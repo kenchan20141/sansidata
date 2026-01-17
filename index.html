@@ -2527,8 +2527,7 @@ function loadAnalyticsClassList() {
 
 let analyticsChartInstance = null;
 
-   // === 雙軌制數據統計函式 (高效 View 節點版) ===
-// === 雙軌制數據統計函式 (一寬一窄 + 最大寬度限制 + 動態標籤版) ===
+// === 雙軌制數據統計函式 (修訂版：實色Bar + 邏輯修復 + 新配色) ===
 async function fetchAndRenderStats() {
     const btn = document.querySelector('button[onclick="fetchAndRenderStats()"]');
     const originalBtnText = btn.innerHTML;
@@ -2537,17 +2536,25 @@ async function fetchAndRenderStats() {
     const scope = document.getElementById('statScope').value;
     const mode = document.getElementById('statTimeMode').value;
     
-    // 2. ★★★ 動態修改標籤文字邏輯 ★★★
+    // ★ 邏輯判斷：是否選中了個別學生
+    // (必須先確認 selectedAnalyticsStudent 是否存在且不為空)
+    const isSingleStudent = (scope === 'class' && typeof selectedAnalyticsStudent !== 'undefined' && selectedAnalyticsStudent !== null);
+
+    // 2. 設定標籤與顏色 (引入新莫蘭迪色)
     const labelEl = document.getElementById('labelUnique');
     let uniqueLabelText = "";
-    
+    let uniqueColor = ""; 
+
     if (mode === 'day') {
         uniqueLabelText = "訪問人數";
-        if(labelEl) labelEl.innerText = uniqueLabelText;
+        uniqueColor = "#b6a6ca"; // 莫蘭迪紫 (本日)
     } else {
-        uniqueLabelText = "活躍人次"; // 月或年改為人次
-        if(labelEl) labelEl.innerText = uniqueLabelText;
+        uniqueLabelText = "活躍人次"; 
+        // ★ 需求四：本月/本年使用新的莫蘭迪杏仁沙色 (#e0c38c)，與紫色區分
+        uniqueColor = "#e0c38c"; 
     }
+    
+    if(labelEl) labelEl.innerText = uniqueLabelText;
 
     // 3. 處理時間參數
     let y, m, d;
@@ -2596,36 +2603,41 @@ async function fetchAndRenderStats() {
         let chartUnique = [];
         let chartDuration = [];
 
-        // 輔助：讀取節點數據
+        // 輔助：讀取節點數據 (嚴謹版，不做假數據)
         function getDataFromDayNode(dayNode) {
             if (!dayNode) return { v:0, u:0, d:0 };
+            
+            let v = 0, u = 0, d = 0;
+
             if (scope === 'class') {
                 const g = document.getElementById('statGrade').value;
                 const c = document.getElementById('statClass').value;
-                const classKey = `${g}${c}`;
+                const classKey = `${g}${c}`; // 例如 "6A"
+                
+                // 嚴格檢查路徑存在
                 if (dayNode.classes && dayNode.classes[classKey]) {
-                    return {
-                        v: dayNode.classes[classKey].visits || 0,
-                        u: dayNode.classes[classKey].unique || 0,
-                        d: dayNode.classes[classKey].duration || 0
-                    };
+                    v = parseInt(dayNode.classes[classKey].visits || 0);
+                    u = parseInt(dayNode.classes[classKey].unique || 0);
+                    d = parseInt(dayNode.classes[classKey].duration || 0);
                 }
-                return { v:0, u:0, d:0 };
             } else {
+                // Global 模式
                 if (dayNode.global) {
-                    return {
-                        v: dayNode.global.visits || 0,
-                        u: dayNode.global.unique || 0,
-                        d: dayNode.global.duration || 0
-                    };
+                    v = parseInt(dayNode.global.visits || 0);
+                    u = parseInt(dayNode.global.unique || 0);
+                    d = parseInt(dayNode.global.duration || 0);
                 }
-                return { v:0, u:0, d:0 };
             }
+            
+            // ★ 需求二修正：完全移除「強制 u=1」的代碼
+            // 如果 DB 回傳 v=8, u=0，這裡就如實回傳 0，反映真實數據狀況
+            
+            return { v, u, d };
         }
 
-        // 處理數據
+        // 處理數據 (根據模式迴圈)
         if (mode === 'day') {
-            const dayData = monthData[d];
+            const dayData = monthData[d]; // monthData 在這裡是該月的物件，key 是日期
             const stats = getDataFromDayNode(dayData);
             totalVisits = stats.v;
             totalUnique = stats.u;
@@ -2640,7 +2652,8 @@ async function fetchAndRenderStats() {
             Object.keys(monthData).sort().forEach(dayKey => {
                 const stats = getDataFromDayNode(monthData[dayKey]);
                 totalVisits += stats.v;
-                totalUnique += stats.u;
+                // 注意：這裡將每日的 unique 累加，變成本月的「活躍人次」
+                totalUnique += stats.u; 
                 totalDuration += stats.d;
 
                 chartLabels.push(`${parseInt(dayKey)}日`);
@@ -2652,10 +2665,11 @@ async function fetchAndRenderStats() {
         } else if (mode === 'year') {
             Object.keys(monthData).sort().forEach(monthKey => {
                 let mVisits = 0, mUnique = 0, mDuration = 0;
+                // monthData[monthKey] 包含該月所有日期
                 Object.values(monthData[monthKey]).forEach(dayNode => {
                     const stats = getDataFromDayNode(dayNode);
                     mVisits += stats.v;
-                    mUnique += stats.u;
+                    mUnique += stats.u; // 這裡是累加人次
                     mDuration += stats.d;
                 });
                 totalVisits += mVisits;
@@ -2669,63 +2683,85 @@ async function fetchAndRenderStats() {
             });
         }
 
-        // 更新卡片數字
-        document.getElementById('dispVisits').innerText = totalVisits;
-        document.getElementById('dispUnique').innerText = totalUnique;
+        // === 更新卡片數字 ===
+        
+        // ★ 需求三修正：如果是「個別學生」，隱藏活躍人次/人數，顯示為 '-'
+        if (isSingleStudent) {
+            document.getElementById('dispUnique').innerText = '-';
+            // 注意：stats_view 結構目前僅存全班數據，若要精確顯示該學生的 Visits，
+            // 需要讀取更底層的 tracking 數據 (速度會較慢)。
+            // 這裡暫時顯示全班 Visits，或您可以選擇也顯示 '-'。
+            document.getElementById('dispVisits').innerText = totalVisits; 
+        } else {
+            document.getElementById('dispUnique').innerText = totalUnique;
+            document.getElementById('dispVisits').innerText = totalVisits;
+        }
+        
         document.getElementById('dispDuration').innerText = Math.round(totalDuration/60);
-        document.getElementById('dispAvg').innerText = totalUnique > 0 ? Math.round((totalDuration/60) / totalUnique) : 0;
+        
+        // 平均時長計算 (防除以零)
+        let avgTime = 0;
+        if (totalUnique > 0) {
+            avgTime = Math.round((totalDuration/60) / totalUnique);
+        }
+        document.getElementById('dispAvg').innerText = avgTime;
 
-        // ★★★ 繪製圖表 (包含最大寬度與重疊設定) ★★★
+
+        // ★★★ 繪製圖表 (樣式修正) ★★★
         const ctx = document.getElementById('analyticsChart').getContext('2d');
+        
+        // 準備 Datasets
+        let chartDatasets = [
+            { 
+                // 底層：訪問次數
+                label: '訪問次數', 
+                data: chartVisits, 
+                // ★ 需求一修正：改為實色莫蘭迪藍，移除透明度 (rgba -> hex)
+                backgroundColor: '#94a7b5', 
+                hoverBackgroundColor: '#7a8f9e',
+                // 讓它寬一點
+                maxBarThickness: 50, 
+                // 關鍵：允許重疊
+                grouped: false, 
+                order: 3
+            },
+            { 
+                // 折線圖：總時長 (保持不變)
+                label: '總訪問時長', 
+                data: chartDuration, 
+                type: 'line', 
+                borderColor: '#d69a92', 
+                backgroundColor: '#d69a92',
+                borderWidth: 2, 
+                pointRadius: 3,
+                yAxisID: 'y1',
+                tension: 0.3,
+                order: 1
+            }
+        ];
+
+        // ★ 需求三修正：只有在「非個別學生」模式下，才加入「活躍人數」Bar
+        // 如果是個別學生，這個 Bar 會自動消失
+        if (!isSingleStudent) {
+            chartDatasets.push({ 
+                // 上層：活躍人次/人數
+                label: uniqueLabelText, 
+                data: chartUnique, 
+                // ★ 需求四修正：根據模式使用不同顏色 (紫 vs 新沙色)
+                backgroundColor: uniqueColor, 
+                hoverBackgroundColor: uniqueColor, 
+                // 讓它窄一點，疊在上面
+                maxBarThickness: 25, 
+                grouped: false,
+                order: 2 
+            });
+        }
+
         analyticsChartInstance = new Chart(ctx, {
             type: 'bar',
             data: { 
                 labels: chartLabels, 
-                datasets: [
-                    { 
-                        // 底層：較寬的淺色 Bar (點擊次數)
-                        label: '訪問次數', 
-                        data: chartVisits, 
-                        backgroundColor: 'rgba(148, 167, 181, 0.5)', // 半透明藍
-                        hoverBackgroundColor: 'rgba(148, 167, 181, 0.7)',
-                        
-                        // ★ 關鍵設定 1：最大寬度 (防止 Bar 太肥)
-                        maxBarThickness: 50, 
-                        
-                        // ★ 關鍵設定 2：不分組 (實現重疊)
-                        grouped: false, 
-                        
-                        order: 3 // 放在最底層
-                    },
-                    { 
-                        // 上層：較窄的深色 Bar (活躍人次)
-                        label: uniqueLabelText, 
-                        data: chartUnique, 
-                        backgroundColor: '#b6a6ca', // 深紫
-                        hoverBackgroundColor: '#9e8fb0',
-                        
-                        // ★ 關鍵設定 1：最大寬度 (比上面的窄)
-                        maxBarThickness: 30, 
-                        
-                        // ★ 關鍵設定 2：不分組 (實現重疊)
-                        grouped: false,
-                        
-                        order: 2 // 放在中間層
-                    },
-                    { 
-                        // 折線圖：總時長
-                        label: '總訪問時長', 
-                        data: chartDuration, 
-                        type: 'line', 
-                        borderColor: '#d69a92', 
-                        backgroundColor: '#d69a92',
-                        borderWidth: 2, 
-                        pointRadius: 3,
-                        yAxisID: 'y1',
-                        tension: 0.3,
-                        order: 1 // 放在最上層
-                    }
-                ] 
+                datasets: chartDatasets
             },
             options: { 
                 maintainAspectRatio: false, 
@@ -2735,15 +2771,14 @@ async function fetchAndRenderStats() {
                 },
                 scales: { 
                     x: { 
-                        // ★ 關鍵設定 3：設為堆疊 (Stacked)，配合 grouped: false 可讓 Bar 置中對齊
-                        stacked: true, 
+                        stacked: true, // 允許 Bar 重疊
                         grid: { display: false }
                     },
                     y: { 
                         beginAtZero: true, 
                         position: 'left', 
                         title: {display:true, text:'數量'},
-                        stacked: false // Y 軸數值不堆疊 (Visits 和 Unique 獨立顯示)
+                        stacked: false 
                     }, 
                     y1: { 
                         beginAtZero: true, 
@@ -2756,10 +2791,8 @@ async function fetchAndRenderStats() {
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                // 優化 Tooltip：移除我們為了識別加上的 (寬)/(窄) 標記
                                 let label = context.dataset.label || '';
                                 if (label) {
-                                    label = label.replace(' (寬)', '').replace(' (窄)', '');
                                     label += ': ';
                                 }
                                 if (context.parsed.y !== null) {

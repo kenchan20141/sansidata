@@ -4224,6 +4224,7 @@ function startListeningOnlineUsers() {
 }
 
 // 3. 停止 Firebase 監聽
+// 3. 停止 Firebase 監聽
 function stopListeningOnlineUsers() {
     if (onlineUsersListener) {
         db.ref('online_users').off('value', onlineUsersListener);
@@ -4286,7 +4287,9 @@ function renderOnlineUsers(data) {
                 stats.teacher++;
             }
             // B. 學生 (已登入)
-            else if (info.grade && info.class && info.name) {
+            // ★★★ 關鍵修訂：增加 info.grade !== 'Guest' 條件 ★★★
+            // 防止訪客資料因具備 grade/class 欄位而被誤判為學生並逐一顯示
+            else if (info.grade && info.class && info.name && info.grade !== 'Guest') {
                 users.push({ 
                     uid, 
                     type: 'student', 
@@ -4298,19 +4301,20 @@ function renderOnlineUsers(data) {
             }
             // C. 訪客 (★ 關鍵邏輯：只計數，不加入列表 ★)
             else {
-                activeGuestCount++; // 這裡只增加數字，不產生 "GUEST" 卡片
+                activeGuestCount++; // 這裡只增加數字，絕對不加入 users 陣列
                 stats.guest++;
             }
         });
     }
 
-    // 2. 只有當訪客數 > 0 時，才手動加入一行「訪客」
+    // 2. 只有當訪客數 > 0 時，才手動加入「單一一行」訪客欄位
+    // 這裡硬性規定顯示文字，確保不會出現 "GUESTVISITOR"
     if (activeGuestCount > 0) {
         users.push({
             uid: 'merged_guest_node',
             type: 'guest',
-            displayName: '訪客', // ★ 強制顯示中文
-            subInfo: `共 ${activeGuestCount} 人`, // ★ 顯示人數
+            displayName: '訪客',          // ★ 強制顯示中文「訪客」
+            subInfo: `共 ${activeGuestCount} 人`, // ★ 統一顯示人數
             sortWeight: 3
         });
     }

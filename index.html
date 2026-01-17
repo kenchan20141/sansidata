@@ -4025,7 +4025,7 @@ function stopListeningOnlineUsers() {
     }
 }
 
-// 4. 渲染名單 (處理顯示邏輯)
+// 4. 渲染名單 (合併訪客版)
 function renderOnlineUsers(data) {
     const list = document.getElementById('onlineUserList');
     const totalEl = document.getElementById('onlineTotalCount');
@@ -4043,48 +4043,57 @@ function renderOnlineUsers(data) {
     // 轉換為陣列並分類
     let users = [];
     let stats = { student: 0, teacher: 0, guest: 0 };
+    
+    // ★★★ 新增：訪客計數器 ★★★
+    let activeGuestCount = 0;
 
     Object.entries(data).forEach(([uid, info]) => {
-        // 過濾掉太舊的資料 (例如超過 10 分鐘沒更新的，雖然 onDisconnect 應該會處理，但雙重保險)
-        // 這裡假設 client 端有寫入 timestamp
+        // 過濾掉太舊的資料 (超過 10 分鐘沒更新)
         const now = Date.now();
         if (info.timestamp && (now - info.timestamp > 10 * 60 * 1000)) return;
 
-        let type = 'guest';
-        let displayName = '訪客';
-        let subInfo = 'Guest';
-        let sortWeight = 3; // 1:老師, 2:學生, 3:訪客
+        let sortWeight = 3; 
 
-        // === 核心邏輯：根據身分決定顯示內容 ===
-        
-        // A. 老師 / 特許用家
+        // A. 老師 / 特許用家 (保留獨立顯示)
         if (info.grade === 'Special' || info.grade === 'System' || info.role === 'teacher') {
-            type = 'teacher';
-            displayName = info.name || '老師';
-            subInfo = '教師/特許';
-            sortWeight = 1;
+            users.push({ 
+                uid, 
+                type: 'teacher', 
+                displayName: info.name || '老師', 
+                subInfo: '教師/特許', 
+                sortWeight: 1 
+            });
             stats.teacher++;
         }
-        // B. 學生 (已登入)
+        // B. 學生 (保留獨立顯示)
         else if (info.grade && info.class && info.name) {
-            type = 'student';
-            // 規則：顯示 班別 + 姓名，不顯示班號
-            displayName = `${info.grade}${info.class} ${info.name}`;
-            subInfo = '學生'; // 這裡不顯示班號
-            sortWeight = 2;
+            users.push({ 
+                uid, 
+                type: 'student', 
+                // 顯示 6A 陳大文
+                displayName: `${info.grade}${info.class} ${info.name}`, 
+                subInfo: '學生', 
+                sortWeight: 2 
+            });
             stats.student++;
         }
-        // C. 訪客 (未登入 或 資料不全)
+        // C. 訪客 (★ 修改：不獨立顯示，只計數)
         else {
-            type = 'guest';
-            displayName = '訪客';
-            subInfo = '未登入';
-            sortWeight = 3;
+            activeGuestCount++;
             stats.guest++;
         }
-
-        users.push({ uid, type, displayName, subInfo, sortWeight });
     });
+
+    // ★★★ 核心修改：如果有訪客，手動加入一個「聚合欄位」 ★★★
+    if (activeGuestCount > 0) {
+        users.push({
+            uid: 'merged_guest_node', // 虛擬 ID
+            type: 'guest',
+            displayName: '訪客', // ★ 中文化
+            subInfo: `共 ${activeGuestCount} 人`, // ★ 顯示人數
+            sortWeight: 3
+        });
+    }
 
     // 排序：老師 -> 學生 -> 訪客
     users.sort((a, b) => a.sortWeight - b.sortWeight);
@@ -4097,6 +4106,7 @@ function renderOnlineUsers(data) {
         
         if (u.type === 'student') { icon = 'fa-user-graduate'; avatarClass = 'avatar-student'; }
         if (u.type === 'teacher') { icon = 'fa-user-tie'; avatarClass = 'avatar-teacher'; }
+        // 訪客圖示保持 fa-user，顏色保持灰色
 
         const item = document.createElement('div');
         item.className = 'online-user-item';
@@ -4111,13 +4121,12 @@ function renderOnlineUsers(data) {
         list.appendChild(item);
     });
 
-    // 更新統計數字
-    totalEl.innerText = users.length;
+    // 更新統計數字 (這裡依然顯示真實總數)
+    totalEl.innerText = stats.student + stats.teacher + stats.guest;
     cntStudentEl.innerText = stats.student;
     cntTeacherEl.innerText = stats.teacher;
     cntGuestEl.innerText = stats.guest;
 }
-
 
 
 

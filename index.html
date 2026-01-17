@@ -2527,8 +2527,7 @@ function loadAnalyticsClassList() {
 
 let analyticsChartInstance = null;
 
-// === 雙軌制數據統計函式 (最終修正版：誠實數據 + 實色 + 莫蘭迪配色) ===
-// === 雙軌制數據統計函式 (精準讀取優化版) ===
+// === 雙軌制數據統計函式 (精準讀取優化版 - 含 stats_school 支援) ===
 async function fetchAndRenderStats() {
     const btn = document.querySelector('button[onclick="fetchAndRenderStats()"]');
     const originalBtnText = btn.innerHTML;
@@ -2548,7 +2547,6 @@ async function fetchAndRenderStats() {
     }
 
     // 3. 智能構建路徑 (Smart Path Construction)
-    // 根據用戶選擇，只讀取需要的那個節點，不再讀取整個 stats_view
     let fetchPath = "";
     
     // 判斷是否選擇了特定學生
@@ -2565,18 +2563,18 @@ async function fetchAndRenderStats() {
         const g = document.getElementById('statGrade').value;
         const c = document.getElementById('statClass').value;
         fetchPath = `stats_classes/${g}${c}/${y}`;
+    } else if (scope === 'school') {
+        // ★★★ C. 新增：查詢全校 (僅學生) ★★★
+        fetchPath = `stats_school/${y}`;
     } else {
-        // C. 查詢全校/所有 (Global)
+        // D. 查詢所有用家 (Global - 含訪客)
         fetchPath = `stats_global/${y}`;
     }
 
-    // 時間維度進一步細分路徑 (如果是日或月)
+    // 時間維度進一步細分路徑
     if (mode === 'month' || mode === 'day') {
         fetchPath += `/${m}`;
     }
-    // 注意：如果是 'day'，我們不加 `/${d}`，因為我們希望拿到該月的結構來做容錯，
-    // 或者可以直接加 `/${d}`，但為了下方邏輯統一，我們統一讀取到「月」或「日」層級。
-    // 優化：如果是 Day，直接讀 Day 節點最快。
     if (mode === 'day') {
         fetchPath += `/${d}`;
     }
@@ -2608,24 +2606,21 @@ async function fetchAndRenderStats() {
             throw new Error("No Data");
         }
 
-        // === 數據聚合邏輯 (適配新結構) ===
+        // === 數據聚合邏輯 ===
         let totalUnique = 0, totalVisits = 0, totalDuration = 0;
         let chartLabels = [], chartVisits = [], chartUnique = [], chartDuration = [];
 
-        // 讀取單日物件的 helper
         const getStats = (obj) => ({
             v: parseInt(obj?.visits || 0),
-            u: parseInt(obj?.unique || 0), // 學生個人節點可能沒有 unique，預設 0
+            u: parseInt(obj?.unique || 0),
             d: parseInt(obj?.duration || 0)
         });
 
         if (mode === 'day') {
-            // dataNode 就是當天的數據 {visits:..., duration:...}
             const s = getStats(dataNode);
             totalVisits = s.v;
             totalDuration = s.d;
             
-            // 如果是學生個人，unique 永遠是 1 (如果有訪問)
             if (selectedStudent && s.v > 0) totalUnique = 1;
             else totalUnique = s.u;
 
@@ -2635,13 +2630,11 @@ async function fetchAndRenderStats() {
             chartDuration.push(Math.round(s.d/60));
 
         } else if (mode === 'month') {
-            // dataNode 是 { "01": {...}, "02": {...} }
             Object.keys(dataNode).sort().forEach(dayKey => {
                 const s = getStats(dataNode[dayKey]);
                 totalVisits += s.v;
                 totalDuration += s.d;
                 
-                // 處理 Unique 累加
                 let dailyUnique = s.u;
                 if (selectedStudent && s.v > 0) dailyUnique = 1;
                 totalUnique += dailyUnique;
@@ -2653,12 +2646,10 @@ async function fetchAndRenderStats() {
             });
 
         } else if (mode === 'year') {
-            // dataNode 是 { "01": {"01":...}, "02":... } (月份 -> 日期)
             Object.keys(dataNode).sort().forEach(monthKey => {
                 let mVisits = 0, mUnique = 0, mDuration = 0;
-                
-                // 遍歷該月的所有日期
                 const monthData = dataNode[monthKey];
+                
                 Object.values(monthData).forEach(dayNode => {
                     const s = getStats(dayNode);
                     mVisits += s.v;
@@ -2684,12 +2675,7 @@ async function fetchAndRenderStats() {
         document.getElementById('dispVisits').innerText = totalVisits;
         document.getElementById('dispDuration').innerText = Math.round(totalDuration/60);
         
-        // 平均計算
         let avgTime = 0;
-        // 如果選的是學生，平均 = 總時長 / 訪問次數 (或天數)
-        // 這裡維持通用邏輯：總時長 / 活躍人次 (如果是個人，就是 1)
-        // 但為了顯示更合理，如果是單人模式，且 unique 累加很大(代表很多天)，
-        // 平均值解釋為「每次訪問的平均時長」可能更好： duration / visits
         if (selectedStudent) {
              if (totalVisits > 0) avgTime = Math.round((totalDuration/60) / totalVisits);
         } else {

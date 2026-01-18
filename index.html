@@ -2840,7 +2840,6 @@ function loadAnalyticsClassList() {
 let analyticsChartInstance = null;
 
 // === 雙軌制數據統計函式 (精準讀取優化版 + 流量監控) ===
-// === 雙軌制數據統計函式 (智能聚合修復版) ===
 async function fetchAndRenderStats() {
     const btn = document.querySelector('button[onclick="fetchAndRenderStats()"]');
     const originalBtnText = btn.innerHTML;
@@ -2859,15 +2858,9 @@ async function fetchAndRenderStats() {
         if(mode === 'month') m = document.getElementById('statMonth').value; 
     }
 
-    // 3. 智能路徑構建 (Smart Path Construction)
+    // 3. 智能構建路徑 (Smart Path Construction)
     let fetchPath = "";
     
-    // ★★★ 核心修復策略 ★★★
-    // 如果選的是「全校 (school)」，我們故意不讀取 stats_school
-    // 而是讀取 stats_classes，然後靠下方的程式碼把所有班級加起來
-    // 這樣就算學生用舊版代碼 (沒寫入 school)，這裡也能算出正確總數
-    let isAggregatingSchool = false;
-
     const selectedStudent = (scope === 'class' && typeof selectedAnalyticsStudent !== 'undefined' && selectedAnalyticsStudent) ? selectedAnalyticsStudent : null;
 
     if (selectedStudent) {
@@ -2880,30 +2873,21 @@ async function fetchAndRenderStats() {
         const c = document.getElementById('statClass').value;
         fetchPath = `stats_classes/${g}${c}/${y}`;
     } else if (scope === 'school') {
-        // ★ 改為讀取班級數據庫，進行聚合 ★
-        isAggregatingSchool = true;
-        fetchPath = `stats_classes`; // 我們從根目錄開始抓，或者抓特定年份
-        // 為了效能，我們還是抓特定年份的班級數據
-        // 但 Firebase 結構是 stats_classes/6A/2025... 
-        // 所以這裡我們必須讀取整個 stats_classes 根節點的 shallow copy 或者全讀
-        // 為了數據準確，我們讀取 `stats_classes` (這可能會有點大，但在 WiFi 環境下尚可)
-        // 或者更聰明的做法：我們依然用舊邏輯讀 stats_school，但因為它壞了，
-        // 我們這裡強制讀取所有班級的資料來加總。
-        // 為了實作簡單且準確，我們讀取所有班級的該年數據比較困難 (因為路徑中間夾了班級號)
-        // 折衷方案：讀取 stats_classes 的根，然後在客戶端過濾年份
-        fetchPath = `stats_classes`; 
+        fetchPath = `stats_school/${y}`;
     } else {
         fetchPath = `stats_global/${y}`;
     }
 
-    // 時間路徑微調 (僅針對非聚合模式)
-    if (!isAggregatingSchool) {
-        if (mode === 'month' || mode === 'day') fetchPath += `/${m}`;
-        if (mode === 'day') fetchPath += `/${d}`;
+    // 時間維度進一步細分路徑
+    if (mode === 'month' || mode === 'day') {
+        fetchPath += `/${m}`;
+    }
+    if (mode === 'day') {
+        fetchPath += `/${d}`;
     }
 
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 數據聚合中...';
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 數據分析中...';
     
     ['dispUnique','dispVisits','dispDuration','dispAvg'].forEach(id=>document.getElementById(id).innerText='-');
     if(analyticsChartInstance) {
@@ -2911,90 +2895,49 @@ async function fetchAndRenderStats() {
         analyticsChartInstance = null;
     }
 
+    const labelEl = document.getElementById('labelUnique');
+    let uniqueLabelText = (mode === 'day') ? "訪問人數" : "活躍人次";
+    let uniqueColor = (mode === 'day') ? "#b6a6ca" : "#d8caaf"; 
+    if(labelEl) labelEl.innerText = uniqueLabelText;
+
     try {
-        console.log(`🔍 [Stats] 讀取路徑: ${fetchPath}`);
+        console.log(`🔍 [Stats] 準備讀取路徑: ${fetchPath}`);
         const snap = await db.ref(fetchPath).once('value');
-        let dataNode = snap.val();
-
-        if (!dataNode) throw new Error("No Data");
-
-        // ★★★ 聚合邏輯 (Aggregation Logic) ★★★
-        // 如果是全校模式，dataNode 現在包含了所有班級 (例如 { "1A": {...}, "6D": {...} })
-        // 我們需要把它轉換成一個單一的統計物件，格式要跟原本直接讀取 stats_school 一樣
-        if (isAggregatingSchool) {
-            console.log("⚡ 啟動全校數據聚合模式 (修復舊版數據缺失)...");
-            
-            // 建立一個空的容器來模擬 stats_school 的結構
-            const aggregatedData = {}; 
-
-            // 遞迴遍歷函式：把班級數據加總到 aggregatedData
-            // 結構: dataNode[ClassKey][Year][Month][Day]
-            Object.keys(dataNode).forEach(classKey => {
-                const classData = dataNode[classKey];
+        const dataNode = snap.val();
+        
+        // ==========================================
+        // ★★★ [新增] 數據統計流量監控 ★★★
+        // ==========================================
+        if (dataNode) {
+            try {
+                // 將資料轉為 JSON 字串並計算真實 UTF-8 大小
+                const jsonString = JSON.stringify(dataNode);
+                const bytes = new TextEncoder().encode(jsonString).length;
+                const kb = (bytes / 1024).toFixed(2);
                 
-                // 進入年份
-                if (classData[y]) {
-                    const yearData = classData[y];
-                    
-                    // 如果模式是 'year'，我們需要這一整年的數據
-                    // 如果模式是 'month'，我們只取 yearData[m]
-                    // 如果模式是 'day'，我們只取 yearData[m][d]
-
-                    if (!aggregatedData) aggregatedData = {};
-
-                    // Helper: 加總數據
-                    const mergeData = (source, target) => {
-                        if (!target.visits) target.visits = 0;
-                        if (!target.duration) target.duration = 0;
-                        // unique 比較難搞，因為我們沒有 user ID 清單，只能簡單相加 (雖有誤差但可接受)
-                        // 或者如果數據結構有保留 unique_users 物件，我們可以 Set merge
-                        // 這裡假設我們只做簡單加總
-                        if (!target.unique) target.unique = 0;
-
-                        target.visits += (source.visits || 0);
-                        target.duration += (source.duration || 0);
-                        target.unique += (source.unique || 0);
-                    };
-
-                    // 遍歷該班級的月份
-                    Object.keys(yearData).forEach(monthKey => {
-                        // 過濾月份
-                        if (mode !== 'year' && monthKey !== m) return;
-
-                        if (!aggregatedData[monthKey]) aggregatedData[monthKey] = {};
-                        const targetMonth = aggregatedData[monthKey];
-                        const sourceMonth = yearData[monthKey];
-
-                        // 遍歷日期
-                        Object.keys(sourceMonth).forEach(dayKey => {
-                            // 過濾日期
-                            if (mode === 'day' && dayKey !== d) return;
-
-                            if (!targetMonth[dayKey]) targetMonth[dayKey] = { visits:0, duration:0, unique:0 };
-                            mergeData(sourceMonth[dayKey], targetMonth[dayKey]);
-                        });
-                    });
-                }
-            });
-            
-            // 將聚合後的數據替換原本的 dataNode
-            // 注意：為了配合下方的通用渲染邏輯，我們需要保持結構一致
-            // 如果是 year 模式，dataNode 應該是 { "01": { "01": ... }, "02": ... }
-            // 如果是 month 模式，dataNode 應該是 { "01": ..., "02": ... } (日)
-            // 如果是 day 模式，dataNode 應該是 { visits: ..., duration: ... }
-            
-            if (mode === 'year') {
-                dataNode = aggregatedData;
-            } else if (mode === 'month') {
-                dataNode = aggregatedData[m] || null;
-            } else if (mode === 'day') {
-                dataNode = (aggregatedData[m] && aggregatedData[m][d]) ? aggregatedData[m][d] : null;
+                console.group("📊 數據統計流量報告");
+                console.log(`📂 下載路徑: ${fetchPath}`);
+                console.log(`📉 數據大小: ${bytes} bytes (約 ${kb} KB)`);
+                
+                // 簡單估算資料節點數量
+                const keys = Object.keys(dataNode);
+                console.log(`🔢 資料節點: 約 ${keys.length} 筆主要紀錄`);
+                console.groupEnd();
+            } catch (e) {
+                console.log("流量計算錯誤", e);
             }
+        } else {
+            console.log(`📊 [數據統計] 此路徑無資料 (0 KB)`);
+        }
+        // ==========================================
+        
+        if (!dataNode) { 
+            alert("此時段無數據紀錄"); 
+            ['dispUnique','dispVisits','dispDuration','dispAvg'].forEach(id=>document.getElementById(id).innerText=0);
+            throw new Error("No Data");
         }
 
-        if (!dataNode) throw new Error("No Data");
-
-        // === 以下為通用的數據渲染邏輯 (保持不變) ===
+        // === 數據聚合邏輯 ===
         let totalUnique = 0, totalVisits = 0, totalDuration = 0;
         let chartLabels = [], chartVisits = [], chartUnique = [], chartDuration = [];
 
@@ -3008,8 +2951,9 @@ async function fetchAndRenderStats() {
             const s = getStats(dataNode);
             totalVisits = s.v;
             totalDuration = s.d;
-            totalUnique = s.u; 
+            
             if (selectedStudent && s.v > 0) totalUnique = 1;
+            else totalUnique = s.u;
 
             chartLabels.push(`${d}日`);
             chartVisits.push(s.v);
@@ -3021,12 +2965,14 @@ async function fetchAndRenderStats() {
                 const s = getStats(dataNode[dayKey]);
                 totalVisits += s.v;
                 totalDuration += s.d;
-                // 這裡的 Unique 是每日獨立人數的總和 (人次)，非去重人數
-                totalUnique += s.u;
+                
+                let dailyUnique = s.u;
+                if (selectedStudent && s.v > 0) dailyUnique = 1;
+                totalUnique += dailyUnique;
 
                 chartLabels.push(`${parseInt(dayKey)}日`);
                 chartVisits.push(s.v);
-                chartUnique.push(s.u);
+                chartUnique.push(dailyUnique);
                 chartDuration.push(Math.round(s.d/60));
             });
 
@@ -3039,7 +2985,9 @@ async function fetchAndRenderStats() {
                     const s = getStats(dayNode);
                     mVisits += s.v;
                     mDuration += s.d;
-                    mUnique += s.u;
+                    let dailyU = s.u;
+                    if (selectedStudent && s.v > 0) dailyU = 1;
+                    mUnique += dailyU;
                 });
 
                 totalVisits += mVisits;
@@ -3053,36 +3001,35 @@ async function fetchAndRenderStats() {
             });
         }
 
-        // 更新介面數字
         document.getElementById('dispUnique').innerText = totalUnique;
         document.getElementById('dispVisits').innerText = totalVisits;
         document.getElementById('dispDuration').innerText = Math.round(totalDuration/60);
         
         let avgTime = 0;
-        // 平均時長 = 總分鐘 / 訪問次數 (Visits) 或 人數 (Unique)
-        // 這裡建議用 Visits 作為分母比較準確反映「每次使用」的長度
-        if (totalVisits > 0) avgTime = Math.round((totalDuration/60) / totalVisits);
-        
+        if (selectedStudent) {
+             if (totalVisits > 0) avgTime = Math.round((totalDuration/60) / totalVisits);
+        } else {
+             if (totalUnique > 0) avgTime = Math.round((totalDuration/60) / totalUnique);
+        }
         document.getElementById('dispAvg').innerText = avgTime;
 
-        // 繪製圖表
         const ctx = document.getElementById('analyticsChart').getContext('2d');
         analyticsChartInstance = new Chart(ctx, {
             type: 'bar',
             data: { 
                 labels: chartLabels, 
                 datasets: [
-                    { label: '訪問次數', data: chartVisits, backgroundColor: '#94a7b5', order: 3 },
-                    { label: '活躍人次', data: chartUnique, backgroundColor: '#b6a6ca', order: 2 },
-                    { label: '總時長 (分)', data: chartDuration, type: 'line', borderColor: '#d69a92', backgroundColor: '#d69a92', borderWidth: 2, yAxisID: 'y1', tension: 0.3, order: 1 }
+                    { label: '訪問次數', data: chartVisits, backgroundColor: '#94a7b5', hoverBackgroundColor: '#7a8f9e', maxBarThickness: 50, order: 3 },
+                    { label: uniqueLabelText, data: chartUnique, backgroundColor: uniqueColor, hoverBackgroundColor: uniqueColor, maxBarThickness: 25, order: 2 },
+                    { label: '總訪問時長 (分)', data: chartDuration, type: 'line', borderColor: '#d69a92', backgroundColor: '#d69a92', borderWidth: 2, pointRadius: 3, yAxisID: 'y1', tension: 0.3, order: 1 }
                 ]
             },
             options: { 
                 maintainAspectRatio: false, 
                 interaction: { mode: 'index', intersect: false },
                 scales: { 
-                    x: { stacked: false, grid: { display: false } },
-                    y: { beginAtZero: true, position: 'left', title: {display:true, text:'數量'} }, 
+                    x: { stacked: true, grid: { display: false } },
+                    y: { beginAtZero: true, position: 'left', title: {display:true, text:'數量'}, stacked: false }, 
                     y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, title: {display:true, text:'分鐘'} } 
                 }
             }
@@ -3090,10 +3037,7 @@ async function fetchAndRenderStats() {
 
     } catch(e) { 
         console.error(e);
-        if (e.message !== "No Data") alert("讀取數據失敗: " + e.message);
-        else {
-            ['dispUnique','dispVisits','dispDuration','dispAvg'].forEach(id=>document.getElementById(id).innerText=0);
-        }
+        if (e.message !== "No Data") alert("讀取數據失敗");
     } finally {
         btn.innerHTML = originalBtnText;
         btn.disabled = false;

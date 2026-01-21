@@ -135,8 +135,8 @@
     .stat-blue { background: linear-gradient(135deg, #94a7b5 0%, #7a8f9e 100%); }
     .stat-red { background: linear-gradient(135deg, #d69a92 0%, #bf857d 100%); }
     .stat-sand { background: linear-gradient(135deg, #c7b299 0%, #b09b82 100%); }
-    /* ★★★ 新增這行：莫蘭迪綠 (用於本月/本年的活躍人次) ★★★ */
-.stat-morandi-green { background: linear-gradient(135deg, #8fa398 0%, #7d9186 100%); }
+/* ★★★ 新增這行：莫蘭迪黃 (用於本月/本年的活躍人次，與藍色形成對比) ★★★ */
+.stat-morandi-yellow { background: linear-gradient(135deg, #e0c38c 0%, #c7aa74 100%); }
 
     /* 學生選擇 Chips */
     .analytics-student-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; padding: 15px; background: #fff; border: 1px solid #e0ddd7; border-radius: 8px; }
@@ -2905,7 +2905,7 @@ function loadAnalyticsClassList() {
 let analyticsChartInstance = null;
 
 // === 雙軌制數據統計函式 (精準讀取優化版 + 流量監控) ===
-// === 雙軌制數據統計函式 (精準讀取優化版 + 流量監控 + 顏色一致性修正 V2) ===
+// === 雙軌制數據統計函式 (精準讀取優化版 + 流量監控 + 顏色對比修正 V3) ===
 async function fetchAndRenderStats() {
     const btn = document.querySelector('button[onclick="fetchAndRenderStats()"]');
     const originalBtnText = btn.innerHTML;
@@ -2955,7 +2955,7 @@ async function fetchAndRenderStats() {
         analyticsChartInstance = null;
     }
 
-    // ★★★ [顏色控制區 - 莫蘭迪綠版] ★★★
+    // ★★★ [顏色控制區 - 莫蘭迪黃版] ★★★
     const labelEl = document.getElementById('labelUnique');
     const cardEl = document.getElementById('dispUnique').parentElement; // 獲取卡片容器
     
@@ -2969,17 +2969,17 @@ async function fetchAndRenderStats() {
         
         // 設定卡片樣式
         if (cardEl) {
-            cardEl.classList.remove('stat-morandi-green'); // 移除綠色
-            cardEl.classList.add('stat-purple');         // 加回紫色
+            cardEl.classList.remove('stat-morandi-yellow'); // 移除黃色
+            cardEl.classList.add('stat-purple');            // 加回紫色
         }
     } else {
         uniqueLabelText = "活躍人次";
-        uniqueColor = "#8fa398"; // ★ 改為莫蘭迪綠
+        uniqueColor = "#e0c38c"; // ★ 改為莫蘭迪黃
         
         // 設定卡片樣式
         if (cardEl) {
-            cardEl.classList.remove('stat-purple');      // 移除紫色
-            cardEl.classList.add('stat-morandi-green');  // ★ 加入綠色
+            cardEl.classList.remove('stat-purple');         // 移除紫色
+            cardEl.classList.add('stat-morandi-yellow');    // ★ 加入黃色
         }
     }
 
@@ -3081,7 +3081,7 @@ async function fetchAndRenderStats() {
                 labels: chartLabels, 
                 datasets: [
                     { label: '訪問次數', data: chartVisits, backgroundColor: '#94a7b5', hoverBackgroundColor: '#7a8f9e', maxBarThickness: 50, order: 3 },
-                    // ★ 使用更新後的 uniqueColor (莫蘭迪綠)
+                    // ★ 使用更新後的 uniqueColor (莫蘭迪黃)
                     { label: uniqueLabelText, data: chartUnique, backgroundColor: uniqueColor, hoverBackgroundColor: uniqueColor, maxBarThickness: 25, order: 2 },
                     { label: '總訪問時長 (分)', data: chartDuration, type: 'line', borderColor: '#d69a92', backgroundColor: '#d69a92', borderWidth: 2, pointRadius: 3, yAxisID: 'y1', tension: 0.3, order: 1 }
                 ]

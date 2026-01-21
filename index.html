@@ -135,6 +135,8 @@
     .stat-blue { background: linear-gradient(135deg, #94a7b5 0%, #7a8f9e 100%); }
     .stat-red { background: linear-gradient(135deg, #d69a92 0%, #bf857d 100%); }
     .stat-sand { background: linear-gradient(135deg, #c7b299 0%, #b09b82 100%); }
+    /* ★★★ 新增這行：莫蘭迪綠 (用於本月/本年的活躍人次) ★★★ */
+.stat-morandi-green { background: linear-gradient(135deg, #8fa398 0%, #7d9186 100%); }
 
     /* 學生選擇 Chips */
     .analytics-student-list { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; padding: 15px; background: #fff; border: 1px solid #e0ddd7; border-radius: 8px; }
@@ -2903,13 +2905,14 @@ function loadAnalyticsClassList() {
 let analyticsChartInstance = null;
 
 // === 雙軌制數據統計函式 (精準讀取優化版 + 流量監控) ===
+// === 雙軌制數據統計函式 (精準讀取優化版 + 流量監控 + 顏色一致性修正 V2) ===
 async function fetchAndRenderStats() {
     const btn = document.querySelector('button[onclick="fetchAndRenderStats()"]');
     const originalBtnText = btn.innerHTML;
     
     // 1. 獲取篩選條件
-    const scope = document.getElementById('statScope').value; // global, school, class
-    const mode = document.getElementById('statTimeMode').value; // day, month, year
+    const scope = document.getElementById('statScope').value; 
+    const mode = document.getElementById('statTimeMode').value; 
     
     // 2. 處理時間參數
     let y, m, d;
@@ -2921,9 +2924,8 @@ async function fetchAndRenderStats() {
         if(mode === 'month') m = document.getElementById('statMonth').value; 
     }
 
-    // 3. 智能構建路徑 (Smart Path Construction)
+    // 3. 智能構建路徑
     let fetchPath = "";
-    
     const selectedStudent = (scope === 'class' && typeof selectedAnalyticsStudent !== 'undefined' && selectedAnalyticsStudent) ? selectedAnalyticsStudent : null;
 
     if (selectedStudent) {
@@ -2941,13 +2943,8 @@ async function fetchAndRenderStats() {
         fetchPath = `stats_global/${y}`;
     }
 
-    // 時間維度進一步細分路徑
-    if (mode === 'month' || mode === 'day') {
-        fetchPath += `/${m}`;
-    }
-    if (mode === 'day') {
-        fetchPath += `/${d}`;
-    }
+    if (mode === 'month' || mode === 'day') fetchPath += `/${m}`;
+    if (mode === 'day') fetchPath += `/${d}`;
 
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 數據分析中...';
@@ -2958,9 +2955,34 @@ async function fetchAndRenderStats() {
         analyticsChartInstance = null;
     }
 
+    // ★★★ [顏色控制區 - 莫蘭迪綠版] ★★★
     const labelEl = document.getElementById('labelUnique');
-    let uniqueLabelText = (mode === 'day') ? "訪問人數" : "活躍人次";
-    let uniqueColor = (mode === 'day') ? "#b6a6ca" : "#d8caaf"; 
+    const cardEl = document.getElementById('dispUnique').parentElement; // 獲取卡片容器
+    
+    let uniqueLabelText = "";
+    let uniqueColor = "";
+
+    // 根據模式設定 標籤文字、卡片顏色 Class、圖表顏色
+    if (mode === 'day') {
+        uniqueLabelText = "訪問人數";
+        uniqueColor = "#b6a6ca"; // 保持紫色
+        
+        // 設定卡片樣式
+        if (cardEl) {
+            cardEl.classList.remove('stat-morandi-green'); // 移除綠色
+            cardEl.classList.add('stat-purple');         // 加回紫色
+        }
+    } else {
+        uniqueLabelText = "活躍人次";
+        uniqueColor = "#8fa398"; // ★ 改為莫蘭迪綠
+        
+        // 設定卡片樣式
+        if (cardEl) {
+            cardEl.classList.remove('stat-purple');      // 移除紫色
+            cardEl.classList.add('stat-morandi-green');  // ★ 加入綠色
+        }
+    }
+
     if(labelEl) labelEl.innerText = uniqueLabelText;
 
     try {
@@ -2968,31 +2990,15 @@ async function fetchAndRenderStats() {
         const snap = await db.ref(fetchPath).once('value');
         const dataNode = snap.val();
         
-        // ==========================================
-        // ★★★ [新增] 數據統計流量監控 ★★★
-        // ==========================================
+        // 流量監控
         if (dataNode) {
             try {
-                // 將資料轉為 JSON 字串並計算真實 UTF-8 大小
                 const jsonString = JSON.stringify(dataNode);
                 const bytes = new TextEncoder().encode(jsonString).length;
                 const kb = (bytes / 1024).toFixed(2);
-                
-                console.group("📊 數據統計流量報告");
-                console.log(`📂 下載路徑: ${fetchPath}`);
-                console.log(`📉 數據大小: ${bytes} bytes (約 ${kb} KB)`);
-                
-                // 簡單估算資料節點數量
-                const keys = Object.keys(dataNode);
-                console.log(`🔢 資料節點: 約 ${keys.length} 筆主要紀錄`);
-                console.groupEnd();
-            } catch (e) {
-                console.log("流量計算錯誤", e);
-            }
-        } else {
-            console.log(`📊 [數據統計] 此路徑無資料 (0 KB)`);
+                console.log(`📊 數據統計流量: ${kb} KB`);
+            } catch (e) {}
         }
-        // ==========================================
         
         if (!dataNode) { 
             alert("此時段無數據紀錄"); 
@@ -3014,10 +3020,7 @@ async function fetchAndRenderStats() {
             const s = getStats(dataNode);
             totalVisits = s.v;
             totalDuration = s.d;
-            
-            if (selectedStudent && s.v > 0) totalUnique = 1;
-            else totalUnique = s.u;
-
+            if (selectedStudent && s.v > 0) totalUnique = 1; else totalUnique = s.u;
             chartLabels.push(`${d}日`);
             chartVisits.push(s.v);
             chartUnique.push(totalUnique);
@@ -3028,11 +3031,9 @@ async function fetchAndRenderStats() {
                 const s = getStats(dataNode[dayKey]);
                 totalVisits += s.v;
                 totalDuration += s.d;
-                
                 let dailyUnique = s.u;
                 if (selectedStudent && s.v > 0) dailyUnique = 1;
                 totalUnique += dailyUnique;
-
                 chartLabels.push(`${parseInt(dayKey)}日`);
                 chartVisits.push(s.v);
                 chartUnique.push(dailyUnique);
@@ -3043,7 +3044,6 @@ async function fetchAndRenderStats() {
             Object.keys(dataNode).sort().forEach(monthKey => {
                 let mVisits = 0, mUnique = 0, mDuration = 0;
                 const monthData = dataNode[monthKey];
-                
                 Object.values(monthData).forEach(dayNode => {
                     const s = getStats(dayNode);
                     mVisits += s.v;
@@ -3052,11 +3052,9 @@ async function fetchAndRenderStats() {
                     if (selectedStudent && s.v > 0) dailyU = 1;
                     mUnique += dailyU;
                 });
-
                 totalVisits += mVisits;
                 totalUnique += mUnique;
                 totalDuration += mDuration;
-
                 chartLabels.push(`${parseInt(monthKey)}月`);
                 chartVisits.push(mVisits);
                 chartUnique.push(mUnique);
@@ -3083,6 +3081,7 @@ async function fetchAndRenderStats() {
                 labels: chartLabels, 
                 datasets: [
                     { label: '訪問次數', data: chartVisits, backgroundColor: '#94a7b5', hoverBackgroundColor: '#7a8f9e', maxBarThickness: 50, order: 3 },
+                    // ★ 使用更新後的 uniqueColor (莫蘭迪綠)
                     { label: uniqueLabelText, data: chartUnique, backgroundColor: uniqueColor, hoverBackgroundColor: uniqueColor, maxBarThickness: 25, order: 2 },
                     { label: '總訪問時長 (分)', data: chartDuration, type: 'line', borderColor: '#d69a92', backgroundColor: '#d69a92', borderWidth: 2, pointRadius: 3, yAxisID: 'y1', tension: 0.3, order: 1 }
                 ]

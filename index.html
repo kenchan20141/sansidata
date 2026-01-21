@@ -135,6 +135,8 @@
     .stat-blue { background: linear-gradient(135deg, #94a7b5 0%, #7a8f9e 100%); }
     .stat-red { background: linear-gradient(135deg, #d69a92 0%, #bf857d 100%); }
     .stat-sand { background: linear-gradient(135deg, #c7b299 0%, #b09b82 100%); }
+    /* ★★★ 修改這裡：將原本的 stat-sand 改為 stat-green ★★★ */
+.stat-green  { background: linear-gradient(135deg, #8fa398 0%, #7d9186 100%); }
 /* ★★★ 新增這行：莫蘭迪黃 (用於本月/本年的活躍人次，與藍色形成對比) ★★★ */
 .stat-morandi-yellow { background: linear-gradient(135deg, #e0c38c 0%, #c7aa74 100%); }
 
@@ -1775,11 +1777,11 @@ button[id^="continue"] {
                 <div class="val" id="dispDuration">0</div>
                 <div class="label">總訪問時長 (分鐘)</div>
             </div>
-            <div class="stat-card stat-sand">
-                <div class="val" id="dispAvg">0</div>
-                <div class="label">平均訪問時長 (分鐘)</div>
-            </div>
-        </div>
+           <div class="stat-card stat-green">
+        <div class="val" id="dispAvg">0</div>
+        <div class="label">平均訪問時長 (分鐘)</div>
+    </div>
+</div>
 
         <div class="chart-container" style="position: relative; height:400px; width:100%;">
             <canvas id="analyticsChart"></canvas>

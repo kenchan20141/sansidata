@@ -1631,17 +1631,17 @@ button[id^="continue"] {
     <option value="1">中一</option><option value="2">中二</option><option value="3">中三</option>
     <option value="4">中四</option><option value="5">中五</option><option value="6" selected>中六</option>
     <!-- 新增 -->
-    <option value="System" style="color:red; font-weight:bold;">系統測試</option> 
+    <option value="System" style="color:red; font-weight:bold;">老師</option> 
                <!-- ★★★ 新增這行 ★★★ -->
 <option value="Special" style="color:blue; font-weight:bold;">特許用家</option>
 </select>
 <!-- 找到這段 -->
 <select id="viewClass" onchange="loadStudentList()">
     <option value="A">A 班</option><option value="B">B 班</option><option value="C">C 班</option><option value="D">D 班</option>
-    <option value="Test" style="color:red; font-weight:bold;">測試班</option>
+    <option value="Test" style="color:red; font-weight:bold;">老師</option>
     
-    <!-- ★★★ 新增這行：必須加入用家班選項，否則 JS 無法自動跳轉 ★★★ -->
-    <option value="User" style="color:blue; font-weight:bold;">用家班</option>
+    <!-- ★★★ 新增這行：必須加入特許用家選項，否則 JS 無法自動跳轉 ★★★ -->
+    <option value="User" style="color:blue; font-weight:bold;">特許用家</option>
 </select>
             <button class="btn-action btn-view" onclick="loadStudentList()"><i class="fas fa-sync-alt"></i> 刷新列表</button>
         </div>
@@ -1659,14 +1659,14 @@ button[id^="continue"] {
     <!-- ... 原有選項 ... -->
     <option value="1">中一</option><option value="2">中二</option><option value="3">中三</option>
     <option value="4">中四</option><option value="5">中五</option><option value="6" selected>中六</option>
-    <option value="System" style="color:red; font-weight:bold;">系統測試</option>
+    <option value="System" style="color:red; font-weight:bold;">老師</option>
 </select>
 <select id="reportClass" onchange="loadReportStudentList()">
     <!-- ... 原有選項 ... -->
     <option value="A">A 班</option><option value="B">B 班</option><option value="C">C 班</option><option value="D">D 班</option>
-    <option value="Test" style="color:red; font-weight:bold;">測試班</option>
+    <option value="Test" style="color:red; font-weight:bold;">老師</option>
     <!-- ★★★ 新增這行 ★★★ -->
-<option value="User" style="color:blue; font-weight:bold;">用家班</option>
+<option value="User" style="color:blue; font-weight:bold;">特許用家</option>
 </select>
             <button id="btnClassReport" class="btn-action btn-manage" style="background: linear-gradient(135deg, #7da3c0 0%, #5e7067 100%); margin-left: auto; box-shadow: 0 4px 10px rgba(94, 112, 103, 0.4);" onclick="generateClassReport()">
                 <i class="fas fa-chart-line"></i> 生成全班綜合報告 (AI)
@@ -1693,12 +1693,12 @@ button[id^="continue"] {
     <!-- ... 原有選項 ... -->
     <option value="1">中一</option><option value="2">中二</option><option value="3">中三</option>
     <option value="4">中四</option><option value="5">中五</option><option value="6" selected>中六</option>
-    <option value="System" style="color:red; font-weight:bold;">系統測試</option>
+    <option value="System" style="color:red; font-weight:bold;">老師</option>
 </select>
 <select id="assignClass" onchange="loadAssignmentHistory()">
     <!-- ... 原有選項 ... -->
     <option value="A">A 班</option><option value="B">B 班</option><option value="C">C 班</option><option value="D">D 班</option>
-    <option value="Test" style="color:red; font-weight:bold;">測試班</option>
+    <option value="Test" style="color:red; font-weight:bold;">老師</option>
 </select>
         </div>
         <div class="publish-area">
@@ -1730,12 +1730,12 @@ button[id^="continue"] {
     <!-- ... 原有選項 ... -->
     <option value="1">中一</option><option value="2">中二</option><option value="3">中三</option>
     <option value="4">中四</option><option value="5">中五</option><option value="6">中六</option>
-    <option value="System">系統測試</option>
+    <option value="System">老師</option>
 </select>
 <select id="statClass" onchange="loadAnalyticsClassList()">
     <!-- ... 原有選項 ... -->
     <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
-    <option value="Test">測試班</option>
+    <option value="Test">老師</option>
 </select>
             </span>
 
@@ -1822,7 +1822,7 @@ button[id^="continue"] {
     <option value="2">中二</option>
     <option value="1">中一</option>
     <!-- ★★★ 新增以下兩行 ★★★ -->
-    <option value="System" style="color:red; font-weight:bold;">系統測試</option>
+    <option value="System" style="color:red; font-weight:bold;">老師</option>
     <option value="Special" style="color:blue; font-weight:bold;">特許用家</option>
 </select>
          <select id="indivToClass" style="flex:1;">
@@ -1831,8 +1831,8 @@ button[id^="continue"] {
     <option value="C">C</option>
     <option value="D">D</option>
     <!-- ★★★ 新增以下兩行 ★★★ -->
-    <option value="Test" style="color:red; font-weight:bold;">測試班</option>
-    <option value="User" style="color:blue; font-weight:bold;">用家班</option>
+    <option value="Test" style="color:red; font-weight:bold;">老師</option>
+    <option value="User" style="color:blue; font-weight:bold;">特許用家</option>
 </select>
         </div>
  
@@ -2254,7 +2254,7 @@ async function loadStudentList() {
  
             // 顯示名稱邏輯
             let displayNameHtml = '';
-            if (g === 'System') displayNameHtml = `<span style="color:var(--m-blue); font-weight:bold;">系統測試</span> - ${name}`;
+            if (g === 'System') displayNameHtml = `<span style="color:var(--m-blue); font-weight:bold;">老師</span> - ${name}`;
             else if (g === 'Special') displayNameHtml = `<span style="color:var(--m-purple); font-weight:bold;">特許用家</span> - ${name}`;
             else displayNameHtml = `${name} <small>(${num})</small>`;
  
@@ -2381,7 +2381,7 @@ async function loadReportStudentList() {
  
             // 顯示名稱邏輯
             let displayNameHtml = '';
-            if (g === 'System') displayNameHtml = `<span style="color:var(--m-blue); font-weight:bold;">系統測試</span> - ${name}`;
+            if (g === 'System') displayNameHtml = `<span style="color:var(--m-blue); font-weight:bold;">老師</span> - ${name}`;
             else if (g === 'Special') displayNameHtml = `<span style="color:var(--m-purple); font-weight:bold;">特許用家</span> - ${name}`;
             else displayNameHtml = `${name} <small>(${num})</small>`;
  

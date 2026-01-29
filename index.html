@@ -3729,8 +3729,11 @@ function loadAssignmentHistory() {
         } 
     }
     
-    async function viewSubmissions(aid, title, g, c) {
-    currentViewingAssignmentId = aid; 
+  async function viewSubmissions(aid, title, g, c) {
+    currentViewingAssignmentId = aid;
+    
+    // ★★★ 新增這行：記錄當前環境，供單一下載使用 ★★★
+    currentAssignmentContext = { topic: title, grade: g, class: c };
     
     // ★★★ 修復重點：取得視窗元素 ★★★
     const modal = document.getElementById('submissionViewerModal');
@@ -3795,15 +3798,22 @@ function loadAssignmentHistory() {
     // 課業詳情檢閱 (修訂：確保與歷史紀錄顯示一致)
  // === 修正後的課業詳情檢閱函式 (修復雷達圖顯示) ===
 function showSubDetail(sub) {
+    // ★★★ 1. 儲存當前學生資料供下載使用 ★★★
+    window.currentViewingSub = sub;
+ 
     const fb = sub.teacherFeedback || {};
-    
-    // 1. 解析使用者輸入內容 (保持原有邏輯)
     let uContent = renderParsedUserContent(sub.userContent, 1);
-
-    // 2. 渲染基本 HTML 結構 (特別加入 ID: subAiContentBox 以便後續抓取)
+ 
+    // ★★★ 2. 在姓名旁邊加入下載按鈕 ★★★
     document.getElementById('submissionDetailArea').innerHTML = `
         <div class="detail-view">
-            <h2>${sub.studentName}</h2>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h2>${sub.studentName}</h2>
+                <button class="btn-action" style="background-color:var(--m-green); padding:8px 15px;" onclick="downloadSingleSubmission('${sub.studentName}')">
+                    <i class="fas fa-download"></i> 下載此份作業 (HTML)
+                </button>
+            </div>
+            
             <div style="font-size:0.9em; color:#888; margin-bottom:10px;">提交時間：${sub.submittedAt}</div>
             ${uContent}
             
@@ -3811,7 +3821,7 @@ function showSubDetail(sub) {
                 <h4 style="color:var(--m-green); margin-bottom:10px;">AI 分析結果：</h4>
                 ${sub.aiContent}
             </div>
-
+ 
             <div class="teacher-feedback-section">
                 <h3><i class="fas fa-pen-alt"></i> 老師批改</h3>
                 <div style="margin-bottom:15px;">
@@ -3825,14 +3835,12 @@ function showSubDetail(sub) {
                 <button class="btn-action btn-manage" onclick="sendFb('${sub.studentName}')">發還給學生</button>
             </div>
         </div>`;
-
-    // 3. ★★★ 關鍵修復：延遲執行繪圖邏輯 (與 renderDetail 保持一致) ★★★
+ 
+    // 延遲繪製雷達圖 (保持原本邏輯)
     setTimeout(() => {
         const container = document.getElementById('subAiContentBox');
         if (!container || !sub.scoreData) return;
-
-        // A. 準備 Canvas 元素
-        // 先嘗試在 aiContent 裡找 canvas，如果找不到 (有些舊資料沒存 canvas 標籤)，就自己創一個
+ 
         let canvas = container.querySelector('canvas');
         if (!canvas) {
             const chartWrapper = document.createElement('div');
@@ -3840,34 +3848,19 @@ function showSubDetail(sub) {
             chartWrapper.style.position = 'relative';
             chartWrapper.style.marginTop = '20px';
             chartWrapper.style.marginBottom = '20px';
-            // 加入 canvas
             chartWrapper.innerHTML = '<canvas id="assignmentRadarCanvas"></canvas>';
-            // 將圖表容器插入到 aiContent 的最上方或最下方 (這裡選擇最上方比較顯眼)
-            container.insertBefore(chartWrapper, container.firstChild.nextSibling); 
+            container.insertBefore(chartWrapper, container.firstChild.nextSibling);
             canvas = chartWrapper.querySelector('canvas');
         } else {
-            // 如果原本就有 canvas，確保它的父容器有高度
             canvas.parentNode.style.height = '350px';
             canvas.parentNode.style.position = 'relative';
         }
-
-        // B. 取得數據 (相容不同格式)
+ 
         let radarData = null;
-        if (sub.scoreData.radar) {
-            // 標準格式
-            radarData = [
-                sub.scoreData.radar.立意, sub.scoreData.radar.取材, sub.scoreData.radar.扣題,
-                sub.scoreData.radar.詳略, sub.scoreData.radar.詞彙, sub.scoreData.radar.文學性
-            ];
-        } else if (sub.scoreData["敘事抒情"] && sub.scoreData["敘事抒情"].radar) {
-            // 報告格式 (敘事)
-            radarData = sub.scoreData["敘事抒情"].radar;
-        } else if (sub.scoreData["議論"] && sub.scoreData["議論"].radar) {
-            // 報告格式 (議論)
-            radarData = sub.scoreData["議論"].radar;
-        }
-
-        // C. 執行 Chart.js 繪圖
+        if (sub.scoreData.radar) radarData = [sub.scoreData.radar.立意, sub.scoreData.radar.取材, sub.scoreData.radar.扣題, sub.scoreData.radar.詳略, sub.scoreData.radar.詞彙, sub.scoreData.radar.文學性];
+        else if (sub.scoreData["敘事抒情"]?.radar) radarData = sub.scoreData["敘事抒情"].radar;
+        else if (sub.scoreData["議論"]?.radar) radarData = sub.scoreData["議論"].radar;
+ 
         if (radarData && canvas) {
             new Chart(canvas.getContext('2d'), {
                 type: 'radar',
@@ -3883,15 +3876,8 @@ function showSubDetail(sub) {
                     }]
                 },
                 options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: { 
-                        r: { 
-                            suggestedMin: 0, 
-                            suggestedMax: 10, 
-                            ticks: { stepSize: 2 } 
-                        } 
-                    },
+                    responsive: true, maintainAspectRatio: false,
+                    scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { stepSize: 2 } } },
                     plugins: { legend: { display: false } }
                 }
             });
@@ -4589,173 +4575,25 @@ async function downloadAssignmentZip(aid, topic, grade, cls) {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 打包中...';
  
     try {
-        // 1. 下載全班提交數據
         const snapshot = await db.ref(`assignments_submissions/${aid}`).once('value');
         const submissions = snapshot.val();
  
         if (!submissions) {
             alert("此課業尚未有學生提交。");
-            btn.disabled = false;
-            btn.innerHTML = originalHtml;
-            return;
+            btn.disabled = false; btn.innerHTML = originalHtml; return;
         }
  
-        // 2. 準備 ZIP 物件
         const zip = new JSZip();
         const folderName = `${grade}${cls}_${topic}_作業存檔`;
         const folder = zip.folder(folderName);
  
-        // 3. 獲取當前頁面的所有 CSS (確保樣式 100% 一致)
-        // 這裡我們直接提取 document 中的 style 標籤內容
-        let allStyles = "";
-        document.querySelectorAll('style').forEach(styleTag => {
-            allStyles += styleTag.innerHTML;
-        });
-        
-        // 補充一些下載版專用的 CSS 修正 (例如隱藏按鈕)
-        allStyles += `
-            body { background: #f4f4f4; padding: 40px; }
-            .container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
-            .download-hide { display: none !important; }
-            /* 強制顯示雷達圖容器高度 */
-            .chart-wrapper { position: relative; height: 400px; width: 100%; margin: 20px 0; }
-        `;
- 
-        // 4. 遍歷每位學生，生成 HTML
         Object.entries(submissions).forEach(([studentName, sub]) => {
+            // ★ 呼叫共用生成器
+            const fileContent = generateStudentHtmlString(studentName, sub, topic, grade, cls);
             const fileName = `${sub.profile?.number || ''}_${studentName}.html`;
-            
-            // 準備雷達圖數據 (如果有)
-            let chartScript = "";
-            let chartHtml = "";
-            
-            if (sub.scoreData) {
-                // 嘗試從不同格式獲取 radar 數據
-                let radarData = null;
-                if (sub.scoreData.radar) radarData = sub.scoreData.radar;
-                else if (sub.scoreData["敘事抒情"]?.radar) radarData = sub.scoreData["敘事抒情"].radar;
-                else if (sub.scoreData["議論"]?.radar) radarData = sub.scoreData["議論"].radar;
- 
-                if (radarData) {
-                    const dataArray = [
-                        radarData.立意 || 0, radarData.取材 || 0, radarData.扣題 || 0,
-                        radarData.詳略 || 0, radarData.詞彙 || 0, radarData.文學性 || 0
-                    ];
-                    
-                    chartHtml = `<div class="chart-wrapper"><canvas id="radarChart"></canvas></div>`;
-                    
-                    // 嵌入 Chart.js 繪圖邏輯
-                    chartScript = `
-                    <script>
-                        document.addEventListener('DOMContentLoaded', function() {
-                            const ctx = document.getElementById('radarChart').getContext('2d');
-                            new Chart(ctx, {
-                                type: 'radar',
-                                data: {
-                                    labels: ['立意', '取材', '扣題', '詳略', '詞彙', '文學性'],
-                                    datasets: [{
-                                        label: '能力分佈',
-                                        data: [${dataArray.join(',')}],
-                                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                                        borderColor: 'rgba(54, 162, 235, 1)',
-                                        borderWidth: 2,
-                                        pointBackgroundColor: 'rgba(54, 162, 235, 1)'
-                                    }]
-                                },
-                                options: {
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { stepSize: 2 } } },
-                                    plugins: { legend: { display: false } }
-                                }
-                            });
-                        });
-                    <\/script>`;
-                }
-            }
- 
-            // 解析學生輸入內容 (使用原本的 renderParsedUserContent 邏輯，但在這裡要重寫簡單版以確保獨立性)
-            // 為了確保樣式一致，我們直接使用後端保存的 userContent，並用簡單的 regex 轉 HTML
-            let parsedUserContent = `<div class="history-parsed-container history-theme-context-1">`;
-            const lines = (sub.userContent || "").split('\n');
-            let currentLabel = "內容";
-            let contentAcc = [];
-            
-            lines.forEach(line => {
-                const match = line.match(/^(.{2,10}?)[：:](.*)$/);
-                if (match) {
-                    if (contentAcc.length > 0) {
-                        parsedUserContent += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${contentAcc.join('<br>')}</div></div>`;
-                    }
-                    currentLabel = match[1];
-                    if(match[2].trim()) contentAcc = [match[2].trim()]; else contentAcc = [];
-                } else {
-                    contentAcc.push(line);
-                }
-            });
-            if (contentAcc.length > 0) parsedUserContent += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${contentAcc.join('<br>')}</div></div>`;
-            parsedUserContent += `</div>`;
- 
-            // 組裝完整 HTML
-            const fileContent = `
-            <!DOCTYPE html>
-            <html lang="zh">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>${grade}${cls} - ${studentName} - ${topic}</title>
-                <!-- 引入 FontAwesome -->
-                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-                <!-- 引入 Google Fonts -->
-                <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
-                <!-- 引入 Chart.js -->
-                <script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
-                <style>
-                    ${allStyles}
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:20px;">
-                        <h1 style="text-align:center; color:#555;">${topic}</h1>
-                        <div style="display:flex; justify-content:space-between; color:#888; font-weight:bold;">
-                            <span>班級：${grade}${cls}</span>
-                            <span>姓名：${studentName} (${sub.profile?.number || '--'})</span>
-                            <span>提交時間：${new Date(sub.submittedAt).toLocaleString()}</span>
-                        </div>
-                    </div>
- 
-                    <!-- 學生輸入內容 -->
-                    <h3 style="color:var(--m-blue);"><i class="fas fa-pen-nib"></i> 學生作答</h3>
-                    ${parsedUserContent}
- 
-                    <!-- AI 評語 (含樣式) -->
-                    <div class="detail-ai-box" style="margin-top:30px;">
-                         <h3 style="color:var(--m-green);"><i class="fas fa-robot"></i> 神思 AI 分析</h3>
-                         ${chartHtml}
-                         ${sub.aiContent} 
-                    </div>
- 
-                    <!-- 老師評語 (若有) -->
-                    ${sub.teacherFeedback ? `
-                    <div style="margin-top:30px; background:#fffaf5; border:2px solid #e6dace; padding:20px; border-radius:12px;">
-                        <h3 style="color:#8d6e63; margin-top:0;"><i class="fas fa-chalkboard-teacher"></i> 老師批改</h3>
-                        <div style="font-size:1.2em; font-weight:bold; color:#d69a92; margin-bottom:10px;">
-                            分數：${sub.teacherFeedback.score || '未評分'}
-                        </div>
-                        <div style="line-height:1.8; color:#555;">
-                            ${sub.teacherFeedback.comment || '無評語'}
-                        </div>
-                    </div>` : ''}
-                </div>
-                ${chartScript}
-            </body>
-            </html>`;
- 
             folder.file(fileName, fileContent);
         });
  
-        // 5. 生成 ZIP 並觸發下載
         const content = await zip.generateAsync({ type: "blob" });
         saveAs(content, `${folderName}.zip`);
  
@@ -4772,6 +4610,165 @@ async function downloadAssignmentZip(aid, topic, grade, cls) {
     
 </script>
 
+
+<script>
+
+
+// =========================================
+// === [核心] 1. 定義共用的 HTML 生成器 (確保樣式一致) ===
+// =========================================
+ 
+// 用來儲存當前正在檢閱的課業資訊 (供單一下載使用)
+let currentAssignmentContext = { topic: '', grade: '', class: '' };
+ 
+function generateStudentHtmlString(studentName, sub, topic, grade, cls) {
+    // 1. 獲取當前頁面所有 CSS (確保樣式 100% 還原)
+    let allStyles = "";
+    document.querySelectorAll('style').forEach(styleTag => {
+        allStyles += styleTag.innerHTML;
+    });
+    
+    // 補充下載版專用 CSS
+    allStyles += `
+        body { background: #f4f4f4; padding: 40px; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+        .download-hide { display: none !important; }
+        .chart-wrapper { position: relative; height: 400px; width: 100%; margin: 20px 0; }
+    `;
+ 
+    // 2. 準備雷達圖數據與腳本
+    let chartScript = "";
+    let chartHtml = "";
+    
+    if (sub.scoreData) {
+        let radarData = null;
+        if (sub.scoreData.radar) radarData = sub.scoreData.radar;
+        else if (sub.scoreData["敘事抒情"]?.radar) radarData = sub.scoreData["敘事抒情"].radar;
+        else if (sub.scoreData["議論"]?.radar) radarData = sub.scoreData["議論"].radar;
+ 
+        if (radarData) {
+            const dataArray = [
+                radarData.立意 || 0, radarData.取材 || 0, radarData.扣題 || 0,
+                radarData.詳略 || 0, radarData.詞彙 || 0, radarData.文學性 || 0
+            ];
+            
+            chartHtml = `<div class="chart-wrapper"><canvas id="radarChart"></canvas></div>`;
+            
+            chartScript = `
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const ctx = document.getElementById('radarChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'radar',
+                        data: {
+                            labels: ['立意', '取材', '扣題', '詳略', '詞彙', '文學性'],
+                            datasets: [{
+                                label: '能力分佈',
+                                data: [${dataArray.join(',')}],
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 2,
+                                pointBackgroundColor: 'rgba(54, 162, 235, 1)'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { stepSize: 2 } } },
+                            plugins: { legend: { display: false } }
+                        }
+                    });
+                });
+            <\/script>`;
+        }
+    }
+ 
+    // 3. 解析學生內容 (保持原有邏輯)
+    let parsedUserContent = `<div class="history-parsed-container history-theme-context-1">`;
+    const lines = (sub.userContent || "").split('\n');
+    let currentLabel = "內容";
+    let contentAcc = [];
+    
+    lines.forEach(line => {
+        const match = line.match(/^(.{2,10}?)[：:](.*)$/);
+        if (match) {
+            if (contentAcc.length > 0) {
+                parsedUserContent += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${contentAcc.join('<br>')}</div></div>`;
+            }
+            currentLabel = match[1];
+            if(match[2].trim()) contentAcc = [match[2].trim()]; else contentAcc = [];
+        } else {
+            contentAcc.push(line);
+        }
+    });
+    if (contentAcc.length > 0) parsedUserContent += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${contentAcc.join('<br>')}</div></div>`;
+    parsedUserContent += `</div>`;
+ 
+    // 4. 組裝完整 HTML
+    return `
+    <!DOCTYPE html>
+    <html lang="zh">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${grade}${cls} - ${studentName}</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
+        <style>${allStyles}</style>
+    </head>
+    <body>
+        <div class="container">
+            <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:20px;">
+                <h1 style="text-align:center; color:#555;">${topic}</h1>
+                <div style="display:flex; justify-content:space-between; color:#888; font-weight:bold;">
+                    <span>班級：${grade}${cls}</span>
+                    <span>姓名：${studentName} (${sub.profile?.number || '--'})</span>
+                    <span>提交時間：${new Date(sub.submittedAt).toLocaleString()}</span>
+                </div>
+            </div>
+            <h3 style="color:var(--m-blue);"><i class="fas fa-pen-nib"></i> 學生作答</h3>
+            ${parsedUserContent}
+            <div class="detail-ai-box" style="margin-top:30px;">
+                 <h3 style="color:var(--m-green);"><i class="fas fa-robot"></i> 神思 AI 分析</h3>
+                 ${chartHtml}
+                 ${sub.aiContent}
+            </div>
+            ${sub.teacherFeedback ? `
+            <div style="margin-top:30px; background:#fffaf5; border:2px solid #e6dace; padding:20px; border-radius:12px;">
+                <h3 style="color:#8d6e63; margin-top:0;"><i class="fas fa-chalkboard-teacher"></i> 老師批改</h3>
+                <div style="font-size:1.2em; font-weight:bold; color:#d69a92; margin-bottom:10px;">
+                    分數：${sub.teacherFeedback.score || '未評分'}
+                </div>
+                <div style="line-height:1.8; color:#555;">${sub.teacherFeedback.comment || '無評語'}</div>
+            </div>` : ''}
+        </div>
+        ${chartScript}
+    </body>
+    </html>`;
+}
+ 
+// =========================================
+// === [核心] 2. 單一學生下載功能 ===
+// =========================================
+function downloadSingleSubmission(studentName) {
+    // 從全域變數獲取當前作業資訊
+    const { topic, grade, class: cls } = currentAssignmentContext;
+    
+    // 獲取當前正在檢閱的學生資料 (從 Firebase 數據中獲取比較麻煩，我們直接從 showSubDetail 傳入的 currentSub 獲取)
+    // 但為了簡化，我們將 currentSub 存為全域變數，或者直接在這裡傳入 sub 對象
+    // 最佳做法：我們修改 showSubDetail，讓它把 sub 存到一個臨時變數
+    
+    if (!window.currentViewingSub) return alert("無法讀取當前學生資料");
+    
+    const htmlContent = generateStudentHtmlString(studentName, window.currentViewingSub, topic, grade, cls);
+    const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
+    saveAs(blob, `${window.currentViewingSub.profile?.number || ''}_${studentName}_${topic}.html`);
+}
+    
+</script>
+
+    
 
     
 </body>

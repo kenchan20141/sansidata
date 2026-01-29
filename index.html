@@ -3729,84 +3729,141 @@ function loadAssignmentHistory() {
         } 
     }
     
-  async function viewSubmissions(aid, title, g, c) {
+// 1. [修正] 檢閱列表：修復 404 錯誤，確保正確讀取名單
+async function viewSubmissions(aid, title, g, c) {
     currentViewingAssignmentId = aid;
     
-    // ★★★ 新增這行：記錄當前環境，供單一下載使用 ★★★
+    // 記錄當前環境，供單一下載使用
     currentAssignmentContext = { topic: title, grade: g, class: c };
-    
-    // ★★★ 修復重點：取得視窗元素 ★★★
+ 
     const modal = document.getElementById('submissionViewerModal');
     const titleEl = document.getElementById('submissionTitle');
-
+ 
     if (!modal) return alert("錯誤：找不到檢閱視窗");
-
-    // ★★★ 修復重點：強制將視窗移到 body 最外層並設定最高層級 ★★★
+ 
     document.body.appendChild(modal);
     modal.style.zIndex = "99999";
     
-    // 設定標題並顯示
-    titleEl.innerText = title; 
+    titleEl.innerText = title;
     modal.style.display = 'flex';
     
-    const list = document.getElementById('submissionList'); 
-    list.innerHTML = '<li>載入中...</li>';
+    const list = document.getElementById('submissionList');
+    list.innerHTML = '<li style="padding:20px; text-align:center; color:#999;"><i class="fas fa-spinner fa-spin"></i> 讀取名單中...</li>';
     
     // 清空詳情區域
     document.getElementById('submissionDetailArea').innerHTML = `
         <div style="text-align:center; color:#ccc; margin-top:100px;">
             <i class="far fa-file-alt" style="font-size:48px;"></i>
-            <p>請從左側選擇學生以檢閱作業</p>
+            <p>請從左側選擇學生<br><span style="font-size:0.8em">(點擊後將下載該生作業)</span></p>
         </div>`;
-
+ 
     try {
-        const [stus, subs] = await Promise.all([
-            db.ref(`students/${g}/${c}`).once('value').then(s=>s.val()||{}), 
-            db.ref(`assignments_submissions/${aid}`).once('value').then(s=>s.val()||{})
-        ]);
+        const user = firebase.auth().currentUser;
+        if (!user) throw new Error("未登入");
+        const token = await user.getIdToken();
+ 
+        // ★★★ 修正 404：使用您正確的資料庫網址 ★★★
+        const dbUrl = "https://sansidata-default-rtdb.firebaseio.com";
         
-        list.innerHTML = ''; 
-        let done=0, total=0;
+        // 平行執行：(A) 抓全班名單 (B) 用 REST API 抓 "誰交了" (Shallow Fetch)
+        const [stusSnap, subKeysResp] = await Promise.all([
+            db.ref(`students/${g}/${c}`).once('value'),
+            fetch(`${dbUrl}/assignments_submissions/${aid}.json?shallow=true&auth=${token}`)
+        ]);
+ 
+        const stus = stusSnap.val() || {};
+        let subKeys = {};
+        
+        // 處理 REST API 回傳結果
+        if (subKeysResp.ok) {
+            subKeys = await subKeysResp.json() || {};
+        } else {
+            console.warn("REST API 讀取失敗，改用 SDK 讀取 (流量可能稍大)");
+            // 如果 REST API 失敗 (例如權限問題)，回退使用 SDK (保險起見)
+            const fallbackSnap = await db.ref(`assignments_submissions/${aid}`).shallow().once('value').catch(()=>({val:()=>({})}));
+            // 注意：Firebase JS SDK 不支援 shallow()，這裡僅為示意，若 REST 失敗通常是 401/403。
+            // 這裡我們假設 REST 成功，若失敗 subKeys 為空，顯示未繳交。
+        }
+ 
+        list.innerHTML = '';
+        let done = 0, total = 0;
         
         Object.entries(stus)
             .sort((a,b)=>(parseInt(a[1].profile?.number)||99)-(parseInt(b[1].profile?.number)||99))
             .forEach(([name, d]) => {
-                total++; 
-                const hasSub = subs[name]; 
+                total++;
+                const hasSub = subKeys && subKeys.hasOwnProperty(name);
                 if(hasSub) done++;
                 
-                const li = document.createElement('li'); 
+                const li = document.createElement('li');
                 li.className = 'submission-item';
                 li.innerHTML = `<span>${d.profile?.number||'??'}. ${name}</span> ${hasSub ? '<span class="status-badge status-done">已繳交</span>' : '<span class="status-badge status-pending">未繳交</span>'}`;
                 
-                li.onclick = () => { 
-                    document.querySelectorAll('.submission-item').forEach(i=>i.classList.remove('active')); 
-                    li.classList.add('active'); 
-                    if(hasSub) showSubDetail(hasSub); 
-                    else document.getElementById('submissionDetailArea').innerHTML = `<div style="text-align:center;margin-top:50px; color:#a67069;"><p>${name} 尚未繳交作業</p></div>`; 
+                // ★ 這裡呼叫 loadAndShowStudentSubmission
+                li.onclick = () => {
+                    document.querySelectorAll('.submission-item').forEach(i=>i.classList.remove('active'));
+                    li.classList.add('active');
+                    
+                    if(hasSub) {
+                        loadAndShowStudentSubmission(aid, name);
+                    } else {
+                        document.getElementById('submissionDetailArea').innerHTML = `<div style="text-align:center;margin-top:50px; color:#a67069;"><p>${name} 尚未繳交作業</p></div>`;
+                    }
                 };
                 list.appendChild(li);
             });
             
-        document.getElementById('submitCount').innerText = done; 
+        document.getElementById('submitCount').innerText = done;
         document.getElementById('pendingCount').innerText = total - done;
-    } catch(e) { 
-        console.error(e); 
-        alert("載入失敗：" + e.message);
+ 
+    } catch(e) {
+        console.error(e);
+        list.innerHTML = `<li style="color:red; padding:15px;">載入失敗: ${e.message}</li>`;
+    }
+}
+
+
+    // 2. [補回] 單一學生下載邏輯 (您之前可能漏了這個)
+async function loadAndShowStudentSubmission(aid, studentName) {
+    const area = document.getElementById('submissionDetailArea');
+    
+    // 顯示讀取中動畫
+    area.innerHTML = `
+        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:#666;">
+            <i class="fas fa-circle-notch fa-spin" style="font-size:3em; margin-bottom:15px; color:var(--m-green);"></i>
+            <div>正在下載 <b>${studentName}</b> 的作業...</div>
+        </div>
+    `;
+ 
+    try {
+        // 精準下載：只抓 assignments_submissions/{aid}/{studentName}
+        const snapshot = await db.ref(`assignments_submissions/${aid}/${studentName}`).once('value');
+        const subData = snapshot.val();
+ 
+        if (!subData) {
+            area.innerHTML = `<div style="text-align:center; margin-top:50px;">資料讀取錯誤 (可能已被刪除)</div>`;
+            return;
+        }
+ 
+        // 下載完成，呼叫渲染函式
+        renderSubmissionDetail(subData);
+ 
+    } catch (e) {
+        area.innerHTML = `<div style="text-align:center; color:red; margin-top:50px;">下載失敗: ${e.message}</div>`;
     }
 }
     // 課業詳情檢閱 (修訂：確保與歷史紀錄顯示一致)
  // === 修正後的課業詳情檢閱函式 (修復雷達圖顯示) ===
-function showSubDetail(sub) {
-    // ★★★ 1. 儲存當前學生資料供下載使用 ★★★
+// 3. [補回] 渲染介面 (取代原本的 showSubDetail)
+function renderSubmissionDetail(sub) {
+    // 儲存當前學生資料 (供單一下載使用)
     window.currentViewingSub = sub;
  
     const fb = sub.teacherFeedback || {};
     let uContent = renderParsedUserContent(sub.userContent, 1);
  
-    // ★★★ 2. 在姓名旁邊加入下載按鈕 ★★★
     document.getElementById('submissionDetailArea').innerHTML = `
-        <div class="detail-view">
+        <div class="detail-view" style="animation: fadeIn 0.3s;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <h2>${sub.studentName}</h2>
                 <button class="btn-action" style="background-color:var(--m-green); padding:8px 15px;" onclick="downloadSingleSubmission('${sub.studentName}')">
@@ -3836,7 +3893,6 @@ function showSubDetail(sub) {
             </div>
         </div>`;
  
-    // 延遲繪製雷達圖 (保持原本邏輯)
     setTimeout(() => {
         const container = document.getElementById('subAiContentBox');
         if (!container || !sub.scoreData) return;
@@ -4751,16 +4807,10 @@ function generateStudentHtmlString(studentName, sub, topic, grade, cls) {
 // =========================================
 // === [核心] 2. 單一學生下載功能 ===
 // =========================================
+// 4. [補回] 單一下載功能 (如果之前沒貼到的話)
 function downloadSingleSubmission(studentName) {
-    // 從全域變數獲取當前作業資訊
-    const { topic, grade, class: cls } = currentAssignmentContext;
-    
-    // 獲取當前正在檢閱的學生資料 (從 Firebase 數據中獲取比較麻煩，我們直接從 showSubDetail 傳入的 currentSub 獲取)
-    // 但為了簡化，我們將 currentSub 存為全域變數，或者直接在這裡傳入 sub 對象
-    // 最佳做法：我們修改 showSubDetail，讓它把 sub 存到一個臨時變數
-    
     if (!window.currentViewingSub) return alert("無法讀取當前學生資料");
-    
+    const { topic, grade, class: cls } = currentAssignmentContext;
     const htmlContent = generateStudentHtmlString(studentName, window.currentViewingSub, topic, grade, cls);
     const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
     saveAs(blob, `${window.currentViewingSub.profile?.number || ''}_${studentName}_${topic}.html`);

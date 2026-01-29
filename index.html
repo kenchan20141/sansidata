@@ -10,6 +10,11 @@
     <!-- 引入 Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+
+    <!-- ★★★ 新增：ZIP 打包與下載工具 ★★★ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -3646,12 +3651,11 @@ function drawReportChart(canvas, radarData) {
     function updateBreadcrumb(c,s) { const b=document.getElementById('teacherBreadcrumb'); b.style.display='flex'; document.getElementById('breadCategory').innerText=c; document.getElementById('breadSub').innerText=s||''; document.getElementById('breadSep2').style.display=s?'inline':'none'; }
     
     // === 課業管理 ===
-   // === 課業管理列表 (自動鎖定) ===
 function loadAssignmentHistory() {
     const gradeSelect = document.getElementById('assignGrade');
     const classSelect = document.getElementById('assignClass');
-
-    // ★ 自動化邏輯 ★
+ 
+    // 自動鎖定邏輯
     if (gradeSelect.value === 'System') {
         classSelect.value = 'Test';
         classSelect.disabled = true;
@@ -3659,7 +3663,7 @@ function loadAssignmentHistory() {
         classSelect.disabled = false;
         if (classSelect.value === 'Test') classSelect.value = 'A';
     }
-
+ 
     const g = gradeSelect.value;
     const c = classSelect.value;
     const list = document.getElementById('assignmentHistoryList');
@@ -3667,15 +3671,15 @@ function loadAssignmentHistory() {
     list.innerHTML = '<p style="text-align:center; padding:20px; color:#999;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
     
     db.ref(`assignments/${g}/${c}`).on('value', (snapshot) => {
-        const data = snapshot.val(); 
+        const data = snapshot.val();
         list.innerHTML = '';
         if (!data) { list.innerHTML = '<div style="text-align:center; padding:30px; color:#ccc;">無課業</div>'; return; }
         
         Object.entries(data).sort((a, b) => b[1].timestamp - a[1].timestamp).forEach(([key, task]) => {
-            const div = document.createElement('div'); 
+            const div = document.createElement('div');
             div.className = 'assignment-item';
-            const safeTopic = task.topic.replace(/'/g, "\\'"); 
-
+            const safeTopic = task.topic.replace(/'/g, "\\'");
+ 
             div.innerHTML = `
                 <div>
                     <div style="font-weight:bold;">${task.topic}</div>
@@ -3684,10 +3688,18 @@ function loadAssignmentHistory() {
                     </div>
                 </div>
                 <div style="display:flex;gap:10px;">
-                    <button class="btn-action btn-view" onclick="viewSubmissions('${key}', '${safeTopic}', '${g}', '${c}')">
+                    <!-- 檢閱按鈕 -->
+                    <button class="btn-action btn-view" title="線上檢閱" onclick="viewSubmissions('${key}', '${safeTopic}', '${g}', '${c}')">
                         <i class="fas fa-eye"></i>
                     </button>
-                    <button class="btn-action btn-delete" onclick="deleteAssignment('${key}', '${g}', '${c}')">
+                    
+                    <!-- ★★★ 新增：下載 ZIP 按鈕 ★★★ -->
+                    <button class="btn-action btn-manage" title="下載全班 HTML (ZIP)" style="background-color: var(--m-green);" onclick="downloadAssignmentZip('${key}', '${safeTopic}', '${g}', '${c}')">
+                        <i class="fas fa-file-archive"></i>
+                    </button>
+ 
+                    <!-- 刪除按鈕 -->
+                    <button class="btn-action btn-delete" title="刪除課業" onclick="deleteAssignment('${key}', '${g}', '${c}')">
                         <i class="fas fa-trash-alt"></i>
                     </button>
                 </div>`;
@@ -4564,7 +4576,201 @@ function renderOnlineUsers(data) {
     </div>
 </div>
 
+<script>
 
+// =========================================
+// === [新增] 全班課業 ZIP 下載功能 (高保真版) ===
+// =========================================
+ 
+async function downloadAssignmentZip(aid, topic, grade, cls) {
+    const btn = event.currentTarget;
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 打包中...';
+ 
+    try {
+        // 1. 下載全班提交數據
+        const snapshot = await db.ref(`assignments_submissions/${aid}`).once('value');
+        const submissions = snapshot.val();
+ 
+        if (!submissions) {
+            alert("此課業尚未有學生提交。");
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            return;
+        }
+ 
+        // 2. 準備 ZIP 物件
+        const zip = new JSZip();
+        const folderName = `${grade}${cls}_${topic}_作業存檔`;
+        const folder = zip.folder(folderName);
+ 
+        // 3. 獲取當前頁面的所有 CSS (確保樣式 100% 一致)
+        // 這裡我們直接提取 document 中的 style 標籤內容
+        let allStyles = "";
+        document.querySelectorAll('style').forEach(styleTag => {
+            allStyles += styleTag.innerHTML;
+        });
+        
+        // 補充一些下載版專用的 CSS 修正 (例如隱藏按鈕)
+        allStyles += `
+            body { background: #f4f4f4; padding: 40px; }
+            .container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
+            .download-hide { display: none !important; }
+            /* 強制顯示雷達圖容器高度 */
+            .chart-wrapper { position: relative; height: 400px; width: 100%; margin: 20px 0; }
+        `;
+ 
+        // 4. 遍歷每位學生，生成 HTML
+        Object.entries(submissions).forEach(([studentName, sub]) => {
+            const fileName = `${sub.profile?.number || ''}_${studentName}.html`;
+            
+            // 準備雷達圖數據 (如果有)
+            let chartScript = "";
+            let chartHtml = "";
+            
+            if (sub.scoreData) {
+                // 嘗試從不同格式獲取 radar 數據
+                let radarData = null;
+                if (sub.scoreData.radar) radarData = sub.scoreData.radar;
+                else if (sub.scoreData["敘事抒情"]?.radar) radarData = sub.scoreData["敘事抒情"].radar;
+                else if (sub.scoreData["議論"]?.radar) radarData = sub.scoreData["議論"].radar;
+ 
+                if (radarData) {
+                    const dataArray = [
+                        radarData.立意 || 0, radarData.取材 || 0, radarData.扣題 || 0,
+                        radarData.詳略 || 0, radarData.詞彙 || 0, radarData.文學性 || 0
+                    ];
+                    
+                    chartHtml = `<div class="chart-wrapper"><canvas id="radarChart"></canvas></div>`;
+                    
+                    // 嵌入 Chart.js 繪圖邏輯
+                    chartScript = `
+                    <script>
+                        document.addEventListener('DOMContentLoaded', function() {
+                            const ctx = document.getElementById('radarChart').getContext('2d');
+                            new Chart(ctx, {
+                                type: 'radar',
+                                data: {
+                                    labels: ['立意', '取材', '扣題', '詳略', '詞彙', '文學性'],
+                                    datasets: [{
+                                        label: '能力分佈',
+                                        data: [${dataArray.join(',')}],
+                                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                        borderColor: 'rgba(54, 162, 235, 1)',
+                                        borderWidth: 2,
+                                        pointBackgroundColor: 'rgba(54, 162, 235, 1)'
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { stepSize: 2 } } },
+                                    plugins: { legend: { display: false } }
+                                }
+                            });
+                        });
+                    <\/script>`;
+                }
+            }
+ 
+            // 解析學生輸入內容 (使用原本的 renderParsedUserContent 邏輯，但在這裡要重寫簡單版以確保獨立性)
+            // 為了確保樣式一致，我們直接使用後端保存的 userContent，並用簡單的 regex 轉 HTML
+            let parsedUserContent = `<div class="history-parsed-container history-theme-context-1">`;
+            const lines = (sub.userContent || "").split('\n');
+            let currentLabel = "內容";
+            let contentAcc = [];
+            
+            lines.forEach(line => {
+                const match = line.match(/^(.{2,10}?)[：:](.*)$/);
+                if (match) {
+                    if (contentAcc.length > 0) {
+                        parsedUserContent += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${contentAcc.join('<br>')}</div></div>`;
+                    }
+                    currentLabel = match[1];
+                    if(match[2].trim()) contentAcc = [match[2].trim()]; else contentAcc = [];
+                } else {
+                    contentAcc.push(line);
+                }
+            });
+            if (contentAcc.length > 0) parsedUserContent += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${contentAcc.join('<br>')}</div></div>`;
+            parsedUserContent += `</div>`;
+ 
+            // 組裝完整 HTML
+            const fileContent = `
+            <!DOCTYPE html>
+            <html lang="zh">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>${grade}${cls} - ${studentName} - ${topic}</title>
+                <!-- 引入 FontAwesome -->
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+                <!-- 引入 Google Fonts -->
+                <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+                <!-- 引入 Chart.js -->
+                <script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
+                <style>
+                    ${allStyles}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div style="border-bottom:1px solid #eee; padding-bottom:15px; margin-bottom:20px;">
+                        <h1 style="text-align:center; color:#555;">${topic}</h1>
+                        <div style="display:flex; justify-content:space-between; color:#888; font-weight:bold;">
+                            <span>班級：${grade}${cls}</span>
+                            <span>姓名：${studentName} (${sub.profile?.number || '--'})</span>
+                            <span>提交時間：${new Date(sub.submittedAt).toLocaleString()}</span>
+                        </div>
+                    </div>
+ 
+                    <!-- 學生輸入內容 -->
+                    <h3 style="color:var(--m-blue);"><i class="fas fa-pen-nib"></i> 學生作答</h3>
+                    ${parsedUserContent}
+ 
+                    <!-- AI 評語 (含樣式) -->
+                    <div class="detail-ai-box" style="margin-top:30px;">
+                         <h3 style="color:var(--m-green);"><i class="fas fa-robot"></i> 神思 AI 分析</h3>
+                         ${chartHtml}
+                         ${sub.aiContent} 
+                    </div>
+ 
+                    <!-- 老師評語 (若有) -->
+                    ${sub.teacherFeedback ? `
+                    <div style="margin-top:30px; background:#fffaf5; border:2px solid #e6dace; padding:20px; border-radius:12px;">
+                        <h3 style="color:#8d6e63; margin-top:0;"><i class="fas fa-chalkboard-teacher"></i> 老師批改</h3>
+                        <div style="font-size:1.2em; font-weight:bold; color:#d69a92; margin-bottom:10px;">
+                            分數：${sub.teacherFeedback.score || '未評分'}
+                        </div>
+                        <div style="line-height:1.8; color:#555;">
+                            ${sub.teacherFeedback.comment || '無評語'}
+                        </div>
+                    </div>` : ''}
+                </div>
+                ${chartScript}
+            </body>
+            </html>`;
+ 
+            folder.file(fileName, fileContent);
+        });
+ 
+        // 5. 生成 ZIP 並觸發下載
+        const content = await zip.generateAsync({ type: "blob" });
+        saveAs(content, `${folderName}.zip`);
+ 
+    } catch (e) {
+        console.error("打包失敗", e);
+        alert("打包失敗：" + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+    }
+}
+ 
+
+    
+</script>
 
 
     

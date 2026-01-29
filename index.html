@@ -15,6 +15,10 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
+
+    <!-- 引入 JSZip 用於打包下載 -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
 <style>
     /* === 莫蘭迪色系定義 === */
     :root {
@@ -3646,11 +3650,10 @@ function drawReportChart(canvas, radarData) {
     function updateBreadcrumb(c,s) { const b=document.getElementById('teacherBreadcrumb'); b.style.display='flex'; document.getElementById('breadCategory').innerText=c; document.getElementById('breadSub').innerText=s||''; document.getElementById('breadSep2').style.display=s?'inline':'none'; }
     
     // === 課業管理 ===
-   // === 課業管理列表 (自動鎖定) ===
 function loadAssignmentHistory() {
     const gradeSelect = document.getElementById('assignGrade');
     const classSelect = document.getElementById('assignClass');
-
+ 
     // ★ 自動化邏輯 ★
     if (gradeSelect.value === 'System') {
         classSelect.value = 'Test';
@@ -3659,7 +3662,7 @@ function loadAssignmentHistory() {
         classSelect.disabled = false;
         if (classSelect.value === 'Test') classSelect.value = 'A';
     }
-
+ 
     const g = gradeSelect.value;
     const c = classSelect.value;
     const list = document.getElementById('assignmentHistoryList');
@@ -3667,15 +3670,15 @@ function loadAssignmentHistory() {
     list.innerHTML = '<p style="text-align:center; padding:20px; color:#999;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
     
     db.ref(`assignments/${g}/${c}`).on('value', (snapshot) => {
-        const data = snapshot.val(); 
+        const data = snapshot.val();
         list.innerHTML = '';
         if (!data) { list.innerHTML = '<div style="text-align:center; padding:30px; color:#ccc;">無課業</div>'; return; }
         
         Object.entries(data).sort((a, b) => b[1].timestamp - a[1].timestamp).forEach(([key, task]) => {
-            const div = document.createElement('div'); 
+            const div = document.createElement('div');
             div.className = 'assignment-item';
-            const safeTopic = task.topic.replace(/'/g, "\\'"); 
-
+            const safeTopic = task.topic.replace(/'/g, "\\'");
+ 
             div.innerHTML = `
                 <div>
                     <div style="font-weight:bold;">${task.topic}</div>
@@ -3684,6 +3687,11 @@ function loadAssignmentHistory() {
                     </div>
                 </div>
                 <div style="display:flex;gap:10px;">
+                    <!-- ★★★ 新增：下載按鈕 ★★★ -->
+                    <button class="btn-action btn-manage" style="background-color: #607d8b;" onclick="downloadAssignmentZip('${key}', '${safeTopic}', '${g}', '${c}')" title="下載全班作業 (ZIP)">
+                        <i class="fas fa-file-archive"></i>
+                    </button>
+ 
                     <button class="btn-action btn-view" onclick="viewSubmissions('${key}', '${safeTopic}', '${g}', '${c}')">
                         <i class="fas fa-eye"></i>
                     </button>
@@ -3695,6 +3703,174 @@ function loadAssignmentHistory() {
         });
     });
 }
+
+
+    // === 新增：一鍵下載全班作業為 ZIP ===
+async function downloadAssignmentZip(aid, topic, g, c) {
+    if (!confirm(`確定要下載「${topic}」的全班作業存檔嗎？\n這將會生成一個包含所有學生 HTML 報告的 ZIP 檔。`)) return;
+ 
+    const btn = event.currentTarget; // 獲取點擊的按鈕
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; // 轉圈圈
+ 
+    try {
+        // 1. 獲取所有提交紀錄
+        const snapshot = await db.ref(`assignments_submissions/${aid}`).once('value');
+        const submissions = snapshot.val();
+ 
+        if (!submissions) {
+            alert("此課業尚未有任何學生提交。");
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            return;
+        }
+ 
+        const zip = new JSZip();
+        const folder = zip.folder(`${g}${c}_${topic}_作業存檔`);
+        let count = 0;
+ 
+        // 2. 準備通用 CSS (確保離線觀看時樣式正常)
+        // 這裡提取了你原本 CSS 的核心部分
+        const styleContent = `
+            body { font-family: 'Noto Serif TC', serif; padding: 40px; background: #f4f4f4; color: #333; max-width: 900px; margin: 0 auto; }
+            h1 { text-align: center; color: #5e5e5e; border-bottom: 2px solid #8fa398; padding-bottom: 20px; }
+            .meta { color: #888; margin-bottom: 30px; text-align: center; }
+            .box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px; border: 1px solid #e0ddd7; }
+            .label { font-weight: bold; color: #8fa398; margin-bottom: 10px; display: block; font-size: 1.1em; }
+            .content { line-height: 1.8; white-space: pre-wrap; text-align: justify; }
+            .ai-box { background: #fffcf6; border: 1px solid #8baea8; padding: 20px; border-radius: 8px; margin-top: 20px; }
+            .score-box { background: #fffaf5; border: 2px solid #e6dace; padding: 20px; border-radius: 12px; }
+            /* 雷達圖容器 */
+            .chart-container { position: relative; height: 400px; width: 100%; margin-top: 20px; }
+            /* 你的表格樣式 */
+            table { width: 100%; border-collapse: collapse; margin: 15px 0; border: 1px solid #8baea8; }
+            th { background-color: #2A9689; color: white; padding: 10px; text-align: left; }
+            td { padding: 10px; border: 1px solid #8baea8; vertical-align: top; }
+        `;
+ 
+        // 3. 遍歷學生並生成 HTML
+        for (const [studentName, sub] of Object.entries(submissions)) {
+            // 準備雷達圖數據 (如果有)
+            let radarScript = "";
+            let radarData = null;
+            
+            // 嘗試抓取雷達圖數據
+            if (sub.scoreData) {
+                if (sub.scoreData.radar) radarData = sub.scoreData.radar;
+                else if (sub.scoreData["敘事抒情"]?.radar) radarData = sub.scoreData["敘事抒情"].radar;
+                else if (sub.scoreData["議論"]?.radar) radarData = sub.scoreData["議論"].radar;
+            }
+ 
+            if (radarData) {
+                const dataArr = [
+                    radarData.立意 || 0, radarData.取材 || 0, radarData.扣題 || 0,
+                    radarData.詳略 || 0, radarData.詞彙 || 0, radarData.文學性 || 0
+                ];
+                
+                // 嵌入圖表腳本
+                radarScript = `
+                <script>
+                    document.addEventListener("DOMContentLoaded", function() {
+                        const ctx = document.getElementById('radarChart').getContext('2d');
+                        new Chart(ctx, {
+                            type: 'radar',
+                            data: {
+                                labels: ['立意', '取材', '扣題', '詳略', '詞彙', '文學性'],
+                                datasets: [{
+                                    label: '能力分佈',
+                                    data: [${dataArr.join(',')}],
+                                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                    borderColor: 'rgba(54, 162, 235, 1)',
+                                    borderWidth: 2
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                scales: { r: { suggestedMin: 0, suggestedMax: 10 } }
+                            }
+                        });
+                    });
+                <\/script>`;
+            }
+ 
+            // 構建 HTML 內容
+            const htmlContent = `
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>${studentName} - ${topic}</title>
+    <!-- 引入 Chart.js 以便離線顯示圖表 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
+    <style>${styleContent}</style>
+</head>
+<body>
+    <h1>${topic}</h1>
+    <div class="meta">
+        班級：${g}${c} | 學生：${studentName} | 提交時間：${sub.submittedAt}
+    </div>
+ 
+    <div class="box">
+        <span class="label">學生作答：</span>
+        <div class="content">${(sub.userContent || '').replace(/\n/g, '<br>')}</div>
+    </div>
+ 
+    <div class="box">
+        <span class="label">AI 評估與分析：</span>
+        <div class="ai-box">
+            ${sub.aiContent}
+            ${radarData ? '<div class="chart-container"><canvas id="radarChart"></canvas></div>' : ''}
+        </div>
+    </div>
+ 
+    <div class="box score-box">
+        <span class="label">老師評分：</span>
+        <div>
+            <strong>分數：</strong> ${sub.teacherFeedback?.score || '未評分'}<br>
+            <strong>評語：</strong> ${sub.teacherFeedback?.comment || '無評語'}
+        </div>
+    </div>
+ 
+    ${radarScript}
+</body>
+</html>`;
+            
+            // 加入 ZIP (檔名：班號_姓名.html，若無班號則用姓名)
+            // 這裡假設我們無法直接從 submission 拿到班號，所以只用姓名
+            // 如果要班號，可以傳入 student list map，但為了省流簡單，這裡用姓名
+            folder.file(`${studentName}.html`, htmlContent);
+            count++;
+        }
+ 
+        // 4. 生成並下載 ZIP
+        const content = await zip.generateAsync({ type: "blob" });
+        
+        // 建立下載連結
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(content);
+        link.download = `${g}${c}_${topic}_全班作業(${count}份).zip`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+ 
+        // 5. 完成提示
+        btn.innerHTML = '<i class="fas fa-check"></i>';
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        }, 2000);
+ 
+    } catch (e) {
+        console.error(e);
+        alert("打包下載失敗：" + e.message);
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+    }
+}
+ 
 
     
     function publishAssignment() {

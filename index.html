@@ -15,10 +15,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-
-    <!-- 引入 JSZip 用於打包下載 -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-
 <style>
     /* === 莫蘭迪色系定義 === */
     :root {
@@ -3650,10 +3646,11 @@ function drawReportChart(canvas, radarData) {
     function updateBreadcrumb(c,s) { const b=document.getElementById('teacherBreadcrumb'); b.style.display='flex'; document.getElementById('breadCategory').innerText=c; document.getElementById('breadSub').innerText=s||''; document.getElementById('breadSep2').style.display=s?'inline':'none'; }
     
     // === 課業管理 ===
+   // === 課業管理列表 (自動鎖定) ===
 function loadAssignmentHistory() {
     const gradeSelect = document.getElementById('assignGrade');
     const classSelect = document.getElementById('assignClass');
- 
+
     // ★ 自動化邏輯 ★
     if (gradeSelect.value === 'System') {
         classSelect.value = 'Test';
@@ -3662,7 +3659,7 @@ function loadAssignmentHistory() {
         classSelect.disabled = false;
         if (classSelect.value === 'Test') classSelect.value = 'A';
     }
- 
+
     const g = gradeSelect.value;
     const c = classSelect.value;
     const list = document.getElementById('assignmentHistoryList');
@@ -3670,15 +3667,15 @@ function loadAssignmentHistory() {
     list.innerHTML = '<p style="text-align:center; padding:20px; color:#999;"><i class="fas fa-spinner fa-spin"></i> 載入中...</p>';
     
     db.ref(`assignments/${g}/${c}`).on('value', (snapshot) => {
-        const data = snapshot.val();
+        const data = snapshot.val(); 
         list.innerHTML = '';
         if (!data) { list.innerHTML = '<div style="text-align:center; padding:30px; color:#ccc;">無課業</div>'; return; }
         
         Object.entries(data).sort((a, b) => b[1].timestamp - a[1].timestamp).forEach(([key, task]) => {
-            const div = document.createElement('div');
+            const div = document.createElement('div'); 
             div.className = 'assignment-item';
-            const safeTopic = task.topic.replace(/'/g, "\\'");
- 
+            const safeTopic = task.topic.replace(/'/g, "\\'"); 
+
             div.innerHTML = `
                 <div>
                     <div style="font-weight:bold;">${task.topic}</div>
@@ -3687,11 +3684,6 @@ function loadAssignmentHistory() {
                     </div>
                 </div>
                 <div style="display:flex;gap:10px;">
-                    <!-- ★★★ 新增：下載按鈕 ★★★ -->
-                    <button class="btn-action btn-manage" style="background-color: #607d8b;" onclick="downloadAssignmentZip('${key}', '${safeTopic}', '${g}', '${c}')" title="下載全班作業 (ZIP)">
-                        <i class="fas fa-file-archive"></i>
-                    </button>
- 
                     <button class="btn-action btn-view" onclick="viewSubmissions('${key}', '${safeTopic}', '${g}', '${c}')">
                         <i class="fas fa-eye"></i>
                     </button>
@@ -3703,315 +3695,6 @@ function loadAssignmentHistory() {
         });
     });
 }
-
-
-// === [終極還原版] 下載全班作業 (100% 樣式同步) ===
-async function downloadAssignmentZip(aid, topic, g, c) {
-    if (!confirm(`確定要下載「${topic}」的全班作業存檔嗎？\n這將生成與管理面板完全一致的 HTML 檔案。`)) return;
-
-    const btn = event.currentTarget;
-    const originalHtml = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 打包中...';
-
-    try {
-        // 1. 下載數據
-        const snapshot = await db.ref(`assignments_submissions/${aid}`).once('value');
-        const submissions = snapshot.val();
-
-        if (!submissions) {
-            alert("尚無學生提交紀錄。");
-            btn.disabled = false;
-            btn.innerHTML = originalHtml;
-            return;
-        }
-
-        const zip = new JSZip();
-        const folder = zip.folder(`${g}${c}_${topic}_作業存檔`);
-        let count = 0;
-
-        // 2. 注入完整的原始 CSS (包含所有細節)
-        const fullCss = `
-            /* === 核心變數 === */
-            :root {
-                --m-green: #8fa398;   --m-blue: #94a7b5;    --m-purple: #b6a6ca;
-                --m-red: #d69a92;     --m-brown: #c7b299;   --bg-color: #fdfcf8;
-                --text-main: #5e5e5e; --border-color: #e0ddd7;
-                --m-color-1: #8fa398; --m-color-2: #94a7b5; --m-color-3: #b6a6ca; 
-                --m-color-4: #d69a92; --m-color-5: #c7b299;
-            }
-
-            /* === 全局設定 === */
-            body {
-                font-family: 'Noto Serif TC', 'Songti TC', serif;
-                background-color: #f4f4f4; /* 灰色背景襯托白色卡片 */
-                color: var(--text-main);
-                margin: 0;
-                padding: 40px 20px;
-                display: flex;
-                justify-content: center;
-            }
-
-            /* === 模擬彈窗的主容器 === */
-            .detail-view {
-                background: #fff;
-                width: 100%;
-                max-width: 900px; /* 限制寬度，避免太寬 */
-                padding: 40px;
-                border-radius: 15px;
-                box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-                box-sizing: border-box;
-            }
-
-            /* === 標題區塊 === */
-            .header-area {
-                border-bottom: 1px solid #eee;
-                padding-bottom: 20px;
-                margin-bottom: 30px;
-                text-align: center;
-            }
-            .header-area h2 { margin: 0; color: #333; font-size: 1.8em; }
-            .header-area p { color: #888; margin-top: 10px; font-size: 0.95em; }
-
-            /* === 學生作答區 (打孔紙風格) - 關鍵修復 === */
-            .history-parsed-container { 
-                background: #fff; 
-                padding: 20px; 
-                border-radius: 12px; 
-                border: 1px solid #e1e4e8; 
-                border-left: 5px solid #ccc; 
-                margin-bottom: 25px; 
-                box-shadow: 0 4px 15px rgba(0,0,0,0.03); 
-            }
-            .history-theme-context-1 { border-left-color: var(--m-color-1); }
-            .history-theme-context-1 .history-item-label { color: var(--m-color-1); }
-            .history-theme-context-1 .history-item-label::before { background-color: var(--m-color-1); }
-            .history-theme-context-1 .history-item-content { border-left: 4px solid var(--m-color-1); }
-
-            .history-item-block { margin-bottom: 15px; }
-            
-            /* 修正標籤排版 */
-            .history-item-label { 
-                font-weight: bold; 
-                font-size: 1em; 
-                margin-bottom: 8px; 
-                display: flex; 
-                align-items: center; 
-                gap: 8px; 
-            }
-            /* 圓點裝飾 (重要) */
-            .history-item-label::before { 
-                content: ''; 
-                display: block; 
-                width: 8px; 
-                height: 8px; 
-                border-radius: 50%; 
-                opacity: 0.8; 
-            }
-            
-            /* 內容框線與排版 */
-            .history-item-content { 
-                background: #fcfcfc; 
-                border: 1px solid #e1e4e8; 
-                border-radius: 4px; 
-                padding: 12px 16px; 
-                color: #444; 
-                line-height: 1.8; 
-                white-space: pre-wrap; 
-                word-break: break-word; 
-                text-align: justify; 
-            }
-
-            /* === AI 分析區 (表格樣式) === */
-            .detail-ai-box { margin-top: 20px; }
-            .detail-ai-box h4 { color: var(--m-green); margin-bottom: 15px; font-size: 1.1em; border-bottom: 2px solid var(--m-green); display: inline-block; padding-bottom: 5px;}
-            
-            .detail-ai-box table { 
-                width: 100%; 
-                border-collapse: collapse; 
-                margin: 15px 0; 
-                border: 1px solid #8baea8; 
-                font-family: 'Noto Serif TC', serif; 
-            }
-            .detail-ai-box th { 
-                background-color: #2A9689; 
-                color: white; 
-                padding: 10px; 
-                border: 1px solid #1e7e72; 
-                text-align: left; 
-            }
-            .detail-ai-box td { 
-                padding: 10px 15px; 
-                border: 1px solid #8baea8; 
-                vertical-align: top; 
-                text-align: left;
-                background-color: #fffcf6; 
-                color: #2c3e50; 
-                line-height: 1.8;
-                /* 保留表格背景紋理 */
-                background-image: linear-gradient(transparent 39px, rgba(42, 150, 137, 0.2) 39px, rgba(42, 150, 137, 0.2) 40px, transparent 40px), linear-gradient(90deg, transparent 39px, rgba(0,0,0,0.02) 39px, rgba(0,0,0,0.02) 40px, transparent 40px);
-                background-size: 40px 40px; 
-            }
-
-            /* === 老師回饋區 === */
-            .teacher-feedback-section { 
-                background-color: #fffaf5; 
-                border: 2px solid #e6dace; 
-                border-radius: 12px; 
-                padding: 25px; 
-                margin-top: 40px; 
-                box-shadow: 0 4px 15px rgba(141, 110, 99, 0.08); 
-            }
-            .teacher-feedback-section h3 { margin-top: 0; color: #8d6e63; }
-            .feedback-group { margin-bottom: 15px; }
-            .feedback-label { font-weight: bold; color: #8d6e63; margin-bottom: 5px; display: block; }
-            .feedback-value { 
-                background: #fff; 
-                padding: 10px 15px; 
-                border: 1px solid #e6dace; 
-                border-radius: 8px; 
-                color: #555; 
-                min-height: 20px;
-            }
-
-            /* === 雷達圖 === */
-            .chart-wrapper { 
-                position: relative; 
-                height: 350px; 
-                width: 100%; 
-                margin: 20px auto; 
-                max-width: 600px;
-            }
-        `;
-
-        // 3. 遍歷每位學生
-        for (const [name, sub] of Object.entries(submissions)) {
-            // A. 解析內容 (使用原函式以保留結構)
-            const parsedUserHtml = renderParsedUserContent(sub.userContent, 1);
-
-            // B. 準備雷達圖
-            let radarData = null;
-            if (sub.scoreData) {
-                if (sub.scoreData.radar) radarData = sub.scoreData.radar;
-                else if (sub.scoreData["敘事抒情"]?.radar) radarData = sub.scoreData["敘事抒情"].radar;
-                else if (sub.scoreData["議論"]?.radar) radarData = sub.scoreData["議論"].radar;
-            }
-
-            let chartScript = "";
-            if (radarData) {
-                const d = [
-                    radarData.立意||0, radarData.取材||0, radarData.扣題||0,
-                    radarData.詳略||0, radarData.詞彙||0, radarData.文學性||0
-                ];
-                chartScript = `
-                <script>
-                    window.onload = function() {
-                        var ctx = document.getElementById('radarChart').getContext('2d');
-                        new Chart(ctx, {
-                            type: 'radar',
-                            data: {
-                                labels: ['立意', '取材', '扣題', '詳略', '詞彙', '文學性'],
-                                datasets: [{
-                                    label: '能力分佈',
-                                    data: [${d.join(',')}],
-                                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                                    borderColor: 'rgba(54, 162, 235, 1)',
-                                    borderWidth: 2,
-                                    pointBackgroundColor: 'rgba(54, 162, 235, 1)'
-                                }]
-                            },
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                scales: { r: { suggestedMin: 0, suggestedMax: 10, ticks: { stepSize: 2 } } },
-                                plugins: { legend: { display: false } }
-                            }
-                        });
-                    };
-                <\/script>`;
-            }
-
-            // C. 組合 HTML (嚴格模擬 detail-view 結構)
-            const htmlContent = `
-<!DOCTYPE html>
-<html lang="zh">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${name} - ${topic}</title>
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"><\/script>
-    <style>${fullCss}</style>
-</head>
-<body>
-    <div class="detail-view">
-        <!-- 標題區 -->
-        <div class="header-area">
-            <h2>${name}</h2>
-            <p>
-                <i class="fas fa-book-reader"></i> 題目：${topic} &nbsp;|&nbsp; 
-                <i class="fas fa-clock"></i> 提交時間：${sub.submittedAt}
-            </p>
-        </div>
-
-        <!-- 學生作答區 (圓點、左側線條、框線) -->
-        ${parsedUserHtml}
-
-        <!-- AI 分析區 (圖表 + 表格) -->
-        <div class="detail-ai-box">
-            <h4><i class="fas fa-robot"></i> AI 分析結果</h4>
-            ${radarData ? '<div class="chart-wrapper"><canvas id="radarChart"></canvas></div>' : ''}
-            <div>${sub.aiContent}</div>
-        </div>
-
-        <!-- 老師評語區 (米色背景) -->
-        <div class="teacher-feedback-section">
-            <h3><i class="fas fa-pen-alt"></i> 老師批改</h3>
-            <div class="feedback-group">
-                <span class="feedback-label">分數：</span>
-                <div class="feedback-value">${sub.teacherFeedback?.score || '尚未評分'}</div>
-            </div>
-            <div class="feedback-group">
-                <span class="feedback-label">評語：</span>
-                <div class="feedback-value">${sub.teacherFeedback?.comment || '尚無評語'}</div>
-            </div>
-        </div>
-    </div>
-    ${chartScript}
-</body>
-</html>`;
-
-            // D. 存入 ZIP (安全檔名)
-            const safeName = name.replace(/[\\/:*?"<>|]/g, "_");
-            folder.file(`${safeName}.html`, htmlContent);
-            count++;
-        }
-
-        // 4. 生成下載
-        const content = await zip.generateAsync({ type: "blob" });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(content);
-        link.download = `${g}${c}_${topic}_全班作業(${count}份).zip`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-
-        btn.innerHTML = '<i class="fas fa-check"></i> 下載完成';
-        setTimeout(() => {
-            btn.innerHTML = originalHtml;
-            btn.disabled = false;
-        }, 2000);
-
-    } catch (e) {
-        console.error(e);
-        alert("下載失敗：" + e.message);
-        btn.innerHTML = originalHtml;
-        btn.disabled = false;
-    }
-}
- 
- 
 
     
     function publishAssignment() {

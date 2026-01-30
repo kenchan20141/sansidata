@@ -2037,6 +2037,33 @@ button[id^="continue"] {
 </div>
 
 <script>
+
+
+// --- 1. 分頁主權控制 (放在所有函數之外的最上方) ---
+// 這段代碼在老師端和學生端都需要運行
+const tabChannel = new BroadcastChannel('sansi_tab_sync_manager');
+let isPrimaryTab = true; // 預設自己是唯一的主分頁
+
+// 告訴其他分頁：「我進來了」
+tabChannel.postMessage({ type: 'NEW_TAB_OPENED', time: Date.now() });
+
+tabChannel.onmessage = (event) => {
+    if (event.data.type === 'NEW_TAB_OPENED') {
+        // 如果有新分頁進來，告訴它：「我才是主分頁」
+        tabChannel.postMessage({ type: 'I_AM_PRIMARY' });
+    } else if (event.data.type === 'I_AM_PRIMARY') {
+        // 如果收到別人說他是主分頁，那我就自動變成副分頁（不執行同步）
+        isPrimaryTab = false;
+        console.warn("⚠️ 偵測到重複分頁：此視窗將進入「低流量模式」，暫停背景自動同步。");
+    }
+};
+
+
+
+
+
+
+    
     const firebaseConfig = {
         apiKey: "AIzaSyBgwrgn2m343mRJb0WjzUhteiospegXhvI",
         authDomain: "sansidata.firebaseapp.com",
@@ -2286,36 +2313,47 @@ async function loadStudentList() {
 
 
     // === 新增：按需下載歷史紀錄 ===
+// === [管理端修訂] 按需下載歷史紀錄 ===
 async function fetchHistoryAndOpenModal(grade, cls, name) {
-    // 1. 顯示簡單的 Loading 提示 (或者您可以用更漂亮的 Modal Loading)
-    const btn = event.currentTarget; // 獲取被點擊的卡片
-    const originalContent = btn.innerHTML;
-    
-    // 在卡片上顯示讀取中
-    btn.innerHTML = `<div style="text-align:center; padding:10px;"><i class="fas fa-circle-notch fa-spin"></i> 下載大數據中...</div>`;
-    btn.style.pointerEvents = 'none'; // 防止連點
+    // 【保護 A】老師點擊檢閱別人時，先關掉自己視窗可能正在跑的背景監聽
+    if (typeof autoSyncListenerRef !== 'undefined' && autoSyncListenerRef) {
+        autoSyncListenerRef.off();
+        autoSyncListenerRef = null;
+        console.log("📋 檢閱模式啟動：暫停個人帳號監聽以省流量。");
+    }
+
+    const btn = window.event ? (window.event.currentTarget || window.event.target.closest('.student-card')) : null;
+    let originalContent = "";
+    if (btn) {
+        originalContent = btn.innerHTML;
+        btn.innerHTML = `<div style="text-align:center; padding:10px; color:#8fa398;"><i class="fas fa-circle-notch fa-spin"></i> 下載大數據中...</div>`;
+        btn.style.pointerEvents = 'none';
+    }
  
     try {
-        // 2. 精準下載：只下載該學生的 history 節點
+        // 【保護 B】使用 once('value') ！！！
+        // 這是解決 5MB/min 的關鍵。once 意味著：下載完，連線立刻斷開，絕對不會循環。
         const snapshot = await db.ref(`students/${grade}/${cls}/${name}/history`).once('value');
         const historyData = snapshot.val();
         
-        // 轉換為陣列 (處理 Firebase 物件格式)
         let historyArray = [];
         if (historyData) {
-            historyArray = Array.isArray(historyData) ? historyData : Object.values(historyData);
+            historyArray = Object.entries(historyData).map(([key, val]) => {
+                return { ...val, firebaseKey: key }; 
+            });
+            historyArray.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         }
  
-        // 3. 呼叫原本的開啟視窗函式
-        // (注意：這裡的 openHistoryModal 需要微調，因為我們現在才傳入 history)
         openHistoryModal(name, historyArray);
  
     } catch (error) {
-        alert("讀取失敗：" + error.message);
+        console.error("下載失敗:", error);
+        alert("讀取失敗，請重試。");
     } finally {
-        // 還原卡片顯示
-        btn.innerHTML = originalContent;
-        btn.style.pointerEvents = 'auto';
+        if (btn) {
+            btn.innerHTML = originalContent;
+            btn.style.pointerEvents = 'auto';
+        }
     }
 }
     

@@ -3399,11 +3399,10 @@ function renderDetail(r) {
     
     let uContent = '';
     
-    // 1. 處理使用者輸入內容 (userContent)
+    // 1. 處理使用者輸入內容 (userContent) (保持不變)
     if (r.category === "學習報告") {
         uContent = ''; 
     } 
-    // ★★★ 特殊處理：議論指引的使用者輸入 (卡片式) ★★★
     else if (r.category === "議論" && r.subFunction === "指引" && r.userContent) {
         const lines = r.userContent.split('\n');
         let cardsHTML = '';
@@ -3428,7 +3427,6 @@ function renderDetail(r) {
             }
         });
 
-        // 第一個區塊 (題目)
         let firstBlock = '';
         if (topicTitle) {
             firstBlock = `
@@ -3446,10 +3444,8 @@ function renderDetail(r) {
                 </div>
             </div>`;
     }
-    // 一般情況
     else {
         if(r.userContent) {
-            // 決定主題色
             let themeIndex = 1;
             if (HISTORY_STRUCTURE[r.category]) {
                 const subIndex = HISTORY_STRUCTURE[r.category].indexOf(r.subFunction);
@@ -3461,43 +3457,28 @@ function renderDetail(r) {
         }
     }
 
-    // 2. 處理 AI 生成內容 (aiContent)
-    let aiHtml = r.aiContent;
+    // 2. ★★★ [核心修改] 處理 AI 生成內容 (解壓縮) ★★★
+    let aiHtml = safeDecompress(r.aiContent);
 
-    // ★★★ 特殊處理：修復議論指引的 AI 內容顯示 ★★★
-    // 如果是舊格式 (純文字或未被 div 包裹)，嘗試重新包裝
+    // 特殊處理：修復議論指引的 AI 內容顯示 (保持不變)
     if (r.category === "議論" && r.subFunction === "指引") {
-        // 如果內容不包含 morandi-guide-container，代表可能是舊資料，嘗試手動格式化
         if (aiHtml && !aiHtml.includes('morandi-guide-container')) {
-            // 嘗試解析原始 HTML 結構 (通常是 <h3>...</h3><p>...</p>)
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = aiHtml;
             
             let newHtml = `<div class="morandi-guide-container">`;
-            
-            // 提取標題 (如果有)
             const h3s = tempDiv.querySelectorAll('h3');
             if (h3s.length > 0) {
-                // 假設第一個 h3 是總標題，或者是分段標題
-                // 這裡做一個簡單的轉換：將所有 h3 + p 轉為卡片
-                
-                // 尋找所有 "參考..." 的區塊
                 const sections = aiHtml.split(/(?=###|<h3>)/);
-                
                 sections.forEach(sec => {
-                    // 移除 HTML 標籤取純文字標題
                     let title = "指引內容";
                     let content = sec;
-                    
                     const titleMatch = sec.match(/<h3>(.*?)<\/h3>/) || sec.match(/###\s*(.*)/);
                     if (titleMatch) {
                         title = titleMatch[1].trim();
                         content = sec.replace(titleMatch[0], '');
                     }
-                    
-                    // 清理內容標籤
                     content = content.replace(/<p>/g, '').replace(/<\/p>/g, '<br>').trim();
-                    
                     if (content) {
                         newHtml += `
                         <div class="guide-section-card">
@@ -3507,20 +3488,15 @@ function renderDetail(r) {
                     }
                 });
             } else {
-                // 如果完全沒有標題結構，直接包在一個卡片裡
                 newHtml += `
                 <div class="guide-section-card">
                     <div class="guide-card-header">AI 指引</div>
                     <div class="guide-card-body">${aiHtml}</div>
                 </div>`;
             }
-            
             newHtml += `</div>`;
             aiHtml = newHtml;
         }
-        
-        // 如果內容已經包含 morandi-guide-container (新資料)，
-        // 我們只需要確保它的 CSS class 能在教師端生效即可 (CSS 已在第一步加入)
     }
 
     // 3. 渲染 HTML 結構
@@ -3550,10 +3526,6 @@ function renderDetail(r) {
         let prefix = '';
         if (r.category === '敘事抒情') prefix = 'narrative';
         else if (r.category === '議論') prefix = 'argument';
-
-        if (prefix && r.scoreData) {
-            // (分數還原邏輯省略，與原代碼相同)
-        }
 
         if (r.category !== "學習報告" && r.scoreData && r.scoreData.radar) {
             const canvas = container.querySelector('canvas');
@@ -3588,7 +3560,6 @@ function renderDetail(r) {
             }
         }
         else if (r.category === "學習報告" && r.scoreData) {
-            // (學習報告圖表邏輯省略，與原代碼相同)
             if (r.scoreData["敘事抒情"]?.radar) {
                 const narrBadge = container.querySelector('.badge-narrative');
                 if (narrBadge) {
@@ -3854,7 +3825,6 @@ async function loadAndShowStudentSubmission(aid, studentName) {
 }
     // 課業詳情檢閱 (修訂：確保與歷史紀錄顯示一致)
  // === 修正後的課業詳情檢閱函式 (修復雷達圖顯示) ===
-// 3. [補回] 渲染介面 (取代原本的 showSubDetail)
 function renderSubmissionDetail(sub) {
     // 儲存當前學生資料 (供單一下載使用)
     window.currentViewingSub = sub;
@@ -3862,6 +3832,9 @@ function renderSubmissionDetail(sub) {
     const fb = sub.teacherFeedback || {};
     let uContent = renderParsedUserContent(sub.userContent, 1);
  
+    // ★★★ [核心修改] 解壓縮 AI 內容 ★★★
+    const decompressedAiContent = safeDecompress(sub.aiContent);
+
     document.getElementById('submissionDetailArea').innerHTML = `
         <div class="detail-view" style="animation: fadeIn 0.3s;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -3876,7 +3849,7 @@ function renderSubmissionDetail(sub) {
             
             <div class="detail-ai-box" style="margin-top:20px;" id="subAiContentBox">
                 <h4 style="color:var(--m-green); margin-bottom:10px;">AI 分析結果：</h4>
-                ${sub.aiContent}
+                ${decompressedAiContent}
             </div>
  
             <div class="teacher-feedback-section">
@@ -4678,13 +4651,12 @@ async function downloadAssignmentZip(aid, topic, grade, cls) {
 let currentAssignmentContext = { topic: '', grade: '', class: '' };
  
 function generateStudentHtmlString(studentName, sub, topic, grade, cls) {
-    // 1. 獲取當前頁面所有 CSS (確保樣式 100% 還原)
+    // 1. 獲取當前頁面所有 CSS
     let allStyles = "";
     document.querySelectorAll('style').forEach(styleTag => {
         allStyles += styleTag.innerHTML;
     });
     
-    // 補充下載版專用 CSS
     allStyles += `
         body { background: #f4f4f4; padding: 40px; }
         .container { max-width: 900px; margin: 0 auto; background: white; padding: 40px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); }
@@ -4739,7 +4711,7 @@ function generateStudentHtmlString(studentName, sub, topic, grade, cls) {
         }
     }
  
-    // 3. 解析學生內容 (保持原有邏輯)
+    // 3. 解析學生內容
     let parsedUserContent = `<div class="history-parsed-container history-theme-context-1">`;
     const lines = (sub.userContent || "").split('\n');
     let currentLabel = "內容";
@@ -4760,6 +4732,9 @@ function generateStudentHtmlString(studentName, sub, topic, grade, cls) {
     if (contentAcc.length > 0) parsedUserContent += `<div class="history-item-block"><div class="history-item-label">${currentLabel}</div><div class="history-item-content">${contentAcc.join('<br>')}</div></div>`;
     parsedUserContent += `</div>`;
  
+    // ★★★ [核心修改] 解壓縮 AI 內容 ★★★
+    const decompressedAiContent = safeDecompress(sub.aiContent);
+
     // 4. 組裝完整 HTML
     return `
     <!DOCTYPE html>
@@ -4788,7 +4763,7 @@ function generateStudentHtmlString(studentName, sub, topic, grade, cls) {
             <div class="detail-ai-box" style="margin-top:30px;">
                  <h3 style="color:var(--m-green);"><i class="fas fa-robot"></i> 神思 AI 分析</h3>
                  ${chartHtml}
-                 ${sub.aiContent}
+                 ${decompressedAiContent}
             </div>
             ${sub.teacherFeedback ? `
             <div style="margin-top:30px; background:#fffaf5; border:2px solid #e6dace; padding:20px; border-radius:12px;">

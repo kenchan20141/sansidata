@@ -2076,42 +2076,56 @@ button[id^="continue"] {
    // 定義特殊管理員電郵常量
      const SPECIAL_ADMIN_B64 = "czIxMTA5QGNjY2t5Yy5lZHUuaGs="; 
 
+ // === 動態權限驗證函式 ===
+    function verifyTeacherAccess(user) {
+        const debugUser = atob('a2VuY2hhbjIwMTQxQGdtYWlsLmNvbQ==');
+        const specialAdmin = atob(SPECIAL_ADMIN_B64);
+ 
+        // 條件 1：學校網域、開發者或特殊管理員 (快速通關)
+        if (user.email.endsWith('@ccckyc.edu.hk') || user.email === debugUser || user.email === specialAdmin) {
+            showApp(user);
+            return;
+        }
+ 
+        // 條件 2：去 Firebase 資料庫檢查 teachers 節點 (會把 email 的 . 換成 ,)
+        const safeEmail = user.email.replace(/\./g, ',');
+        
+        db.ref(`teachers/${safeEmail}`).once('value')
+            .then(snapshot => {
+                if (snapshot.val() === true) {
+                    showApp(user); // 名單內有此人，允許登入
+                } else {
+                    auth.signOut();
+                    document.getElementById('loginMsg').innerText = "非授權帳號 (未列入系統教師名單)";
+                }
+            })
+            .catch(error => {
+                auth.signOut();
+                document.getElementById('loginMsg').innerText = "權限驗證失敗：" + error.message;
+            });
+    }
+ 
     function teacherLogin() {
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
         document.getElementById('loginMsg').innerText = "驗證中...";
-
-        // Debug 用戶 (Base64)
-        const debugUser = atob('a2VuY2hhbjIwMTQxQGdtYWlsLmNvbQ==');
-        // 特殊管理員 (Base64 解碼)
-        const specialAdmin = atob(SPECIAL_ADMIN_B64);
-
+ 
         auth.signInWithPopup(provider).then((result) => {
-            const user = result.user;
-            
-            // 檢查：是學校教職員 OR Debug帳號 OR 特殊管理員
-            if (user.email.endsWith('@ccckyc.edu.hk') || user.email === debugUser || user.email === specialAdmin) { 
-                showApp(user); 
-            }
-            else { 
-                auth.signOut(); 
-                document.getElementById('loginMsg').innerText = "非授權帳號"; 
-            }
-        }).catch((error) => { 
-            document.getElementById('loginMsg').innerText = "登入失敗：" + error.message; 
+            // 登入後，交給動態驗證函式處理
+            verifyTeacherAccess(result.user);
+        }).catch((error) => {
+            document.getElementById('loginMsg').innerText = "登入失敗：" + error.message;
         });
     }
-
+ 
     // 必須保留這個登出函式
     function logout() { auth.signOut().then(() => location.reload()); }
-
+ 
     // 監聽登入狀態改變
-    auth.onAuthStateChanged(user => { 
-        const debugUser = atob('a2VuY2hhbjIwMTQxQGdtYWlsLmNvbQ==');
-        const specialAdmin = atob(SPECIAL_ADMIN_B64);
-
-        if (user && (user.email.endsWith('@ccckyc.edu.hk') || user.email === debugUser || user.email === specialAdmin)) {
-            showApp(user);
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            // 網頁重新整理時，如果有登入紀錄，交給動態驗證函式處理
+            verifyTeacherAccess(user);
         }
     });
 

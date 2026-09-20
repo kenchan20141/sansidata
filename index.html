@@ -1884,6 +1884,26 @@ button[id^="continue"] {
     </div>
 
 
+    <!-- ★★★ 新增：一鍵升班並清空歷史紀錄（保留班號） ★★★ -->
+    <div class="management-section" style="border: 2px solid var(--m-blue); background: #fdfcf8; margin-bottom: 30px;">
+        <div class="section-title">
+            <div class="section-icon-box" style="background:#e8edea; color:var(--m-green);"><i class="fas fa-history"></i></div>
+            <span>全校升班及清空歷史紀錄</span>
+            <span class="usage-tag" style="background:var(--m-blue); color:white;">直接升班・保留班別與班號</span>
+        </div>
+        <p style="color: #666; font-size: 0.95em; line-height: 1.6; margin-bottom: 15px;">
+            <b>功能說明：</b><br>
+            1. <b>直接升班</b>：中一升中二、中二升中三……中五升中六（班別及班號完整保留，如 3A 5號 ➔ 4A 5號）。<br>
+            2. <b>中六畢業生</b>：中六全體學生資料及登入索引將被完全刪除。<br>
+            3. <b>清空歷史</b>：清空所有學生的點評歷史紀錄，並發出重置訊號，學生下次打開網頁會自動清空本地 IndexedDB，絕不回傳舊紀錄。<br>
+            4. <b>特殊帳號</b>：老師（System）與特許用家（Special）帳號完整保留。
+        </p>
+        <button class="btn-action" style="background: linear-gradient(135deg, #d69a92 0%, #c96055 100%); font-size: 1.1rem; padding: 14px 30px; width: 100%; justify-content: center; border-radius: 50px; font-weight: bold; box-shadow: 0 4px 12px rgba(214, 154, 146, 0.4);" onclick="runPromotionAndClearHistory()">
+            <i class="fas fa-user-graduate"></i> 執行一鍵升班並清空歷史紀錄
+        </button>
+    </div>
+
+
     <!-- 步驟二：一鍵全校升班 -->
     <div class="year-transition-card" style="margin-bottom: 30px;">
         <span class="step-badge step-2">步驟二</span>
@@ -4830,6 +4850,107 @@ function downloadSingleSubmission(studentName) {
     const blob = new Blob([htmlContent], { type: "text/html;charset=utf-8" });
     saveAs(blob, `${window.currentViewingSub.profile?.number || ''}_${studentName}_${topic}.html`);
 }
+
+
+
+
+
+// === 新增：全校直接升班並清空歷史紀錄（保留班號） ===
+async function runPromotionAndClearHistory() {
+    if (prompt("⚠️ 請輸入管理員密碼以確認【全校升班並清空歷史紀錄】：") !== "23262036") return;
+
+    if (!confirm("確定執行全校升班及清空歷史？\n\n此操作將會：\n1. 中六學生所有資料徹底刪除（畢業離校）\n2. 中一至中五學生直接升級（例如 3A ➔ 4A，班別與班號完整保留）\n3. 清空全校所有學生的寫作、點評歷史紀錄\n4. 廣播重置時間戳，學生端再次訪問時將自動清空本地 IndexedDB，絕不回傳舊數據\n5. 老師（System）與特許用家（Special）帳號完整保留")) return;
+
+    const btn = event.currentTarget;
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 正在執行全校升班與歷史清空...';
+
+    try {
+        const snapshot = await db.ref('students').once('value');
+        const allStudents = snapshot.val() || {};
+
+        let newStudentsMap = {};
+        let mappingUpdates = {};
+        const nowTimestamp = Date.now();
+
+        for (const grade in allStudents) {
+            const g = parseInt(grade);
+
+            // 1. 保留特殊帳號（老師 System、特許用家 Special）
+            if (isNaN(g)) {
+                newStudentsMap[grade] = allStudents[grade];
+                continue;
+            }
+
+            for (const cls in allStudents[grade]) {
+                const studentsInClass = allStudents[grade][cls];
+                for (const studentName in studentsInClass) {
+                    const studentData = studentsInClass[studentName];
+                    const email = studentData.profile?.email;
+                    const emailKey = email ? btoa(email) : null;
+
+                    // 2. 中六學生畢業：徹底刪除資料庫節點及登入索引
+                    if (g === 6) {
+                        if (emailKey) {
+                            mappingUpdates[`email_mapping/${emailKey}`] = null;
+                        }
+                    }
+                    // 3. 中一至中五學生：直接升班，班別不變，班號完整保留，拋棄舊 history
+                    else if (g >= 1 && g <= 5) {
+                        const newG = (g + 1).toString();
+
+                        const updatedProfile = {
+                            ...studentData.profile,
+                            grade: newG,
+                            class: cls,
+                            number: studentData.profile?.number || "" // ★ 完整保留班號
+                        };
+
+                        // 只保留 profile，不包含 history，徹底清除雲端歷史
+                        if (!newStudentsMap[newG]) newStudentsMap[newG] = {};
+                        if (!newStudentsMap[newG][cls]) newStudentsMap[newG][cls] = {};
+                        newStudentsMap[newG][cls][studentName] = {
+                            profile: updatedProfile
+                        };
+
+                        // 同步更新 email_mapping 索引，確保登入時能抓到新年級
+                        if (emailKey) {
+                            mappingUpdates[`email_mapping/${emailKey}`] = updatedProfile;
+                        }
+                    }
+                }
+            }
+        }
+
+        // 準備批量更新
+        const updates = {};
+        updates['students'] = newStudentsMap;
+        updates['assignments'] = null;               // 清除舊課業
+        updates['assignments_submissions'] = null;   // 清除課業提交
+        updates['class_reports'] = null;             // 清除班級報告
+        updates['config/historyResetTime'] = nowTimestamp; // ★ 核心：廣播重置時間戳
+
+        // 合併 email_mapping
+        Object.assign(updates, mappingUpdates);
+
+        await db.ref().update(updates);
+
+        alert("🎉 全校升班及歷史清空成功！\n- 中六畢業生已清除\n- 中一至中五已升班（班級與班號保留）\n- 歷史紀錄已清空\n- 學生端登入時會自動清空本地 IndexedDB，絕不回傳舊數據。");
+
+        // 刷新後台學生列表
+        loadStudentList();
+
+    } catch (e) {
+        console.error("執行失敗:", e);
+        alert("操作失敗：" + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+    
     
 </script>
 

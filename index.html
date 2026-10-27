@@ -4386,45 +4386,50 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
- // === 修訂：刪除學生 (同步刪除 Email Mapping) ===
+// === 修訂：刪除學生 (加入管理員密碼驗證) ===
 async function deleteStudent() {
     const n = document.querySelector('input[name="ts"]:checked')?.value;
     const g = document.getElementById('indivFromGrade').value;
     const c = document.getElementById('indivFromClass').value;
- 
+
     if (!n) return alert("請選擇要刪除的學生");
-    if (!confirm(`⚠️ 危險操作\n\n確定要永久刪除學生「${n}」嗎？\n這將一併刪除該學生的所有歷史紀錄、課業提交及雲端索引，且無法復原。`)) return;
- 
+
+    // ★★★ 新增：前端密碼驗證（不提示密碼內容） ★★★
+    const pwd = prompt(`⚠️ 危險操作\n\n確定要永久刪除學生「${n}」嗎？\n請輸入管理員密碼以確認執行：`);
+    if (pwd === null) return; // 使用者按了取消
+    if (pwd !== "23262036") {
+        return alert("密碼錯誤，操作已取消！");
+    }
+
     try {
         // 1. 先讀取該學生的 Profile 以獲取 Email
         const path = `students/${g}/${c}/${n}`;
         const snapshot = await db.ref(path + '/profile').once('value');
         const profile = snapshot.val();
- 
+
         const updates = {};
         
         // 2. 準備刪除學生資料的指令
         updates[path] = null;
- 
+
         // 3. 準備刪除 Email Mapping 的指令 (如果有 Email)
         if (profile && profile.email) {
             const emailKey = btoa(profile.email);
             updates[`email_mapping/${emailKey}`] = null;
             console.log(`準備刪除索引: ${profile.email}`);
         }
- 
+
         // 4. 原子化執行 (一次過刪除)
         await db.ref().update(updates);
         
-        alert("✅ 學生及關聯索引已刪除。");
+        alert("✅ 學生及關聯索引已成功刪除。");
         populateTransferStudentList(); // 刷新列表
- 
+
     } catch (e) {
         console.error("刪除失敗", e);
         alert("刪除失敗：" + e.message);
     }
 }
-
 
 
 // === [新增] 即時在線名單功能邏輯 ===
